@@ -4,17 +4,92 @@
  */
 package ui.screens;
 
+import services.CardService;
+import services.TransactionService;
+import ui.DBConnect;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 /**
  *
  * @author admin
  */
 public class phihv extends javax.swing.JPanel {
+    
+    private CardService cardService;
+    private TransactionService transactionService;
+    private String currentCardId = "CARD001";
+    private String selectedPackageName = "";
+    private double selectedPackagePrice = 0;
+    private int selectedDiscount = 0;
+    private int selectedMonths = 0;
 
     /**
      * Creates new form MembershipFeePanel
      */
     public phihv() {
+        cardService = new CardService();
+        transactionService = new TransactionService();
         initComponents();
+        loadCardInfo();
+    }
+    
+    /**
+     * Load card information from database
+     */
+    private void loadCardInfo() {
+        CardService.Card card = cardService.getCardById(currentCardId);
+        if (card != null) {
+            cardIdField.setText(card.cardId);
+            
+            // Set member status
+            if (card.memberType != null && !card.memberType.isEmpty() && !card.memberType.equals("Basic")) {
+                memberStatusField.setText(card.memberType);
+                
+                // Calculate expiry date (if we have register date, add membership duration)
+                if (card.registerDate != null && !card.registerDate.isEmpty()) {
+                    try {
+                        LocalDate registerDate = LocalDate.parse(card.registerDate);
+                        // Assume 3 months for Basic, 6 months for Premium, 12 months for VIP
+                        int months = 3;
+                        if (card.memberType.equals("Premium") || card.memberType.equals("Cao cap")) {
+                            months = 6;
+                        } else if (card.memberType.equals("VIP")) {
+                            months = 12;
+                        }
+                        LocalDate expiryDate = registerDate.plusMonths(months);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                        expiryDateField.setText(expiryDate.format(formatter));
+                    } catch (Exception e) {
+                        expiryDateField.setText("--");
+                    }
+                } else {
+                    expiryDateField.setText("--");
+                }
+            } else {
+                memberStatusField.setText("Chua co hoi vien");
+                expiryDateField.setText("--");
+            }
+        } else {
+            cardIdField.setText(currentCardId);
+            memberStatusField.setText("Chua co hoi vien");
+            expiryDateField.setText("--");
+        }
+    }
+    
+    /**
+     * Reload card info (public method for external refresh)
+     */
+    public void reloadCardInfo() {
+        loadCardInfo();
     }
 
     /**
@@ -60,6 +135,8 @@ public class phihv extends javax.swing.JPanel {
         // Right panel - Thông tin hội viên và thanh toán
         infoPanel = new javax.swing.JPanel();
         infoTitle = new javax.swing.JLabel();
+        cardIdLabel = new javax.swing.JLabel();
+        cardIdField = new javax.swing.JTextField();
         memberStatusLabel = new javax.swing.JLabel();
         memberStatusField = new javax.swing.JTextField();
         expiryDateLabel = new javax.swing.JLabel();
@@ -136,7 +213,7 @@ public class phihv extends javax.swing.JPanel {
         basicButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
         basicButton.setFocusPainted(false);
         basicButton.setPreferredSize(new java.awt.Dimension(0, 45));
-        basicButton.addActionListener(e -> selectPackage("Cơ bản", 100000, 5));
+        basicButton.addActionListener(e -> selectPackage("Basic", 100000, 5, 3));
 
         // Center panel for price, duration and features
         javax.swing.JPanel basicCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
@@ -210,7 +287,7 @@ public class phihv extends javax.swing.JPanel {
         premiumButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
         premiumButton.setFocusPainted(false);
         premiumButton.setPreferredSize(new java.awt.Dimension(0, 45));
-        premiumButton.addActionListener(e -> selectPackage("Cao cấp", 280000, 20));
+        premiumButton.addActionListener(e -> selectPackage("Premium", 280000, 20, 6));
 
         // Top panel for badge and title
         javax.swing.JPanel premiumTopPanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
@@ -279,7 +356,7 @@ public class phihv extends javax.swing.JPanel {
         vipButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
         vipButton.setFocusPainted(false);
         vipButton.setPreferredSize(new java.awt.Dimension(0, 45));
-        vipButton.addActionListener(e -> selectPackage("VIP", 500000, 30));
+        vipButton.addActionListener(e -> selectPackage("VIP", 500000, 30, 12));
 
         // Top panel for badge and title
         javax.swing.JPanel vipTopPanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
@@ -337,6 +414,7 @@ public class phihv extends javax.swing.JPanel {
             .addGroup(formLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(memberStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(expiryDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(selectedPackageLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -344,6 +422,7 @@ public class phihv extends javax.swing.JPanel {
                     .addComponent(totalLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(cardIdField)
                     .addComponent(memberStatusField)
                     .addComponent(expiryDateField)
                     .addComponent(selectedPackageField)
@@ -356,6 +435,10 @@ public class phihv extends javax.swing.JPanel {
             formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(formLayout.createSequentialGroup()
                 .addContainerGap()
+                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cardIdLabel)
+                    .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(memberStatusLabel)
                     .addComponent(memberStatusField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -379,6 +462,8 @@ public class phihv extends javax.swing.JPanel {
         );
 
         // Labels
+        cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        cardIdLabel.setText("Mã thẻ:");
         memberStatusLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         memberStatusLabel.setText("Trạng thái:");
         expiryDateLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -391,11 +476,11 @@ public class phihv extends javax.swing.JPanel {
         totalLabel.setText("Tổng tiền:");
 
         // Fields
+        cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        cardIdField.setEditable(false);
         memberStatusField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        memberStatusField.setText("Chưa có hội viên");
         memberStatusField.setEditable(false);
         expiryDateField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        expiryDateField.setText("--");
         expiryDateField.setEditable(false);
         selectedPackageField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         selectedPackageField.setEditable(false);
@@ -425,24 +510,124 @@ public class phihv extends javax.swing.JPanel {
         add(mainContainer, java.awt.BorderLayout.CENTER);
     }
 
-    private void selectPackage(String packageName, int price, int discount) {
-        selectedPackageField.setText(packageName);
+    private void selectPackage(String packageName, int price, int discount, int months) {
+        selectedPackageName = packageName;
+        selectedPackagePrice = price;
+        selectedDiscount = discount;
+        selectedMonths = months;
+        
+        // Display package name in Vietnamese
+        String displayName = packageName;
+        if (packageName.equals("Basic")) displayName = "Co ban";
+        else if (packageName.equals("Premium")) displayName = "Cao cap";
+        
+        selectedPackageField.setText(displayName);
         discountField.setText(discount + "%");
-        totalField.setText(String.format("%,d đ", price));
-        javax.swing.JOptionPane.showMessageDialog(this, 
-            "Đã chọn gói: " + packageName + "\nGiá: " + String.format("%,d đ", price) + "\nGiảm giá: " + discount + "%",
-            "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        totalField.setText(nf.format(price) + " d");
     }
 
     private void processPayment() {
-        String selectedPackage = selectedPackageField.getText();
-        if (selectedPackage.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn gói hội viên!", "Thông báo", 
+        if (selectedPackageName.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Vui long chon goi hoi vien!", "Thong bao", 
                 javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        javax.swing.JOptionPane.showMessageDialog(this, "Chuyển đến màn hình thanh toán...", "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        
+        // Check card balance
+        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+        double balance = 0;
+        if (transactions != null) {
+            for (TransactionService.Transaction t : transactions) {
+                if (t.type.equals("Deposit")) {
+                    balance += t.amount;
+                } else if (t.type.equals("Payment")) {
+                    balance += t.amount; // amount is negative for payment
+                }
+            }
+        }
+        
+        if (balance < selectedPackagePrice) {
+            javax.swing.JOptionPane.showMessageDialog(this, 
+                "So du khong du!\nSo du hien tai: " + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(balance) + " d\nCan: " + 
+                NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " d",
+                "Thong bao", 
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int option = javax.swing.JOptionPane.showConfirmDialog(this, 
+            "Xac nhan thanh toan goi hoi vien?\nGoi: " + selectedPackageField.getText() + "\nGia: " + 
+            NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " d",
+            "Xac nhan",
+            javax.swing.JOptionPane.YES_NO_OPTION);
+        if (option != javax.swing.JOptionPane.YES_OPTION) {
+            return;
+        }
+        
+        // Process payment
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn != null) {
+                conn.setAutoCommit(false);
+                
+                try {
+                    // Update MemberType in Cards table
+                    String updateCardSql = "UPDATE Cards SET MemberType = ?, RegisterDate = ? WHERE CardID = ?";
+                    try (PreparedStatement updateCardStmt = conn.prepareStatement(updateCardSql)) {
+                        updateCardStmt.setString(1, selectedPackageName);
+                        updateCardStmt.setString(2, LocalDate.now().toString());
+                        updateCardStmt.setString(3, currentCardId);
+                        updateCardStmt.executeUpdate();
+                    }
+                    
+                    // Create transaction record
+                    String transSql = "INSERT INTO Transactions (TransID, CardID, Type, Amount, PointsChanged, DateTime, SignatureCard, SignatureStore) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement transStmt = conn.prepareStatement(transSql)) {
+                        transStmt.setString(1, UUID.randomUUID().toString());
+                        transStmt.setString(2, currentCardId);
+                        transStmt.setString(3, "Payment");
+                        transStmt.setDouble(4, -selectedPackagePrice);
+                        transStmt.setInt(5, 0);
+                        transStmt.setString(6, java.time.LocalDateTime.now().toString());
+                        transStmt.setBytes(7, new byte[]{});
+                        transStmt.setBytes(8, new byte[]{});
+                        transStmt.executeUpdate();
+                    }
+                    
+                    conn.commit();
+                    
+                    javax.swing.JOptionPane.showMessageDialog(this, 
+                        "Thanh toan thanh cong!\nGoi hoi vien: " + selectedPackageField.getText(),
+                        "Thong bao", 
+                        javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                    
+                    // Reset selection and reload info
+                    selectedPackageName = "";
+                    selectedPackagePrice = 0;
+                    selectedDiscount = 0;
+                    selectedMonths = 0;
+                    selectedPackageField.setText("");
+                    discountField.setText("0%");
+                    totalField.setText("0 d");
+                    loadCardInfo();
+                    
+                } catch (SQLException e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this, "Khong the ket noi database!", "Loi", 
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Loi khi thanh toan: " + e.getMessage(), "Loi", 
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
     }
 
     // Variables declaration
@@ -472,6 +657,8 @@ public class phihv extends javax.swing.JPanel {
     private javax.swing.JLabel vipBadge;
     private javax.swing.JPanel infoPanel;
     private javax.swing.JLabel infoTitle;
+    private javax.swing.JLabel cardIdLabel;
+    private javax.swing.JTextField cardIdField;
     private javax.swing.JLabel memberStatusLabel;
     private javax.swing.JTextField memberStatusField;
     private javax.swing.JLabel expiryDateLabel;

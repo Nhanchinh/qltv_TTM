@@ -14,9 +14,9 @@ public class QuickSQLiteTest {
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:src/database/library.db");
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM Cards")) {
+             ResultSet rs = stmt.executeQuery("SELECT * FROM Books")) {
             while (rs.next()) {
-                System.out.println("CardID: " + rs.getString("CardID") + ", FullName: " + rs.getString("FullName"));
+                System.out.println("" + rs.getString("Publisher"));
             }
         } catch (SQLException e) {
         }

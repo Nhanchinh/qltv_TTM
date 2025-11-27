@@ -4,17 +4,40 @@
  */
 package ui.screens;
 
+import services.BorrowService;
+import services.PurchaseService;
+import services.StationeryService;
+import services.TransactionService;
+import services.BookService;
+import java.text.SimpleDateFormat;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
+
 /**
  *
  * @author admin
  */
 public class lichsu extends javax.swing.JPanel {
+    
+    private BorrowService borrowService;
+    private PurchaseService purchaseService;
+    private StationeryService stationeryService;
+    private TransactionService transactionService;
+    private BookService bookService;
+    private String currentCardId = "CARD001";
 
     /**
      * Creates new form lichsu
      */
     public lichsu() {
+        borrowService = new BorrowService();
+        purchaseService = new PurchaseService();
+        stationeryService = new StationeryService();
+        transactionService = new TransactionService();
+        bookService = new BookService();
         initComponents();
+        loadAllHistory();
     }
 
     /**
@@ -146,11 +169,12 @@ public class lichsu extends javax.swing.JPanel {
         borrowHistoryPanel.setLayout(new java.awt.BorderLayout());
         borrowHistoryPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        String[] borrowColumns = {"Mã giao dịch", "Loại", "Mã sách", "Tên sách", "Ngày mượn", "Ngày trả", "Trạng thái"};
+        // Theo bảng BorrowHistory: ID, CardID, BookID, BorrowDate, DueDate, ReturnDate, Fine, Status
+        String[] borrowColumns = {"ID", "Mã thẻ", "Mã sách", "Ngày mượn", "Ngày trả dự kiến", "Ngày trả thực tế", "Phí phạt", "Trạng thái"};
         Object[][] borrowData = {
-            {"BR001", "Mượn", "BK001", "Lập trình Java", "01/01/2024", "15/01/2024", "Đã trả"},
-            {"BR002", "Mượn", "BK002", "Cơ sở dữ liệu", "10/01/2024", "25/01/2024", "Đang mượn"},
-            {"BR003", "Trả", "BK001", "Lập trình Java", "15/01/2024", "15/01/2024", "Hoàn thành"}
+            {"1", "CARD001", "BK001", "01/01/2024", "15/01/2024", "15/01/2024", "0 đ", "đã trả"},
+            {"2", "CARD001", "BK002", "10/01/2024", "25/01/2024", "", "0 đ", "mượn"},
+            {"3", "CARD002", "BK001", "15/01/2024", "15/01/2024", "15/01/2024", "0 đ", "đã trả"}
         };
         borrowTable = new javax.swing.JTable(borrowData, borrowColumns);
         borrowTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -162,11 +186,14 @@ public class lichsu extends javax.swing.JPanel {
         paymentHistoryPanel.setLayout(new java.awt.BorderLayout());
         paymentHistoryPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        String[] paymentColumns = {"Mã giao dịch", "Loại", "Sản phẩm", "Số lượng", "Tổng tiền", "Ngày thanh toán", "Trạng thái"};
+        // Tab này hiển thị PurchaseBookHistory và StationerySales
+        // PurchaseBookHistory: ID, CardID, BookID, Quantity, UnitPrice, DiscountPercent, FinalPrice, PointsEarned, PurchaseDate
+        String[] paymentColumns = {"Loại", "ID", "Mã thẻ", "Mã SP/Sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Tổng tiền", "Điểm", "Ngày"};
         Object[][] paymentData = {
-            {"PAY001", "Mua sách", "Lập trình Java nâng cao", "2", "300,000 đ", "05/01/2024", "Hoàn thành"},
-            {"PAY002", "Mua VPP", "Bút bi xanh, Vở học sinh", "5", "85,000 đ", "08/01/2024", "Hoàn thành"},
-            {"PAY003", "Phí hội viên", "Gói Cao cấp", "1", "280,000 đ", "12/01/2024", "Hoàn thành"}
+            {"Mua sách", "1", "CARD001", "BK001", "1", "200,000 đ", "10%", "180,000 đ", "180", "05/01/2024"},
+            {"Mua sách", "2", "CARD002", "BK002", "2", "300,000 đ", "5%", "570,000 đ", "570", "06/01/2024"},
+            {"Mua VPP", "1", "CARD001", "ITEM001", "5", "5,000 đ", "0%", "25,000 đ", "0", "08/01/2024"},
+            {"Mua VPP", "2", "CARD002", "ITEM002", "3", "20,000 đ", "0%", "60,000 đ", "-10", "09/01/2024"}
         };
         paymentTable = new javax.swing.JTable(paymentData, paymentColumns);
         paymentTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -178,11 +205,13 @@ public class lichsu extends javax.swing.JPanel {
         topUpHistoryPanel.setLayout(new java.awt.BorderLayout());
         topUpHistoryPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        String[] topUpColumns = {"Mã giao dịch", "Số tiền", "Phương thức", "Ngày nạp", "Ghi chú", "Trạng thái"};
+        // Theo bảng Transactions: TransID, CardID, Type, Amount, PointsChanged, DateTime
+        String[] topUpColumns = {"Mã giao dịch", "Mã thẻ", "Loại", "Số tiền", "Điểm thay đổi", "Ngày giờ"};
         Object[][] topUpData = {
-            {"TU001", "500,000 đ", "Thẻ ngân hàng", "03/01/2024", "Nạp tiền lần đầu", "Hoàn thành"},
-            {"TU002", "1,000,000 đ", "Chuyển khoản", "10/01/2024", "Nạp tiền tháng 1", "Hoàn thành"},
-            {"TU003", "200,000 đ", "Tiền mặt", "15/01/2024", "Nạp tiền lẻ", "Hoàn thành"}
+            {"TXN001", "CARD001", "Deposit", "500,000 đ", "0", "03/01/2024 10:30:00"},
+            {"TXN002", "CARD001", "Deposit", "1,000,000 đ", "0", "10/01/2024 14:20:00"},
+            {"TXN003", "CARD002", "Payment", "-200,000 đ", "200", "15/01/2024 09:15:00"},
+            {"TXN004", "CARD002", "Deposit", "2,000,000 đ", "0", "20/01/2024 16:45:00"}
         };
         topUpTable = new javax.swing.JTable(topUpData, topUpColumns);
         topUpTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -191,8 +220,8 @@ public class lichsu extends javax.swing.JPanel {
         topUpHistoryPanel.add(topUpHistoryTable, java.awt.BorderLayout.CENTER);
 
         historyTabbedPane.addTab("Mượn/Trả sách", borrowHistoryPanel);
-        historyTabbedPane.addTab("Thanh toán", paymentHistoryPanel);
-        historyTabbedPane.addTab("Nạp tiền", topUpHistoryPanel);
+        historyTabbedPane.addTab("Mua hàng (Sách/VPP)", paymentHistoryPanel);
+        historyTabbedPane.addTab("Giao dịch", topUpHistoryPanel);
 
         // ============ SUMMARY PANEL ============
         summaryPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -273,17 +302,135 @@ public class lichsu extends javax.swing.JPanel {
         add(mainContainer, java.awt.BorderLayout.CENTER);
     }
 
+    private void loadAllHistory() {
+        loadBorrowHistory();
+        loadPurchaseHistory();
+        loadTransactionHistory();
+        updateSummary();
+    }
+    
+    private void loadBorrowHistory() {
+        List<BorrowService.BorrowRecord> records = borrowService.getAllBorrowHistory(currentCardId);
+        String[] columns = {"ID", "Mã sách", "Tên sách", "Ngày mượn", "Ngày trả dự kiến", "Ngày trả thực tế", "Phí phạt", "Trạng thái"};
+        Object[][] data = new Object[records.size()][8];
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        for (int i = 0; i < records.size(); i++) {
+            BorrowService.BorrowRecord record = records.get(i);
+            BookService.Book book = bookService.getBookById(record.bookId);
+            data[i][0] = record.id;
+            data[i][1] = record.bookId;
+            data[i][2] = book != null ? book.title : record.bookId;
+            data[i][3] = formatDate(record.borrowDate);
+            data[i][4] = formatDate(record.dueDate);
+            data[i][5] = record.returnDate != null ? formatDate(record.returnDate) : "";
+            data[i][6] = nf.format(record.fine) + " đ";
+            data[i][7] = record.status;
+        }
+        borrowTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+    
+    private void loadPurchaseHistory() {
+        List<PurchaseService.PurchaseRecord> purchases = purchaseService.getPurchaseHistory(currentCardId);
+        List<StationeryService.SaleRecord> sales = stationeryService.getSaleHistory(currentCardId);
+        
+        String[] columns = {"Loại", "ID", "Mã thẻ", "Mã SP/Sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Tổng tiền", "Điểm", "Ngày"};
+        Object[][] data = new Object[purchases.size() + sales.size()][10];
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        int idx = 0;
+        
+        for (PurchaseService.PurchaseRecord p : purchases) {
+            data[idx][0] = "Mua sách";
+            data[idx][1] = p.id;
+            data[idx][2] = p.cardId;
+            data[idx][3] = p.bookId;
+            data[idx][4] = p.quantity;
+            data[idx][5] = nf.format(p.unitPrice) + " đ";
+            data[idx][6] = String.format("%.0f%%", p.discountPercent);
+            data[idx][7] = nf.format(p.finalPrice) + " đ";
+            data[idx][8] = p.pointsEarned;
+            data[idx][9] = formatDateTime(p.purchaseDate);
+            idx++;
+        }
+        
+        for (StationeryService.SaleRecord s : sales) {
+            data[idx][0] = "Mua VPP";
+            data[idx][1] = s.id;
+            data[idx][2] = s.cardId;
+            data[idx][3] = s.itemId;
+            data[idx][4] = s.quantity;
+            data[idx][5] = nf.format(s.unitPrice) + " đ";
+            data[idx][6] = "0%";
+            data[idx][7] = nf.format(s.finalPrice) + " đ";
+            data[idx][8] = -s.pointsUsed;
+            data[idx][9] = formatDateTime(s.saleDate);
+            idx++;
+        }
+        
+        paymentTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+    
+    private void loadTransactionHistory() {
+        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+        String[] columns = {"Mã giao dịch", "Mã thẻ", "Loại", "Số tiền", "Điểm thay đổi", "Ngày giờ"};
+        Object[][] data = new Object[transactions.size()][6];
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        for (int i = 0; i < transactions.size(); i++) {
+            TransactionService.Transaction t = transactions.get(i);
+            data[i][0] = t.transId;
+            data[i][1] = t.cardId;
+            data[i][2] = t.type;
+            data[i][3] = nf.format(t.amount) + " đ";
+            data[i][4] = t.pointsChanged;
+            data[i][5] = formatDateTime(t.dateTime);
+        }
+        topUpTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+    
+    private void updateSummary() {
+        List<BorrowService.BorrowRecord> borrows = borrowService.getAllBorrowHistory(currentCardId);
+        List<PurchaseService.PurchaseRecord> purchases = purchaseService.getPurchaseHistory(currentCardId);
+        List<StationeryService.SaleRecord> sales = stationeryService.getSaleHistory(currentCardId);
+        List<TransactionService.Transaction> deposits = transactionService.getTransactionsByType(currentCardId, "Deposit");
+        
+        totalBorrowsField.setText(String.valueOf(borrows.size()));
+        totalPaymentsField.setText(String.valueOf(purchases.size() + sales.size()));
+        totalTopUpsField.setText(String.valueOf(deposits.size()));
+    }
+    
+    private String formatDate(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) return "";
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy");
+            return outputFormat.format(inputFormat.parse(dateStr));
+        } catch (Exception e) {
+            return dateStr;
+        }
+    }
+    
+    private String formatDateTime(String dateTimeStr) {
+        if (dateTimeStr == null || dateTimeStr.isEmpty()) return "";
+        try {
+            String normalized = dateTimeStr.replace("T", " ");
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+            return outputFormat.format(inputFormat.parse(normalized));
+        } catch (Exception e) {
+            return dateTimeStr;
+        }
+    }
+
     private void searchHistory() {
         String type = (String) transactionTypeCombo.getSelectedItem();
-        String fromDate = dateFromField.getText();
-        String toDate = dateToField.getText();
+        loadAllHistory();
         javax.swing.JOptionPane.showMessageDialog(this, 
-            "Đang tìm kiếm lịch sử:\nLoại: " + type + "\nTừ ngày: " + fromDate + "\nĐến ngày: " + toDate,
+            "Đã tìm kiếm lịch sử theo loại: " + type,
             "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void refreshHistory() {
-        javax.swing.JOptionPane.showMessageDialog(this, "Đang làm mới danh sách lịch sử...", "Thông báo", 
+        loadAllHistory();
+        javax.swing.JOptionPane.showMessageDialog(this, "Đã làm mới danh sách lịch sử!", "Thông báo", 
             javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 

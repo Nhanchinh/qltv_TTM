@@ -4,17 +4,121 @@
  */
 package ui.screens;
 
+import services.BorrowService;
+import services.TransactionService;
+import services.CardService;
+import ui.DBConnect;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 /**
  *
  * @author admin
  */
 public class HomePanel extends javax.swing.JPanel {
+    
+    private BorrowService borrowService;
+    private TransactionService transactionService;
+    private CardService cardService;
+    private String currentCardId = "CARD001";
 
     /**
      * Creates new form HomePanel
      */
     public HomePanel() {
+        borrowService = new BorrowService();
+        transactionService = new TransactionService();
+        cardService = new CardService();
         initComponents();
+        loadStats();
+    }
+    
+    /**
+     * Load statistics from database
+     */
+    private void loadStats() {
+        // Card 1: Sách đang mượn
+        List<BorrowService.BorrowRecord> borrowedBooks = borrowService.getBorrowedBooksByCard(currentCardId);
+        int currentlyBorrowed = borrowedBooks != null ? borrowedBooks.size() : 0;
+        card1Value.setText(String.valueOf(currentlyBorrowed));
+        
+        // Card 2: Sách đã mượn (đã trả)
+        int totalReturned = 0;
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn != null) {
+                String sql = "SELECT COUNT(*) as count FROM BorrowHistory WHERE CardID = ? AND Status = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, currentCardId);
+                    pstmt.setString(2, "đã trả");
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            totalReturned = rs.getInt("count");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi khi dem sach da muon: " + e.getMessage());
+        }
+        card2Value.setText(String.valueOf(totalReturned));
+        
+        // Card 3: Số dư tài khoản
+        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+        double balance = 0;
+        if (transactions != null) {
+            for (TransactionService.Transaction t : transactions) {
+                if (t.type.equals("Deposit")) {
+                    balance += t.amount;
+                } else if (t.type.equals("Payment")) {
+                    balance += t.amount; // amount is negative for payment
+                }
+            }
+        }
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        card3Value.setText(nf.format(balance) + " đ");
+        
+        // Card 4: Giao dịch tháng này
+        int transactionsThisMonth = 0;
+        if (transactions != null) {
+            LocalDate now = LocalDate.now();
+            int currentYear = now.getYear();
+            int currentMonth = now.getMonthValue();
+            for (TransactionService.Transaction t : transactions) {
+                try {
+                    // DateTime format: "2024-01-15T10:30:00"
+                    String dateTime = t.dateTime;
+                    if (dateTime != null && dateTime.length() >= 7) {
+                        String yearMonth = dateTime.substring(0, 7); // "2024-01"
+                        String[] parts = yearMonth.split("-");
+                        if (parts.length == 2) {
+                            int year = Integer.parseInt(parts[0]);
+                            int month = Integer.parseInt(parts[1]);
+                            if (year == currentYear && month == currentMonth) {
+                                transactionsThisMonth++;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Skip invalid dates
+                }
+            }
+        }
+        card4Value.setText(String.valueOf(transactionsThisMonth));
+    }
+    
+    /**
+     * Reload statistics (public method for external refresh)
+     */
+    public void reloadStats() {
+        loadStats();
     }
 
     /**

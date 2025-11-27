@@ -4,17 +4,34 @@
  */
 package ui.screens;
 
+import services.BookService;
+import services.BorrowService;
+import services.CardService;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
 /**
  *
  * @author admin
  */
 public class muontra extends javax.swing.JPanel {
+    
+    private BookService bookService;
+    private BorrowService borrowService;
+    private CardService cardService;
+    private String currentCardId = "CARD001"; // Default card ID
 
     /**
      * Creates new form BorrowPanel
      */
     public muontra() {
+        bookService = new BookService();
+        borrowService = new BorrowService();
+        cardService = new CardService();
         initComponents();
+        loadAvailableBooks();
+        loadBorrowedBooks();
     }
 
     /**
@@ -32,6 +49,8 @@ public class muontra extends javax.swing.JPanel {
         // Panel Mượn sách
         borrowPanel = new javax.swing.JPanel();
         borrowTitleLabel = new javax.swing.JLabel();
+        cardIdLabel = new javax.swing.JLabel();
+        cardIdField = new javax.swing.JTextField();
         bookIdLabel = new javax.swing.JLabel();
         bookIdField = new javax.swing.JTextField();
         bookNameLabel = new javax.swing.JLabel();
@@ -99,6 +118,7 @@ public class muontra extends javax.swing.JPanel {
             .addGroup(formLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(bookIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(bookNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(authorLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -106,6 +126,7 @@ public class muontra extends javax.swing.JPanel {
                     .addComponent(returnDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(cardIdField)
                     .addComponent(bookIdField)
                     .addComponent(bookNameField)
                     .addComponent(authorField)
@@ -122,6 +143,10 @@ public class muontra extends javax.swing.JPanel {
             formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(formLayout.createSequentialGroup()
                 .addContainerGap()
+                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cardIdLabel)
+                    .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(bookIdLabel)
                     .addComponent(bookIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -147,6 +172,8 @@ public class muontra extends javax.swing.JPanel {
         );
 
         // Labels và Fields setup
+        cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        cardIdLabel.setText("Mã thẻ:");
         bookIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         bookIdLabel.setText("Mã sách:");
         bookNameLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -158,6 +185,10 @@ public class muontra extends javax.swing.JPanel {
         returnDateLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         returnDateLabel.setText("Ngày trả dự kiến:");
 
+        cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        cardIdField.setColumns(20);
+        cardIdField.setText(currentCardId);
+        cardIdField.setEditable(false);
         bookIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         bookIdField.setColumns(20);
         bookNameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
@@ -185,13 +216,9 @@ public class muontra extends javax.swing.JPanel {
         borrowButton.setFocusPainted(false);
         borrowButton.addActionListener(e -> borrowBook());
 
-        // Table cho danh sách sách có sẵn
+        // Table cho danh sách sách có sẵn - sẽ được load từ database
         String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Số lượng", "Trạng thái"};
-        Object[][] data = {
-            {"BK001", "Lập trình Java", "Nguyễn Văn A", "NXB Giáo dục", "5", "Có sẵn"},
-            {"BK002", "Cơ sở dữ liệu", "Trần Thị B", "NXB Khoa học", "3", "Có sẵn"},
-            {"BK003", "Mạng máy tính", "Lê Văn C", "NXB Công nghệ", "8", "Có sẵn"}
-        };
+        Object[][] data = {};
         booksTable = new javax.swing.JTable(data, columns);
         booksTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
         booksTable.setRowHeight(25);
@@ -209,12 +236,19 @@ public class muontra extends javax.swing.JPanel {
         javax.swing.JPanel centerPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
         centerPanel.setBackground(new java.awt.Color(245, 245, 250));
         centerPanel.add(borrowFormPanel, java.awt.BorderLayout.NORTH);
-        centerPanel.add(availableBooksTable, java.awt.BorderLayout.CENTER);
         
+        // Wrapper panel for table with label - label ở trên bảng
+        javax.swing.JPanel tablePanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 10));
+        tablePanel.setBackground(new java.awt.Color(245, 245, 250));
+        
+        // Table label - đặt ở trên bảng
         javax.swing.JLabel tableLabel = new javax.swing.JLabel("Danh sách sách có sẵn:");
         tableLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        tableLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 5, 0));
-        centerPanel.add(tableLabel, java.awt.BorderLayout.SOUTH);
+        tableLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 0, 5, 0));
+        tablePanel.add(tableLabel, java.awt.BorderLayout.NORTH);
+        tablePanel.add(availableBooksTable, java.awt.BorderLayout.CENTER);
+        
+        centerPanel.add(tablePanel, java.awt.BorderLayout.CENTER);
         
         borrowPanel.add(centerPanel, java.awt.BorderLayout.CENTER);
 
@@ -228,12 +262,9 @@ public class muontra extends javax.swing.JPanel {
         returnTitleLabel.setText("Trả sách");
         returnPanel.add(returnTitleLabel, java.awt.BorderLayout.NORTH);
 
-        // Table cho sách đang mượn
-        String[] returnColumns = {"Mã sách", "Tên sách", "Ngày mượn", "Ngày trả dự kiến", "Số ngày quá hạn", "Phí phạt"};
-        Object[][] returnData = {
-            {"BK001", "Lập trình Java", "01/01/2024", "15/01/2024", "0", "0 đ"},
-            {"BK004", "Kỹ thuật lập trình", "10/01/2024", "25/01/2024", "2", "10,000 đ"}
-        };
+        // Table cho sách đang mượn - sẽ được load từ database
+        String[] returnColumns = {"ID", "Mã sách", "Tên sách", "Ngày mượn", "Ngày trả dự kiến", "Ngày trả thực tế", "Phí phạt", "Trạng thái"};
+        Object[][] returnData = {};
         borrowedTable = new javax.swing.JTable(returnData, returnColumns);
         borrowedTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
         borrowedTable.setRowHeight(25);
@@ -241,7 +272,7 @@ public class muontra extends javax.swing.JPanel {
         borrowedTable.getSelectionModel().addListSelectionListener(e -> {
             int selectedRow = borrowedTable.getSelectedRow();
             if (selectedRow >= 0) {
-                returnBookIdField.setText(borrowedTable.getValueAt(selectedRow, 0).toString());
+                returnBookIdField.setText(borrowedTable.getValueAt(selectedRow, 1).toString());
             }
         });
         borrowedBooksTable.setViewportView(borrowedTable);
@@ -347,6 +378,53 @@ public class muontra extends javax.swing.JPanel {
         add(tabbedPane, java.awt.BorderLayout.CENTER);
     }
 
+    private void loadAvailableBooks() {
+        List<BookService.Book> books = bookService.getAllBooks();
+        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Số lượng", "Trạng thái"};
+        Object[][] data = new Object[books.size()][6];
+        for (int i = 0; i < books.size(); i++) {
+            BookService.Book book = books.get(i);
+            data[i][0] = book.bookId;
+            data[i][1] = book.title;
+            data[i][2] = book.author;
+            data[i][3] = book.publisher;
+            data[i][4] = book.stock;
+            data[i][5] = book.stock > 0 ? "Có sẵn" : "Hết sách";
+        }
+        booksTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+    
+    private void loadBorrowedBooks() {
+        List<BorrowService.BorrowRecord> records = borrowService.getBorrowedBooksByCard(currentCardId);
+        String[] columns = {"ID", "Mã sách", "Tên sách", "Ngày mượn", "Ngày trả dự kiến", "Ngày trả thực tế", "Phí phạt", "Trạng thái"};
+        Object[][] data = new Object[records.size()][8];
+        for (int i = 0; i < records.size(); i++) {
+            BorrowService.BorrowRecord record = records.get(i);
+            BookService.Book book = bookService.getBookById(record.bookId);
+            data[i][0] = record.id;
+            data[i][1] = record.bookId;
+            data[i][2] = book != null ? book.title : record.bookId;
+            data[i][3] = formatDate(record.borrowDate);
+            data[i][4] = formatDate(record.dueDate);
+            data[i][5] = record.returnDate != null ? formatDate(record.returnDate) : "";
+            data[i][6] = String.format("%.0f đ", record.fine);
+            data[i][7] = record.status;
+        }
+        borrowedTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+    
+    private String formatDate(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) return "";
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy");
+            Date date = inputFormat.parse(dateStr);
+            return outputFormat.format(date);
+        } catch (Exception e) {
+            return dateStr;
+        }
+    }
+
     private void searchBook() {
         String bookId = bookIdField.getText().trim();
         if (bookId.isEmpty()) {
@@ -354,9 +432,20 @@ public class muontra extends javax.swing.JPanel {
                 javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // Giả lập tìm kiếm sách
-        javax.swing.JOptionPane.showMessageDialog(this, "Đang tìm kiếm sách với mã: " + bookId, "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        BookService.Book book = bookService.getBookById(bookId);
+        if (book != null) {
+            bookIdField.setText(book.bookId);
+            bookNameField.setText(book.title);
+            authorField.setText(book.author);
+            borrowDateField.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+            // Default 7 days
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.add(java.util.Calendar.DAY_OF_MONTH, 7);
+            returnDateField.setText(new SimpleDateFormat("dd/MM/yyyy").format(cal.getTime()));
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this, "Không tìm thấy sách với mã: " + bookId, "Thông báo", 
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     private void borrowBook() {
@@ -366,25 +455,72 @@ public class muontra extends javax.swing.JPanel {
                 javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // Giả lập mượn sách
-        javax.swing.JOptionPane.showMessageDialog(this, "Mượn sách thành công! Mã sách: " + bookId, "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        
+        BookService.Book book = bookService.getBookById(bookId);
+        if (book == null) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Không tìm thấy sách!", "Lỗi", 
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        if (book.stock <= 0) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Sách đã hết!", "Thông báo", 
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Default 7 days
+        if (borrowService.borrowBook(currentCardId, bookId, 7)) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Mượn sách thành công!", "Thông báo", 
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            loadAvailableBooks();
+            loadBorrowedBooks();
+            // Clear fields
+            bookIdField.setText("");
+            bookNameField.setText("");
+            authorField.setText("");
+            borrowDateField.setText("");
+            returnDateField.setText("");
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi mượn sách!", "Lỗi", 
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void returnBook() {
-        String bookId = returnBookIdField.getText().trim();
-        if (bookId.isEmpty()) {
+        int selectedRow = borrowedTable.getSelectedRow();
+        if (selectedRow < 0) {
             javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn sách để trả!", "Thông báo", 
                 javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // Giả lập trả sách
-        javax.swing.JOptionPane.showMessageDialog(this, "Trả sách thành công! Mã sách: " + bookId, "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        
+        int borrowId = Integer.parseInt(borrowedTable.getValueAt(selectedRow, 0).toString());
+        
+        if (borrowService.returnBook(borrowId, currentCardId)) {
+            // Calculate fine
+            double fine = borrowService.calculateFine(borrowId);
+            if (fine > 0) {
+                lateFeeField.setText(String.format("%.0f đ", fine));
+            }
+            
+            javax.swing.JOptionPane.showMessageDialog(this, "Trả sách thành công!", "Thông báo", 
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            loadAvailableBooks();
+            loadBorrowedBooks();
+            // Clear fields
+            returnBookIdField.setText("");
+            returnDateField2.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+            lateFeeField.setText("0 đ");
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi trả sách!", "Lỗi", 
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void refreshBorrowedList() {
-        javax.swing.JOptionPane.showMessageDialog(this, "Đang làm mới danh sách sách đang mượn...", "Thông báo", 
+        loadBorrowedBooks();
+        javax.swing.JOptionPane.showMessageDialog(this, "Đã làm mới danh sách!", "Thông báo", 
             javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -393,6 +529,8 @@ public class muontra extends javax.swing.JPanel {
     private javax.swing.JTabbedPane tabbedPane;
     private javax.swing.JPanel borrowPanel;
     private javax.swing.JLabel borrowTitleLabel;
+    private javax.swing.JLabel cardIdLabel;
+    private javax.swing.JTextField cardIdField;
     private javax.swing.JLabel bookIdLabel;
     private javax.swing.JTextField bookIdField;
     private javax.swing.JLabel bookNameLabel;

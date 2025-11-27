@@ -18,6 +18,16 @@ public class MainFrame extends javax.swing.JFrame {
     
     private CardLayout cardLayout;
     private javax.swing.JPanel mainPanel;
+    private javax.swing.JButton currentActiveButton;
+    private naptien topUpPanel;
+    private HomePanel homePanel;
+    private thongtincanhan personalPanel;
+    private phihv membershipPanel;
+    
+    // Colors
+    private static final java.awt.Color ACTIVE_COLOR = new java.awt.Color(0, 120, 215);
+    private static final java.awt.Color INACTIVE_COLOR = new java.awt.Color(60, 60, 65);
+    private static final java.awt.Color HOVER_COLOR = new java.awt.Color(0, 100, 180);
 
     /**
      * Creates new form MainFrame
@@ -35,13 +45,17 @@ public class MainFrame extends javax.swing.JFrame {
         mainPanel = new javax.swing.JPanel(cardLayout);
         
         // Thêm các panel vào CardLayout
-        mainPanel.add(new HomePanel(), "home");
-        mainPanel.add(new thongtincanhan(), "personal");
+        homePanel = new HomePanel();
+        mainPanel.add(homePanel, "home");
+        personalPanel = new thongtincanhan();
+        mainPanel.add(personalPanel, "personal");
         mainPanel.add(new muontra(), "borrow");
         mainPanel.add(new bansach(), "buy");
         mainPanel.add(new vpp(), "office");
-        mainPanel.add(new phihv(), "membership");
-        mainPanel.add(new naptien(), "topup");
+        membershipPanel = new phihv();
+        mainPanel.add(membershipPanel, "membership");
+        topUpPanel = new naptien();
+        mainPanel.add(topUpPanel, "topup");
         mainPanel.add(new lichsu(), "history");
         mainPanel.add(new quanlithe(), "card");
         
@@ -58,23 +72,105 @@ public class MainFrame extends javax.swing.JFrame {
      */
     public void showScreen(String name) {
         cardLayout.show(mainPanel, name);
+        updateActiveButton(name);
+        
+        // Reload data when switching to specific screens
+        if (name.equals("topup") && topUpPanel != null) {
+            topUpPanel.reloadCardInfo();
+        }
+        if (name.equals("home") && homePanel != null) {
+            homePanel.reloadStats();
+        }
+        if (name.equals("personal") && personalPanel != null) {
+            personalPanel.reloadCardInfo();
+        }
+        if (name.equals("membership") && membershipPanel != null) {
+            membershipPanel.reloadCardInfo();
+        }
+    }
+    
+    /**
+     * Cập nhật nút đang được chọn (active)
+     * @param screenName Tên màn hình hiện tại
+     */
+    private void updateActiveButton(String screenName) {
+        // Reset tất cả các nút về màu inactive
+        resetAllButtons();
+        
+        // Set nút tương ứng với màn hình hiện tại thành active
+        switch (screenName) {
+            case "home":
+                setButtonActive(btnHome);
+                break;
+            case "personal":
+                setButtonActive(btnPersonal);
+                break;
+            case "borrow":
+                setButtonActive(btnBorrow);
+                break;
+            case "buy":
+                setButtonActive(btnBuy);
+                break;
+            case "office":
+                setButtonActive(btnOffice);
+                break;
+            case "membership":
+                setButtonActive(btnMembership);
+                break;
+            case "topup":
+                setButtonActive(btnTopUp);
+                break;
+            case "history":
+                setButtonActive(btnHistory);
+                break;
+        }
+    }
+    
+    /**
+     * Set nút thành active (màu xanh)
+     */
+    private void setButtonActive(javax.swing.JButton button) {
+        if (button != null) {
+            button.setBackground(ACTIVE_COLOR);
+            currentActiveButton = button;
+        }
+    }
+    
+    /**
+     * Reset tất cả các nút về inactive (màu xám)
+     */
+    private void resetAllButtons() {
+        btnHome.setBackground(INACTIVE_COLOR);
+        btnPersonal.setBackground(INACTIVE_COLOR);
+        btnBorrow.setBackground(INACTIVE_COLOR);
+        btnBuy.setBackground(INACTIVE_COLOR);
+        btnOffice.setBackground(INACTIVE_COLOR);
+        btnMembership.setBackground(INACTIVE_COLOR);
+        btnTopUp.setBackground(INACTIVE_COLOR);
+        btnHistory.setBackground(INACTIVE_COLOR);
     }
     
     /**
      * Tạo MouseAdapter cho button với hiệu ứng hover
      */
-    private java.awt.event.MouseAdapter createButtonHoverAdapter(
-            javax.swing.JButton button, 
-            java.awt.Color normalColor, 
-            java.awt.Color hoverColor) {
+    private java.awt.event.MouseAdapter createButtonHoverAdapter(javax.swing.JButton button) {
         return new java.awt.event.MouseAdapter() {
+            private java.awt.Color savedColor;
+            
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(hoverColor);
+                // Chi hover neu khong phai nut dang active
+                if (button != currentActiveButton) {
+                    savedColor = button.getBackground();
+                    button.setBackground(ACTIVE_COLOR);
+                }
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(normalColor);
+                // Giu mau xanh neu dang active, khong thi ve mau xam
+                if (button != currentActiveButton && savedColor != null) {
+                    button.setBackground(savedColor);
+                }
             }
         };
     }
@@ -142,7 +238,7 @@ public class MainFrame extends javax.swing.JFrame {
         buttonsPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
         // Button Home (Trang chủ)
-        btnHome.setBackground(new java.awt.Color(0, 120, 215));
+        btnHome.setBackground(ACTIVE_COLOR);
         btnHome.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnHome.setForeground(new java.awt.Color(255, 255, 255));
         btnHome.setText("Trang chủ");
@@ -152,14 +248,11 @@ public class MainFrame extends javax.swing.JFrame {
         btnHome.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnHome.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnHome.addActionListener(this::btnHomeActionPerformed);
-        btnHome.addMouseListener(createButtonHoverAdapter(
-            btnHome, 
-            new java.awt.Color(0, 120, 215), 
-            new java.awt.Color(0, 100, 180)
-        ));
+        btnHome.addMouseListener(createButtonHoverAdapter(btnHome));
+        currentActiveButton = btnHome;
 
         // Button Personal Info
-        btnPersonal.setBackground(new java.awt.Color(60, 60, 65));
+        btnPersonal.setBackground(INACTIVE_COLOR);
         btnPersonal.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnPersonal.setForeground(new java.awt.Color(255, 255, 255));
         btnPersonal.setText("Thông tin cá nhân");
@@ -169,14 +262,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnPersonal.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnPersonal.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnPersonal.addActionListener(this::btnPersonalActionPerformed);
-        btnPersonal.addMouseListener(createButtonHoverAdapter(
-            btnPersonal, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnPersonal.addMouseListener(createButtonHoverAdapter(btnPersonal));
 
         // Button Borrow/Return
-        btnBorrow.setBackground(new java.awt.Color(60, 60, 65));
+        btnBorrow.setBackground(INACTIVE_COLOR);
         btnBorrow.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnBorrow.setForeground(new java.awt.Color(255, 255, 255));
         btnBorrow.setText("Mượn/ Trả");
@@ -186,14 +275,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnBorrow.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnBorrow.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnBorrow.addActionListener(this::btnBorrowActionPerformed);
-        btnBorrow.addMouseListener(createButtonHoverAdapter(
-            btnBorrow, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnBorrow.addMouseListener(createButtonHoverAdapter(btnBorrow));
 
         // Button Buy Books
-        btnBuy.setBackground(new java.awt.Color(60, 60, 65));
+        btnBuy.setBackground(INACTIVE_COLOR);
         btnBuy.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnBuy.setForeground(new java.awt.Color(255, 255, 255));
         btnBuy.setText("Mua sách");
@@ -203,14 +288,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnBuy.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnBuy.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnBuy.addActionListener(this::btnBuyActionPerformed);
-        btnBuy.addMouseListener(createButtonHoverAdapter(
-            btnBuy, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnBuy.addMouseListener(createButtonHoverAdapter(btnBuy));
 
         // Button Buy Office Supplies
-        btnOffice.setBackground(new java.awt.Color(60, 60, 65));
+        btnOffice.setBackground(INACTIVE_COLOR);
         btnOffice.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnOffice.setForeground(new java.awt.Color(255, 255, 255));
         btnOffice.setText("Mua VPP");
@@ -220,14 +301,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnOffice.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnOffice.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnOffice.addActionListener(this::btnOfficeActionPerformed);
-        btnOffice.addMouseListener(createButtonHoverAdapter(
-            btnOffice, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnOffice.addMouseListener(createButtonHoverAdapter(btnOffice));
 
         // Button Membership Fee
-        btnMembership.setBackground(new java.awt.Color(60, 60, 65));
+        btnMembership.setBackground(INACTIVE_COLOR);
         btnMembership.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnMembership.setForeground(new java.awt.Color(255, 255, 255));
         btnMembership.setText("Phí hội viên");
@@ -237,14 +314,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnMembership.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnMembership.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnMembership.addActionListener(this::btnMembershipActionPerformed);
-        btnMembership.addMouseListener(createButtonHoverAdapter(
-            btnMembership, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnMembership.addMouseListener(createButtonHoverAdapter(btnMembership));
 
         // Button Top Up
-        btnTopUp.setBackground(new java.awt.Color(60, 60, 65));
+        btnTopUp.setBackground(INACTIVE_COLOR);
         btnTopUp.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnTopUp.setForeground(new java.awt.Color(255, 255, 255));
         btnTopUp.setText("Nạp tiền");
@@ -254,14 +327,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnTopUp.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnTopUp.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnTopUp.addActionListener(this::btnTopUpActionPerformed);
-        btnTopUp.addMouseListener(createButtonHoverAdapter(
-            btnTopUp, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnTopUp.addMouseListener(createButtonHoverAdapter(btnTopUp));
 
         // Button History
-        btnHistory.setBackground(new java.awt.Color(60, 60, 65));
+        btnHistory.setBackground(INACTIVE_COLOR);
         btnHistory.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnHistory.setForeground(new java.awt.Color(255, 255, 255));
         btnHistory.setText("Lịch sử");
@@ -271,11 +340,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnHistory.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnHistory.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnHistory.addActionListener(this::btnHistoryActionPerformed);
-        btnHistory.addMouseListener(createButtonHoverAdapter(
-            btnHistory, 
-            new java.awt.Color(60, 60, 65), 
-            new java.awt.Color(0, 120, 215)
-        ));
+        btnHistory.addMouseListener(createButtonHoverAdapter(btnHistory));
 
         // Separator
         separator.setBackground(new java.awt.Color(100, 100, 100));
@@ -292,11 +357,17 @@ public class MainFrame extends javax.swing.JFrame {
         btnExit.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnExit.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnExit.addActionListener(this::btnExitActionPerformed);
-        btnExit.addMouseListener(createButtonHoverAdapter(
-            btnExit, 
-            new java.awt.Color(200, 50, 50), 
-            new java.awt.Color(220, 70, 70)
-        ));
+        // Button Exit - hover effect riêng
+        btnExit.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btnExit.setBackground(new java.awt.Color(220, 70, 70));
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnExit.setBackground(new java.awt.Color(200, 50, 50));
+            }
+        });
 
         // Add buttons to panel
         javax.swing.Box buttonsBox = javax.swing.Box.createVerticalBox();
@@ -399,11 +470,26 @@ public class MainFrame extends javax.swing.JFrame {
             logger.log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
+        
+        // Show PIN login dialog first
+        boolean authenticated = PinLoginDialog.showPinDialog(null);
+        
+        if (!authenticated) {
+            // User cancelled or PIN was wrong - exit application
+            System.exit(0);
+            return;
+        }
+        
+        // Check database connection
         Connection conn = (Connection) DBConnect.getConnection();
-        if (conn != null) {
-            System.out.println("Kết nối DB OK!");
-        } else {
-            System.out.println("Kết nối DB lỗi!");
+        if (conn == null) {
+            System.err.println("Ket noi DB loi!");
+            javax.swing.JOptionPane.showMessageDialog(null, 
+                "Loi ket noi database!\nVui long kiem tra SQLite JDBC driver da duoc them vao project chua.",
+                "Loi ket noi", 
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+            return;
         }
 
         /* Create and display the form */
