@@ -4,18 +4,33 @@
  */
 package ui.screens;
 
+import services.TransactionService;
+import services.CardService;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
 /**
  *
  * @author admin
  */
 public class naptien extends javax.swing.JPanel {
+    
+    private TransactionService transactionService;
+    private CardService cardService;
+    private String currentCardId = "CARD001";
 
     /**
      * Creates new form TopUpPanel
      */
     public naptien() {
+        transactionService = new TransactionService();
+        cardService = new CardService();
         initComponents();
+        loadCardInfo();
     }
+    
 
     /**
      * Khởi tạo các component của giao diện
@@ -140,7 +155,7 @@ public class naptien extends javax.swing.JPanel {
         currentBalanceLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
         currentBalanceLabel.setText("Số dư hiện tại:");
         accountIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        accountIdLabel.setText("Mã tài khoản:");
+        accountIdLabel.setText("Mã thẻ:");
         accountNameLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         accountNameLabel.setText("Tên tài khoản:");
 
@@ -151,7 +166,7 @@ public class naptien extends javax.swing.JPanel {
         currentBalanceField.setForeground(new java.awt.Color(0, 120, 215));
         currentBalanceField.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         accountIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        accountIdField.setText("ACC001");
+        accountIdField.setText(currentCardId);
         accountIdField.setEditable(false);
         accountNameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         accountNameField.setText("Nguyễn Văn A");
@@ -373,6 +388,33 @@ public class naptien extends javax.swing.JPanel {
         return button;
     }
 
+    private void loadCardInfo() {
+        CardService.Card card = cardService.getCardById(currentCardId);
+        if (card != null) {
+            accountIdField.setText(card.cardId);
+            accountNameField.setText(card.fullName);
+            // Calculate balance from transactions
+            List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+            double balance = 0;
+            for (TransactionService.Transaction t : transactions) {
+                if (t.type.equals("Deposit")) {
+                    balance += t.amount;
+                } else if (t.type.equals("Payment")) {
+                    balance += t.amount; // amount is negative for payment
+                }
+            }
+            NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+            currentBalanceField.setText(nf.format(balance) + " đ");
+        }
+    }
+    
+    /**
+     * Reload card info (public method for external refresh)
+     */
+    public void reloadCardInfo() {
+        loadCardInfo();
+    }
+    
     private void confirmTopUp() {
         String amountText = amountField.getText().replace(",", "").trim();
         if (amountText.isEmpty() || amountText.equals("0")) {
@@ -393,10 +435,18 @@ public class naptien extends javax.swing.JPanel {
                 "Xác nhận nạp tiền",
                 javax.swing.JOptionPane.YES_NO_OPTION);
             if (option == javax.swing.JOptionPane.YES_OPTION) {
-                javax.swing.JOptionPane.showMessageDialog(this, "Nạp tiền thành công!\nSố tiền: " + String.format("%,d", amount) + " VNĐ", 
-                    "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                amountField.setText("0");
-                noteField.setText("");
+                // Save to database
+                String transId = UUID.randomUUID().toString();
+                if (transactionService.createTransaction(transId, currentCardId, "Deposit", amount, 0)) {
+                    javax.swing.JOptionPane.showMessageDialog(this, "Nạp tiền thành công!\nSố tiền: " + String.format("%,d", amount) + " VNĐ", 
+                        "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                    amountField.setText("0");
+                    noteField.setText("");
+                    loadCardInfo(); // Refresh balance
+                } else {
+                    javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi nạp tiền!", "Lỗi", 
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                }
             }
         } catch (NumberFormatException e) {
             javax.swing.JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", 

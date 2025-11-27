@@ -1,0 +1,50 @@
+===========================================
+HƯỚNG DẪN SETUP PROJECT - SQLite JDBC Driver
+===========================================
+
+VẤN ĐỀ:
+- SQLite JDBC driver không có trong project vì bị gitignore
+- Khi chạy sẽ báo lỗi: "No suitable driver found for jdbc:sqlite"
+
+GIẢI PHÁP:
+
+BƯỚC 1: Download SQLite JDBC Driver
+-------------------------------------
+1. Truy cập một trong các link sau:
+   - https://github.com/xerial/sqlite-jdbc/releases
+   - https://repo1.maven.org/maven2/org/xerial/sqlite-jdbc/
+
+2. Download file: sqlite-jdbc-3.45.0.0.jar (hoặc phiên bản mới hơn)
+
+3. Đặt file JAR vào thư mục: TTM/libs/
+
+BƯỚC 2: Thêm vào NetBeans
+---------------------------
+1. Mở NetBeans
+2. Click chuột phải vào project "TTM" → Properties
+3. Chọn tab "Libraries"
+4. Ở phần "Compile", click nút "Add JAR/Folder..."
+5. Duyệt đến thư mục TTM/libs/
+6. Chọn file sqlite-jdbc-3.45.0.0.jar
+7. Click "Open"
+8. Click "OK" để đóng Properties
+
+BƯỚC 3: Clean và Build
+------------------------
+1. Menu: Build → Clean and Build Project
+2. Chờ build xong
+
+BƯỚC 4: Chạy lại ứng dụng
+---------------------------
+1. Run → Run Project (F6)
+2. Kiểm tra console có thông báo "Kết nối database thành công!"
+
+LINK TẢI NHANH:
+https://repo1.maven.org/maven2/org/xerial/sqlite-jdbc/3.45.0.0/sqlite-jdbc-3.45.0.0.jar
+
+GHI CHÚ:
+- Nếu không có thư mục libs, tự tạo thư mục TTM/libs/
+- File JAR cần đặt trực tiếp trong libs/, không cần thư mục con
+
+===========================================
+
