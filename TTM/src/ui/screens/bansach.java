@@ -159,7 +159,7 @@ public class bansach extends javax.swing.JPanel {
         searchPanel.add(searchButton, java.awt.BorderLayout.EAST);
 
         // Books table - sẽ được load từ database
-        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Giá", "Số lượng"};
+        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng"};
         Object[][] data = {};
         booksTableScroll = new javax.swing.JTable(data, columns);
         booksTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -171,7 +171,8 @@ public class bansach extends javax.swing.JPanel {
                 bookIdField.setText(booksTableScroll.getValueAt(selectedRow, 0).toString());
                 bookNameField.setText(booksTableScroll.getValueAt(selectedRow, 1).toString());
                 authorField.setText(booksTableScroll.getValueAt(selectedRow, 2).toString());
-                priceField.setText(booksTableScroll.getValueAt(selectedRow, 3).toString());
+                publisherField.setText(booksTableScroll.getValueAt(selectedRow, 3).toString());
+                priceField.setText(booksTableScroll.getValueAt(selectedRow, 4).toString());
             }
         });
         booksTable.setViewportView(booksTableScroll);
@@ -273,7 +274,6 @@ public class bansach extends javax.swing.JPanel {
         authorField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         authorField.setEditable(false);
         publisherField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        publisherField.setText("NXB Giáo dục");
         publisherField.setEditable(false);
         priceField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         priceField.setEditable(false);
@@ -403,16 +403,17 @@ public class bansach extends javax.swing.JPanel {
 
     private void loadBooks() {
         List<BookService.Book> books = bookService.getAllBooks();
-        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Giá", "Số lượng"};
-        Object[][] data = new Object[books.size()][5];
+        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng"};
+        Object[][] data = new Object[books.size()][6];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < books.size(); i++) {
             BookService.Book book = books.get(i);
             data[i][0] = book.bookId;
             data[i][1] = book.title;
             data[i][2] = book.author;
-            data[i][3] = nf.format(book.price) + " đ";
-            data[i][4] = book.stock;
+            data[i][3] = book.publisher;
+            data[i][4] = nf.format(book.price) + " đ";
+            data[i][5] = book.stock;
         }
         booksTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
@@ -422,8 +423,9 @@ public class bansach extends javax.swing.JPanel {
         if (card != null) {
             // Calculate discount based on member type
             double discount = 0;
-            if (card.memberType.equals("Premium")) discount = 5;
-            else if (card.memberType.equals("VIP")) discount = 10;
+            if (card.memberType.equals("Basic")) discount = 5;
+            else if (card.memberType.equals("Premium")) discount = 10;
+            else if (card.memberType.equals("VIP")) discount = 15;
             discountField.setText(String.format("%.0f%%", discount));
             pointsEarnedField.setText("0");
         }
@@ -470,16 +472,17 @@ public class bansach extends javax.swing.JPanel {
                 filtered.add(book);
             }
         }
-        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Giá", "Số lượng"};
-        Object[][] data = new Object[filtered.size()][5];
+        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng"};
+        Object[][] data = new Object[filtered.size()][6];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < filtered.size(); i++) {
             BookService.Book book = filtered.get(i);
             data[i][0] = book.bookId;
             data[i][1] = book.title;
             data[i][2] = book.author;
-            data[i][3] = nf.format(book.price) + " đ";
-            data[i][4] = book.stock;
+            data[i][3] = book.publisher;
+            data[i][4] = nf.format(book.price) + " đ";
+            data[i][5] = book.stock;
         }
         booksTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
@@ -510,8 +513,9 @@ public class bansach extends javax.swing.JPanel {
         CardService.Card card = cardService.getCardById(currentCardId);
         double discount = 0;
         if (card != null) {
-            if (card.memberType.equals("Premium")) discount = 5;
-            else if (card.memberType.equals("VIP")) discount = 10;
+            if (card.memberType.equals("Basic")) discount = 5;
+            else if (card.memberType.equals("Premium")) discount = 10;
+            else if (card.memberType.equals("VIP")) discount = 15;
         }
         
         cartItems.add(new CartItem(bookId, book.title, quantity, book.price, discount));
@@ -539,8 +543,9 @@ public class bansach extends javax.swing.JPanel {
             CardService.Card card = cardService.getCardById(currentCardId);
             double discount = 0;
             if (card != null) {
-                if (card.memberType.equals("Premium")) discount = 5;
-                else if (card.memberType.equals("VIP")) discount = 10;
+                if (card.memberType.equals("Basic")) discount = 5;
+                else if (card.memberType.equals("Premium")) discount = 10;
+                else if (card.memberType.equals("VIP")) discount = 15;
             }
             if (!purchaseService.purchaseBook(currentCardId, item.bookId, item.quantity, discount)) {
                 success = false;

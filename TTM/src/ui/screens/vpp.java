@@ -54,16 +54,15 @@ public class vpp extends javax.swing.JPanel {
     
     private void loadStationeryItems() {
         List<StationeryService.StationeryItem> items = stationeryService.getAllItems();
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Loại", "Giá", "Tồn kho"};
-        Object[][] data = new Object[items.size()][5];
+        String[] columns = {"Mã SP", "Tên sản phẩm", "Giá", "Tồn kho"};
+        Object[][] data = new Object[items.size()][4];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < items.size(); i++) {
             StationeryService.StationeryItem item = items.get(i);
             data[i][0] = item.itemId;
             data[i][1] = item.name;
-            data[i][2] = ""; // Không có category trong Stationery table
-            data[i][3] = nf.format(item.price) + " đ";
-            data[i][4] = item.stock;
+            data[i][2] = nf.format(item.price) + " đ";
+            data[i][3] = item.stock;
         }
         productsTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
@@ -131,8 +130,6 @@ public class vpp extends javax.swing.JPanel {
         productIdField = new javax.swing.JTextField();
         productNameLabel = new javax.swing.JLabel();
         productNameField = new javax.swing.JTextField();
-        productTypeLabel = new javax.swing.JLabel();
-        productTypeField = new javax.swing.JTextField();
         priceLabel = new javax.swing.JLabel();
         priceField = new javax.swing.JTextField();
         stockLabel = new javax.swing.JLabel();
@@ -191,7 +188,7 @@ public class vpp extends javax.swing.JPanel {
         categoryLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         categoryLabel.setText("Danh mục:");
         categoryCombo.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        categoryCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Tất cả", "Bút viết", "Giấy", "Tập vở", "Bìa kẹp", "Dụng cụ văn phòng"}));
+        categoryCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Tất cả"}));
         categoryCombo.addActionListener(e -> filterByCategory());
 
         searchLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -223,7 +220,7 @@ public class vpp extends javax.swing.JPanel {
         filterPanel.add(filterTopPanel, java.awt.BorderLayout.CENTER);
 
         // Products table - se duoc load tu database
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Loại", "Giá", "Tồn kho"};
+        String[] columns = {"Mã SP", "Tên sản phẩm", "Giá", "Tồn kho"};
         Object[][] data = {};
         productsTableScroll = new javax.swing.JTable(data, columns);
         productsTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -237,7 +234,6 @@ public class vpp extends javax.swing.JPanel {
                 if (item != null) {
                     productIdField.setText(item.itemId);
                     productNameField.setText(item.name);
-                    productTypeField.setText("");
                     NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
                     priceField.setText(nf.format(item.price) + " đ");
                     stockField.setText(String.valueOf(item.stock));
@@ -272,7 +268,6 @@ public class vpp extends javax.swing.JPanel {
                 .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(productIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(productNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(productTypeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(priceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(stockLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(quantityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -280,7 +275,6 @@ public class vpp extends javax.swing.JPanel {
                 .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(productIdField)
                     .addComponent(productNameField)
-                    .addComponent(productTypeField)
                     .addComponent(priceField)
                     .addComponent(stockField)
                     .addGroup(detailsLayout.createSequentialGroup()
@@ -302,9 +296,6 @@ public class vpp extends javax.swing.JPanel {
                     .addComponent(productNameLabel)
                     .addComponent(productNameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(productTypeLabel)
-                    .addComponent(productTypeField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(priceLabel)
@@ -326,8 +317,6 @@ public class vpp extends javax.swing.JPanel {
         productIdLabel.setText("Mã SP:");
         productNameLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         productNameLabel.setText("Tên SP:");
-        productTypeLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        productTypeLabel.setText("Loại:");
         priceLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         priceLabel.setText("Giá:");
         stockLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -340,8 +329,6 @@ public class vpp extends javax.swing.JPanel {
         productIdField.setEditable(false);
         productNameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         productNameField.setEditable(false);
-        productTypeField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        productTypeField.setEditable(false);
         priceField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         priceField.setEditable(false);
         stockField.setFont(new java.awt.Font("Segoe UI", 0, 13));
@@ -490,16 +477,15 @@ public class vpp extends javax.swing.JPanel {
                 filtered.add(item);
             }
         }
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Loại", "Giá", "Tồn kho"};
-        Object[][] data = new Object[filtered.size()][5];
+        String[] columns = {"Mã SP", "Tên sản phẩm", "Giá", "Tồn kho"};
+        Object[][] data = new Object[filtered.size()][4];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < filtered.size(); i++) {
             StationeryService.StationeryItem item = filtered.get(i);
             data[i][0] = item.itemId;
             data[i][1] = item.name;
-            data[i][2] = "";
-            data[i][3] = nf.format(item.price) + " đ";
-            data[i][4] = item.stock;
+            data[i][2] = nf.format(item.price) + " đ";
+            data[i][3] = item.stock;
         }
         productsTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
@@ -655,8 +641,6 @@ public class vpp extends javax.swing.JPanel {
     private javax.swing.JTextField productIdField;
     private javax.swing.JLabel productNameLabel;
     private javax.swing.JTextField productNameField;
-    private javax.swing.JLabel productTypeLabel;
-    private javax.swing.JTextField productTypeField;
     private javax.swing.JLabel priceLabel;
     private javax.swing.JTextField priceField;
     private javax.swing.JLabel stockLabel;
