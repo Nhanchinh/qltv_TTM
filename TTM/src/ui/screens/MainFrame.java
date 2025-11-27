@@ -4,7 +4,9 @@
  */
 package ui.screens;
 
+import java.sql.Connection;
 import java.awt.CardLayout;
+import ui.DBConnect;
 
 /**
  *
@@ -397,6 +399,12 @@ public class MainFrame extends javax.swing.JFrame {
             logger.log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
+        Connection conn = (Connection) DBConnect.getConnection();
+        if (conn != null) {
+            System.out.println("Kết nối DB OK!");
+        } else {
+            System.out.println("Kết nối DB lỗi!");
+        }
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> new MainFrame().setVisible(true));
