@@ -201,10 +201,18 @@ public class MainFrame extends javax.swing.JFrame {
         separator = new javax.swing.JSeparator();
         btnExit = new javax.swing.JButton();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
         setTitle("Hệ thống quản lý thư viện - TTM");
         setResizable(true);
         getContentPane().setLayout(new java.awt.BorderLayout());
+        
+        // Add window listener for logout
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                handleLogout();
+            }
+        });
 
         // Thiết lập Sidebar Panel
         sidebarPanel.setBackground(new java.awt.Color(45, 45, 48));
@@ -386,6 +394,30 @@ public class MainFrame extends javax.swing.JFrame {
                 btnExit.setBackground(new java.awt.Color(200, 50, 50));
             }
         });
+        
+        // Button Logout
+        javax.swing.JButton btnLogout = new javax.swing.JButton();
+        btnLogout.setBackground(new java.awt.Color(150, 150, 150));
+        btnLogout.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        btnLogout.setForeground(new java.awt.Color(255, 255, 255));
+        btnLogout.setText("Dang Xuat");
+        btnLogout.setBorderPainted(false);
+        btnLogout.setFocusPainted(false);
+        btnLogout.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
+        btnLogout.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
+        btnLogout.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
+        btnLogout.addActionListener(this::handleLogout);
+        // Button Logout - hover effect
+        btnLogout.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btnLogout.setBackground(new java.awt.Color(170, 170, 170));
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnLogout.setBackground(new java.awt.Color(150, 150, 150));
+            }
+        });
 
         // Add buttons to panel
         javax.swing.Box buttonsBox = javax.swing.Box.createVerticalBox();
@@ -408,7 +440,9 @@ public class MainFrame extends javax.swing.JFrame {
         buttonsBox.add(btnCard);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
         buttonsBox.add(separator);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
+        buttonsBox.add(btnLogout);
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnExit);
         buttonsBox.add(javax.swing.Box.createVerticalGlue());
         
@@ -472,6 +506,90 @@ public class MainFrame extends javax.swing.JFrame {
             System.exit(0);
         }
     }//GEN-LAST:event_btnExitActionPerformed
+    
+    private void handleLogout(java.awt.event.ActionEvent evt) {
+        int option = javax.swing.JOptionPane.showConfirmDialog(
+            this,
+            "Ban co chac chan muon dang xuat?",
+            "Xac nhan",
+            javax.swing.JOptionPane.YES_NO_OPTION,
+            javax.swing.JOptionPane.QUESTION_MESSAGE
+        );
+        if (option == javax.swing.JOptionPane.YES_OPTION) {
+            // Close this window and return to login screen
+            this.dispose();
+            // Show login selection dialog again
+            int loginMode = LoginSelectDialog.showSelectionDialog(null);
+            
+            if (loginMode == 0) {
+                System.exit(0);
+                return;
+            }
+            
+            boolean authenticated = false;
+            if (loginMode == 1) {
+                authenticated = PinLoginDialog.showPinDialog(null);
+            } else if (loginMode == 2) {
+                authenticated = AdminLoginDialog.showAdminLoginDialog(null);
+            }
+            
+            if (!authenticated) {
+                System.exit(0);
+                return;
+            }
+            
+            // Show appropriate interface
+            java.awt.EventQueue.invokeLater(() -> {
+                if (loginMode == 1) {
+                    new MainFrame().setVisible(true);
+                } else {
+                    AppFrame appFrame = new AppFrame(loginMode);
+                }
+            });
+        }
+    }
+    
+    private void handleLogout() {
+        int option = javax.swing.JOptionPane.showConfirmDialog(
+            this,
+            "Ban co chac chan muon dang xuat?",
+            "Xac nhan",
+            javax.swing.JOptionPane.YES_NO_OPTION,
+            javax.swing.JOptionPane.QUESTION_MESSAGE
+        );
+        if (option == javax.swing.JOptionPane.YES_OPTION) {
+            // Close this window and return to login screen
+            this.dispose();
+            // Show login selection dialog again
+            int loginMode = LoginSelectDialog.showSelectionDialog(null);
+            
+            if (loginMode == 0) {
+                System.exit(0);
+                return;
+            }
+            
+            boolean authenticated = false;
+            if (loginMode == 1) {
+                authenticated = PinLoginDialog.showPinDialog(null);
+            } else if (loginMode == 2) {
+                authenticated = AdminLoginDialog.showAdminLoginDialog(null);
+            }
+            
+            if (!authenticated) {
+                System.exit(0);
+                return;
+            }
+            
+            // Show appropriate interface
+            java.awt.EventQueue.invokeLater(() -> {
+                if (loginMode == 1) {
+                    new MainFrame().setVisible(true);
+                } else {
+                    AppFrame appFrame = new AppFrame(loginMode);
+                }
+            });
+        }
+    }
 
 
     /**
@@ -495,11 +613,26 @@ public class MainFrame extends javax.swing.JFrame {
         }
         //</editor-fold>
         
-        // Show PIN login dialog first
-        boolean authenticated = PinLoginDialog.showPinDialog(null);
+        // Show login selection dialog first
+        int loginMode = LoginSelectDialog.showSelectionDialog(null);
+        
+        if (loginMode == 0) {
+            // User cancelled - exit application
+            System.exit(0);
+            return;
+        }
+        
+        boolean authenticated = false;
+        if (loginMode == 1) {
+            // User mode - show PIN login dialog
+            authenticated = PinLoginDialog.showPinDialog(null);
+        } else if (loginMode == 2) {
+            // Admin mode - show admin login dialog
+            authenticated = AdminLoginDialog.showAdminLoginDialog(null);
+        }
         
         if (!authenticated) {
-            // User cancelled or PIN was wrong - exit application
+            // User cancelled or credentials were wrong - exit application
             System.exit(0);
             return;
         }
@@ -517,7 +650,13 @@ public class MainFrame extends javax.swing.JFrame {
         }
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new MainFrame().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> {
+            if (loginMode == 1) {
+                new MainFrame().setVisible(true);
+            } else {
+                new AppFrame(loginMode);
+            }
+        });
     }
 
     // Variables declaration
