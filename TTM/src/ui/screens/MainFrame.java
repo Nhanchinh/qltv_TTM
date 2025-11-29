@@ -123,6 +123,9 @@ public class MainFrame extends javax.swing.JFrame {
             case "history":
                 setButtonActive(btnHistory);
                 break;
+            case "card":
+                setButtonActive(btnCard);
+                break;
         }
     }
     
@@ -148,6 +151,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnMembership.setBackground(INACTIVE_COLOR);
         btnTopUp.setBackground(INACTIVE_COLOR);
         btnHistory.setBackground(INACTIVE_COLOR);
+        btnCard.setBackground(INACTIVE_COLOR);
     }
     
     /**
@@ -193,6 +197,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnMembership = new javax.swing.JButton();
         btnTopUp = new javax.swing.JButton();
         btnHistory = new javax.swing.JButton();
+        btnCard = new javax.swing.JButton();
         separator = new javax.swing.JSeparator();
         btnExit = new javax.swing.JButton();
 
@@ -342,6 +347,19 @@ public class MainFrame extends javax.swing.JFrame {
         btnHistory.addActionListener(this::btnHistoryActionPerformed);
         btnHistory.addMouseListener(createButtonHoverAdapter(btnHistory));
 
+        // Button Smart Card
+        btnCard.setBackground(INACTIVE_COLOR);
+        btnCard.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        btnCard.setForeground(new java.awt.Color(255, 255, 255));
+        btnCard.setText("Quản lý thẻ");
+        btnCard.setBorderPainted(false);
+        btnCard.setFocusPainted(false);
+        btnCard.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
+        btnCard.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
+        btnCard.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
+        btnCard.addActionListener(this::btnCardActionPerformed);
+        btnCard.addMouseListener(createButtonHoverAdapter(btnCard));
+
         // Separator
         separator.setBackground(new java.awt.Color(100, 100, 100));
         separator.setForeground(new java.awt.Color(100, 100, 100));
@@ -386,6 +404,8 @@ public class MainFrame extends javax.swing.JFrame {
         buttonsBox.add(btnTopUp);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnHistory);
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
+        buttonsBox.add(btnCard);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
         buttonsBox.add(separator);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
@@ -427,6 +447,10 @@ public class MainFrame extends javax.swing.JFrame {
     private void btnHistoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnHistoryActionPerformed
         showScreen("history");
     }//GEN-LAST:event_btnHistoryActionPerformed
+
+    private void btnCardActionPerformed(java.awt.event.ActionEvent evt) {
+        showScreen("card");
+    }
 
     private void btnOfficeActionPerformed(java.awt.event.ActionEvent evt) {
         showScreen("office");
@@ -501,6 +525,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JButton btnBuy;
     private javax.swing.JButton btnExit;
     private javax.swing.JButton btnHistory;
+    private javax.swing.JButton btnCard;
     private javax.swing.JButton btnHome;
     private javax.swing.JButton btnMembership;
     private javax.swing.JButton btnOffice;
