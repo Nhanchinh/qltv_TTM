@@ -63,13 +63,13 @@ public class LoginSelectDialog extends JDialog {
         titlePanel.setOpaque(false);
         titlePanel.setBorder(new EmptyBorder(0, 0, 40, 0));
         
-        JLabel titleLabel = new JLabel("CHON CHE DO DANG NHAP");
+        JLabel titleLabel = new JLabel("Đăng Nhập Với Vai Trò");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
         titleLabel.setForeground(PRIMARY_COLOR);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         
-        JLabel subtitleLabel = new JLabel("Vui long chon che do de dang nhap");
+        JLabel subtitleLabel = new JLabel("Vui lòng chọn vai trò của bạn");
         subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         subtitleLabel.setForeground(new Color(120, 120, 120));
         subtitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -84,7 +84,7 @@ public class LoginSelectDialog extends JDialog {
         centerPanel.setBorder(new EmptyBorder(20, 0, 30, 0));
         
         // User button
-        userButton = new ModernButton("NGUOI DUNG", PRIMARY_COLOR, PRIMARY_DARK) {
+        userButton = new ModernButton("USER", PRIMARY_COLOR, PRIMARY_DARK) {
             @Override
             public void performAction() {
                 selectedOption = 1;
@@ -113,7 +113,7 @@ public class LoginSelectDialog extends JDialog {
         buttonPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
         
         // Cancel button
-        cancelButton = new JButton("THOAT") {
+        cancelButton = new JButton("EXIT") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
@@ -140,8 +140,8 @@ public class LoginSelectDialog extends JDialog {
         cancelButton.addActionListener(e -> {
             int option = JOptionPane.showConfirmDialog(
                 this,
-                "Ban co chac chan muon thoat?",
-                "Xac nhan",
+                "Bạn có chắc chắn muốn thoát?",
+                "Xác nhận",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
             );

@@ -30,7 +30,7 @@ public class AdminLoginDialog extends JDialog {
     }
     
     private void initComponents() {
-        setTitle("Dang nhap ADMIN");
+        setTitle("Đăng nhập");
         setResizable(false);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         
@@ -63,13 +63,13 @@ public class AdminLoginDialog extends JDialog {
         titlePanel.setOpaque(false);
         titlePanel.setBorder(new EmptyBorder(0, 0, 40, 0));
         
-        JLabel titleLabel = new JLabel("DANG NHAP ADMIN");
+        JLabel titleLabel = new JLabel("Đăng Nhập");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
         titleLabel.setForeground(PRIMARY_COLOR);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         
-        JLabel subtitleLabel = new JLabel("Vui long nhap username va password");
+        JLabel subtitleLabel = new JLabel("Vui lòng nhập tên đăng nhập và mật khẩu");
         subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         subtitleLabel.setForeground(new Color(120, 120, 120));
         subtitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -86,14 +86,15 @@ public class AdminLoginDialog extends JDialog {
         // Form panel
         JPanel formPanel = new JPanel();
         formPanel.setOpaque(false);
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 0, 15, 15);
         
         // Username label and field
-        JLabel usernameLabel = new JLabel("Username:");
+        JLabel usernameLabel = new JLabel("Tên đăng nhập:");
         usernameLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         usernameLabel.setForeground(new Color(60, 60, 60));
-        usernameLabel.setBorder(new EmptyBorder(0, 0, 8, 0));
-        formPanel.add(usernameLabel);
         
         usernameField = new JTextField() {
             @Override
@@ -125,16 +126,21 @@ public class AdminLoginDialog extends JDialog {
                 ));
             }
         });
-        formPanel.add(usernameField);
         
-        formPanel.add(Box.createVerticalStrut(20));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.3;
+        formPanel.add(usernameLabel, gbc);
+        
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        formPanel.add(usernameField, gbc);
         
         // Password label and field
-        JLabel passwordLabel = new JLabel("Password:");
+        JLabel passwordLabel = new JLabel("Mật khẩu:");
         passwordLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         passwordLabel.setForeground(new Color(60, 60, 60));
-        passwordLabel.setBorder(new EmptyBorder(0, 0, 8, 0));
-        formPanel.add(passwordLabel);
         
         passwordField = new JPasswordField() {
             @Override
@@ -167,7 +173,17 @@ public class AdminLoginDialog extends JDialog {
             }
         });
         passwordField.addActionListener(e -> attemptLogin());
-        formPanel.add(passwordField);
+        
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 0, 15);
+        formPanel.add(passwordLabel, gbc);
+        
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        formPanel.add(passwordField, gbc);
         
         centerPanel.add(formPanel, BorderLayout.NORTH);
         
@@ -187,7 +203,7 @@ public class AdminLoginDialog extends JDialog {
         buttonPanel.setBorder(new EmptyBorder(30, 0, 0, 0));
         
         // Login button with modern styling
-        loginButton = new JButton("DANG NHAP") {
+        loginButton = new JButton("Đăng Nhập") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
@@ -215,7 +231,7 @@ public class AdminLoginDialog extends JDialog {
         buttonPanel.add(loginButton);
         
         // Cancel button with modern styling
-        cancelButton = new JButton("THOAT") {
+        cancelButton = new JButton("THOÁT") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
