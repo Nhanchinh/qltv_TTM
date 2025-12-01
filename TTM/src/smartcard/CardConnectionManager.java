@@ -149,6 +149,14 @@ public class CardConnectionManager {
     }
     
     /**
+     * Get card channel
+     * @return CardChannel for communication with card
+     */
+    public CardChannel getChannel() {
+        return channel;
+    }
+    
+    /**
      * Convert hex string to byte array
      * @param s hex string
      * @return byte array

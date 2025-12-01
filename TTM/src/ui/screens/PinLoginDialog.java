@@ -1,12 +1,34 @@
 package ui.screens;
 
 import services.SettingsService;
+import services.CardService;
+import smartcard.CardConnectionManager;
+import smartcard.CardVerifyManager;
+import smartcard.CardKeyManager;
+import smartcard.CardIdExtractor;
 import ui.DBConnect;
 import java.awt.*;
 import java.awt.event.*;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SecureRandom;
+import java.security.spec.RSAPublicKeySpec;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.math.BigInteger;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.smartcardio.CommandAPDU;
+import javax.smartcardio.ResponseAPDU;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import java.util.Arrays;
 
 public class PinLoginDialog extends JDialog {
     
@@ -15,6 +37,7 @@ public class PinLoginDialog extends JDialog {
     private JButton cancelButton;
     private JLabel errorLabel;
     private boolean authenticated = false;
+    private boolean cardBlocked = false;
     private SettingsService settingsService;
     
     // Colors
@@ -199,7 +222,10 @@ public class PinLoginDialog extends JDialog {
                 JOptionPane.QUESTION_MESSAGE
             );
             if (option == JOptionPane.YES_OPTION) {
-                System.exit(0);
+                // Do not exit app; just close dialog and return false
+                authenticated = false;
+                cardBlocked = false;
+                dispose();
             }
         });
         buttonPanel.add(cancelButton);
@@ -236,7 +262,10 @@ public class PinLoginDialog extends JDialog {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                cancelButton.doClick();
+                // Close dialog without exiting app
+                authenticated = false;
+                cardBlocked = false;
+                dispose();
             }
         });
     }
@@ -251,26 +280,136 @@ public class PinLoginDialog extends JDialog {
             return;
         }
         
-        // Get PIN from settings
-        String correctPin = settingsService.getSetting("app_pin");
-        if (correctPin == null || correctPin.isEmpty()) {
-            // Initialize default PIN if not exists
-            settingsService.initializeDefaultPin();
-            correctPin = "1234";
-        }
-        
-        // Check PIN
-        if (enteredPin.equals(correctPin)) {
-            authenticated = true;
-            dispose();
-        } else {
-            errorLabel.setText("Ma PIN khong dung! Vui long thu lai.");
+        if (enteredPin.length() != 6) {
+            errorLabel.setText("Ma PIN phai co dung 6 ky tu!");
             pinField.setText("");
             pinField.requestFocus();
-            
-            // Shake animation
-            shakeDialog();
+            return;
         }
+        
+        // Disable button and show loading
+        loginButton.setEnabled(false);
+        errorLabel.setForeground(PRIMARY_COLOR);
+        errorLabel.setText("Dang ket noi the...");
+        
+        // Verify PIN on smart card in background thread
+        new Thread(() -> {
+            CardConnectionManager connManager = null;
+            try {
+                // Connect to card
+                connManager = new CardConnectionManager();
+                connManager.connectCard();
+                
+                SwingUtilities.invokeLater(() -> {
+                    errorLabel.setText("Dang xac thuc PIN...");
+                });
+                
+                // Verify PIN on card
+                CardVerifyManager verifyManager = new CardVerifyManager(connManager.getChannel());
+                boolean verified = verifyManager.verifyPin(enteredPin);
+                
+                if (verified) {
+                    // PIN verified - now authenticate user (BEFORE disconnecting)
+                    try {
+                        SwingUtilities.invokeLater(() -> {
+                            errorLabel.setText("Dang xac thuc the...");
+                        });
+                        
+                        // Get card public key and authenticate (channel still connected)
+                        authenticateUserAfterLogin(connManager.getChannel());
+                        
+                        SwingUtilities.invokeLater(() -> {
+                            authenticated = true;
+                            dispose();
+                        });
+                    } catch (Exception authEx) {
+                        authEx.printStackTrace();
+                        SwingUtilities.invokeLater(() -> {
+                            errorLabel.setForeground(new Color(220, 53, 69));
+                            errorLabel.setText("Loi xac thuc: " + authEx.getMessage());
+                            loginButton.setEnabled(true);
+                        });
+                    }
+                } else {
+                    SwingUtilities.invokeLater(() -> {
+                        errorLabel.setForeground(new Color(220, 53, 69));
+                        errorLabel.setText("Ma PIN khong dung!");
+                        pinField.setText("");
+                        pinField.requestFocus();
+                        loginButton.setEnabled(true);
+                        shakeDialog();
+                    });
+                }
+                
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    String errorMsg = ex.getMessage();
+                    
+                    if ("WRONG_PIN".equals(errorMsg)) {
+                        // PIN sai - cho phép thử lại
+                        errorLabel.setForeground(new Color(220, 53, 69));
+                        errorLabel.setText("Sai ma PIN! Vui long thu lai.");
+                        pinField.setText("");
+                        pinField.requestFocus();
+                        loginButton.setEnabled(true);
+                        shakeDialog();
+                    } else if ("CARD_BLOCKED".equals(errorMsg)) {
+                        // Thẻ bị khóa - thoát ra màn hình chọn vai trò
+                        JOptionPane.showMessageDialog(
+                            PinLoginDialog.this,
+                            "The da bi khoa!\nVui long lien he quan tri vien.",
+                            "The bi khoa",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                        // Immediately route to role selection without exiting app
+                        authenticated = false;
+                        PinLoginDialog.this.cardBlocked = true;
+                        // Show role selection dialog and handle choice
+                        Frame owner = (Frame) SwingUtilities.getWindowAncestor(PinLoginDialog.this);
+                        int loginMode = LoginSelectDialog.showSelectionDialog(owner);
+                        
+                        if (loginMode == 0) {
+                            // User chose to exit login flow only
+                            dispose();
+                            return;
+                        } else if (loginMode == 1) {
+                            // Loop back to PIN login
+                            dispose();
+                            // Relaunch PIN dialog
+                            SwingUtilities.invokeLater(() -> {
+                                PinLoginDialog.showPinDialog(owner);
+                            });
+                            return;
+                        } else if (loginMode == 2) {
+                            // Launch admin login
+                            dispose();
+                            SwingUtilities.invokeLater(() -> {
+                                AdminLoginDialog.showAdminLoginDialog(owner);
+                            });
+                            return;
+                        }
+                    } else {
+                        // Lỗi khác
+                        errorLabel.setForeground(new Color(220, 53, 69));
+                        errorLabel.setText("Loi: " + errorMsg);
+                        pinField.setText("");
+                        pinField.requestFocus();
+                        loginButton.setEnabled(true);
+                        shakeDialog();
+                    }
+                });
+            } finally {
+                // Always disconnect card at the end
+                if (connManager != null) {
+                    try {
+                        connManager.disconnectCard();
+                    } catch (Exception e) {
+                        System.err.println("Error disconnecting card: " + e.getMessage());
+                    }
+                }
+            }
+        }).start();
     }
     
     private void shakeDialog() {
@@ -301,6 +440,108 @@ public class PinLoginDialog extends JDialog {
         return authenticated;
     }
     
+    public boolean isCardBlocked() {
+        return cardBlocked;
+    }
+    
+    /**
+     * Authenticate user after PIN verification
+     * Step 1: Get CardID from smart card using CardInfoManager
+     * Step 2: Get public key from database using CardID
+     * Step 3: Verify public key exists (consistency check)
+     */
+    private void authenticateUserAfterLogin(javax.smartcardio.CardChannel channel) throws Exception {
+        System.out.println("\n========== USER AUTHENTICATION AFTER LOGIN ==========");
+        
+        // Step 1: Get app keypair first (required for decrypting card info)
+        CardKeyManager keyManager = new CardKeyManager(channel);
+        keyManager.getPublicKey();
+        if (!keyManager.loadAppKeyPair()) {
+            throw new Exception("App KeyPair not found. Please register card first.");
+        }
+        System.out.println(">>> App KeyPair loaded");
+        
+        // Step 2: Get CardID from smart card (decrypt encrypted response)
+        String cardId = CardIdExtractor.extractCardId(channel, keyManager);
+        
+        if (cardId == null || cardId.isEmpty()) {
+            throw new Exception("Failed to get Card ID from card");
+        }
+        System.out.println(">>> Card ID retrieved from card: " + cardId);
+        
+        // Step 3: Get public key from database using CardID
+        byte[] publicKeyBytes = getCardPublicKeyFromDatabase(cardId);
+        if (publicKeyBytes == null || publicKeyBytes.length == 0) {
+            throw new Exception("Public key not found in database for card: " + cardId);
+        }
+        System.out.println(">>> Public Key retrieved from database (" + publicKeyBytes.length + " bytes)");
+        
+        System.out.println("✓ AUTHENTICATION SUCCESSFUL!");
+        System.out.println("✓ Card ID: " + cardId);
+        System.out.println("========== AUTHENTICATION COMPLETED SUCCESSFULLY ==========\n");
+    }
+    
+
+    
+    /**
+     * Query database to get card's public key
+     * Public key is stored as BLOB in Cards table
+     */
+    private byte[] getCardPublicKeyFromDatabase(String cardId) throws Exception {
+        String sql = "SELECT CardPublicKey FROM Cards WHERE CardID = ?";
+        
+        try (Connection conn = DBConnect.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, cardId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    byte[] pubKeyBytes = rs.getBytes("CardPublicKey");
+                    if (pubKeyBytes != null && pubKeyBytes.length > 0) {
+                        return pubKeyBytes;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new Exception("Database error: " + e.getMessage(), e);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Convert public key bytes (X.509 encoded) to PublicKey object
+     */
+    private PublicKey bytesToPublicKey(byte[] pubKeyBytes) throws Exception {
+        // This assumes pubKeyBytes is in X.509 format
+        // If stored as raw RSA modulus/exponent, parse accordingly
+        
+        try {
+            java.security.spec.X509EncodedKeySpec keySpec = 
+                new java.security.spec.X509EncodedKeySpec(pubKeyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            return keyFactory.generatePublic(keySpec);
+        } catch (Exception e) {
+            // If X.509 format fails, try parsing as raw RSA key (modulus only, assume exponent 65537)
+            // Assume first 128 bytes are the modulus
+            if (pubKeyBytes.length >= 128) {
+                BigInteger modulus = new BigInteger(1, Arrays.copyOfRange(pubKeyBytes, 0, 128));
+                BigInteger exponent = BigInteger.valueOf(65537);
+                
+                try {
+                    RSAPublicKeySpec rsaSpec = new RSAPublicKeySpec(modulus, exponent);
+                    KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+                    return keyFactory.generatePublic(rsaSpec);
+                } catch (Exception ex) {
+                    throw new Exception("Failed to convert public key bytes: " + ex.getMessage());
+                }
+            }
+            throw e;
+        }
+    }
+    
+    
     public static boolean showPinDialog(Frame parent) {
         // Check database connection first
         if (DBConnect.getConnection() == null) {
@@ -313,14 +554,30 @@ public class PinLoginDialog extends JDialog {
             return false;
         }
         
-        // Initialize default PIN if needed
-        SettingsService settingsService = new SettingsService();
-        settingsService.initializeDefaultPin();
-        
-        // Show PIN dialog
-        PinLoginDialog dialog = new PinLoginDialog(parent);
-        dialog.setVisible(true);
-        return dialog.isAuthenticated();
+        // Loop to handle card blocked case
+        while (true) {
+            // Initialize default PIN if needed
+            SettingsService settingsService = new SettingsService();
+            settingsService.initializeDefaultPin();
+            
+            // Show PIN dialog
+            PinLoginDialog dialog = new PinLoginDialog(parent);
+            dialog.setVisible(true);
+            
+            if (dialog.isAuthenticated()) {
+                // User authenticated successfully
+                return true;
+            }
+            
+            if (dialog.isCardBlocked()) {
+                // Card is blocked - automatically return to login selection screen
+                // Return false so caller can show login selection again
+                return false;
+            } else {
+                // Other error or user cancelled
+                return false;
+            }
+        }
     }
 }
 

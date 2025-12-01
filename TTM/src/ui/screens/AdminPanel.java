@@ -3,6 +3,10 @@ package ui.screens;
 import services.SettingsService;
 import services.CardService;
 import ui.DBConnect;
+import smartcard.CardConnectionManager;
+import smartcard.CardSetupManager;
+import smartcard.CardKeyManager;
+import smartcard.CardInfoManager;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
@@ -20,6 +24,9 @@ public class AdminPanel extends JPanel {
     private JTabbedPane tabbedPane;
     private SettingsService settingsService;
     private CardService cardService;
+    private CardConnectionManager connManager;
+    private JLabel cardStatusLabel;
+    private JButton unlockButton;
     
     // Colors
     private static final Color ADMIN_COLOR = new Color(220, 53, 69);
@@ -46,6 +53,52 @@ public class AdminPanel extends JPanel {
         headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
         headerLabel.setForeground(Color.WHITE);
         headerPanel.add(headerLabel, BorderLayout.WEST);
+        
+        // Right side panel: Card status + buttons
+        JPanel rightPanel = new JPanel();
+        rightPanel.setBackground(ADMIN_COLOR);
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.X_AXIS));
+        rightPanel.add(Box.createHorizontalStrut(20));
+        
+        // Card status label
+        cardStatusLabel = new JLabel("Trạng thái thẻ: Đang kiểm tra...");
+        cardStatusLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        cardStatusLabel.setForeground(Color.WHITE);
+        rightPanel.add(cardStatusLabel);
+        
+        rightPanel.add(Box.createHorizontalStrut(15));
+        
+        // Unlock button (hidden by default)
+        unlockButton = new JButton("MỞ KHÓA") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isPressed()) {
+                    g2d.setColor(new Color(255, 152, 0));
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(new Color(255, 167, 38));
+                } else {
+                    g2d.setColor(new Color(255, 140, 0));
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
+        unlockButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        unlockButton.setForeground(Color.WHITE);
+        unlockButton.setPreferredSize(new Dimension(90, 35));
+        unlockButton.setMaximumSize(new Dimension(90, 35));
+        unlockButton.setBorderPainted(false);
+        unlockButton.setContentAreaFilled(false);
+        unlockButton.setFocusPainted(false);
+        unlockButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        unlockButton.setVisible(false);
+        unlockButton.addActionListener(e -> performUnlock());
+        rightPanel.add(unlockButton);
+        
+        rightPanel.add(Box.createHorizontalStrut(15));
         
         // Logout button
         JButton logoutButton = new JButton("ĐĂNG XUẤT") {
@@ -74,7 +127,10 @@ public class AdminPanel extends JPanel {
         logoutButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         logoutButton.addActionListener(e -> handleLogout());
         
-        headerPanel.add(logoutButton, BorderLayout.EAST);
+        rightPanel.add(logoutButton);
+        rightPanel.add(Box.createHorizontalStrut(10));
+        
+        headerPanel.add(rightPanel, BorderLayout.EAST);
         
         add(headerPanel, BorderLayout.NORTH);
         
@@ -85,8 +141,12 @@ public class AdminPanel extends JPanel {
         
         tabbedPane.addTab("Reset PIN", createResetPINPanel());
         tabbedPane.addTab("Nap Data The", createImportCardDataPanel());
+        tabbedPane.addTab("Lay Thong Tin", createGetInfoPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
+        
+        // Check card status after UI initialized
+        checkCardStatusOnStartup();
     }
     
     /**
@@ -136,6 +196,151 @@ public class AdminPanel extends JPanel {
     }
     
     /**
+     * Check card status automatically when admin panel loads
+     */
+    private void checkCardStatusOnStartup() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(500); // Give UI time to render
+                connManager = new CardConnectionManager();
+                connManager.connectCard();
+                
+                CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
+                setupManager.getPublicKey();
+                
+                byte[] pinTries = setupManager.getPinTries();
+                
+                SwingUtilities.invokeLater(() -> {
+                    if (pinTries != null && pinTries.length > 0) {
+                        byte tries = pinTries[0];
+                        if (tries >= 3) {
+                            // Card is blocked
+                            cardStatusLabel.setText("Trạng thái thẻ: THẺ BỊ KHÓA");
+                            cardStatusLabel.setForeground(new Color(255, 200, 0));
+                            unlockButton.setVisible(true);
+                        } else {
+                            // Card is normal
+                            cardStatusLabel.setText("Trạng thái thẻ: Normal");
+                            cardStatusLabel.setForeground(SUCCESS_COLOR);
+                            unlockButton.setVisible(false);
+                        }
+                    }
+                });
+                
+            } catch (Exception e) {
+                System.err.println("Error checking card status: " + e.getMessage());
+                SwingUtilities.invokeLater(() -> {
+                    cardStatusLabel.setText("Trạng thái thẻ: Lỗi");
+                    cardStatusLabel.setForeground(new Color(220, 53, 69));
+                });
+            } finally {
+                if (connManager != null) {
+                    try {
+                        connManager.disconnectCard();
+                    } catch (Exception e) {
+                        // Ignore
+                    }
+                }
+            }
+        }).start();
+    }
+    
+    /**
+     * Perform unlock card operation
+     */
+    private void performUnlock() {
+        String adminPin = JOptionPane.showInputDialog(this, 
+            "Nhập mã PIN Admin để mở khóa thẻ:", 
+            "");
+        
+        if (adminPin == null || adminPin.isEmpty()) {
+            return;
+        }
+        
+        if (adminPin.length() != 6) {
+            JOptionPane.showMessageDialog(this, 
+                "Mã PIN phải đúng 6 ký tự!", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        new Thread(() -> {
+            try {
+                connManager = new CardConnectionManager();
+                connManager.connectCard();
+                
+                CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
+                setupManager.getPublicKey();
+                
+                // Send unlock command (0x26)
+                byte INS_UNBLOCK_PIN = (byte) 0x26;
+                byte[] payload = adminPin.getBytes();
+                
+                byte[] paddedData = new byte[16];
+                System.arraycopy(payload, 0, paddedData, 0, Math.min(payload.length, 16));
+                
+                javax.crypto.KeyGenerator keyGen = javax.crypto.KeyGenerator.getInstance("AES");
+                keyGen.init(128);
+                javax.crypto.SecretKey sessionKey = keyGen.generateKey();
+                
+                javax.crypto.Cipher rsaCipher = javax.crypto.Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                rsaCipher.init(javax.crypto.Cipher.ENCRYPT_MODE, setupManager.getKeyManager().getCardPublicKey());
+                byte[] encryptedSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
+                
+                javax.crypto.spec.IvParameterSpec ivSpec = new javax.crypto.spec.IvParameterSpec(new byte[16]);
+                javax.crypto.Cipher aesCipher = javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+                aesCipher.init(javax.crypto.Cipher.ENCRYPT_MODE, sessionKey, ivSpec);
+                byte[] encryptedData = aesCipher.doFinal(paddedData);
+                
+                byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
+                System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
+                System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
+                
+                javax.smartcardio.ResponseAPDU response = connManager.getChannel().transmit(
+                    new javax.smartcardio.CommandAPDU(0x00, INS_UNBLOCK_PIN, 0x00, 0x00, apduData)
+                );
+                
+                if (response.getSW() == 0x9000) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(this, 
+                            "Mở khóa thẻ thành công!\nSố lần thử đã được đặt lại.", 
+                            "Thành công", 
+                            JOptionPane.INFORMATION_MESSAGE);
+                        cardStatusLabel.setText("Trạng thái thẻ: Normal");
+                        cardStatusLabel.setForeground(SUCCESS_COLOR);
+                        unlockButton.setVisible(false);
+                    });
+                } else {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(this, 
+                            "Lỗi mở khóa thẻ. Mã lỗi: " + String.format("0x%04X", response.getSW()), 
+                            "Lỗi", 
+                            JOptionPane.ERROR_MESSAGE);
+                    });
+                }
+                
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this, 
+                        "Lỗi: " + e.getMessage(), 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                });
+                e.printStackTrace();
+            } finally {
+                if (connManager != null) {
+                    try {
+                        connManager.disconnectCard();
+                    } catch (Exception e) {
+                        // Ignore
+                    }
+                }
+            }
+        }).start();
+    }
+    
+    /**
      * Create Reset PIN tab
      */
     private JPanel createResetPINPanel() {
@@ -157,6 +362,21 @@ public class AdminPanel extends JPanel {
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(titleLabel);
         centerPanel.add(Box.createVerticalStrut(30));
+        
+        // Admin PIN input
+        JLabel adminPINLabel = new JLabel("MÃ PIN ADMIN:");
+        adminPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        adminPINLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.add(adminPINLabel);
+        
+        JPasswordField adminPINField = new JPasswordField();
+        adminPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        adminPINField.setMaximumSize(new Dimension(300, 45));
+        adminPINField.setPreferredSize(new Dimension(300, 45));
+        adminPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
+        adminPINField.setHorizontalAlignment(JTextField.CENTER);
+        centerPanel.add(adminPINField);
+        centerPanel.add(Box.createVerticalStrut(15));
         
         // New PIN input
         JLabel newPINLabel = new JLabel("MÃ PIN MỚI:");
@@ -224,12 +444,31 @@ public class AdminPanel extends JPanel {
         resetButton.setFocusPainted(false);
         resetButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         resetButton.addActionListener(e -> {
+            String adminPIN = new String(adminPINField.getPassword()).trim();
             String newPIN = new String(newPINField.getPassword()).trim();
             String confirmPIN = new String(confirmPINField.getPassword()).trim();
+            
+            if (adminPIN.isEmpty()) {
+                messageLabel.setForeground(new Color(220, 53, 69));
+                messageLabel.setText("Vui lòng nhập mã PIN admin!");
+                return;
+            }
+            
+            if (adminPIN.length() != 6) {
+                messageLabel.setForeground(new Color(220, 53, 69));
+                messageLabel.setText("Mã PIN admin phải đúng 6 ký tự!");
+                return;
+            }
             
             if (newPIN.isEmpty()) {
                 messageLabel.setForeground(new Color(220, 53, 69));
                 messageLabel.setText("Vui lòng nhập mã PIN mới!");
+                return;
+            }
+            
+            if (newPIN.length() != 6) {
+                messageLabel.setForeground(new Color(220, 53, 69));
+                messageLabel.setText("Mã PIN mới phải đúng 6 ký tự!");
                 return;
             }
             
@@ -245,8 +484,8 @@ public class AdminPanel extends JPanel {
                 return;
             }
             
-            // Show confirmation dialog
-            showPINConfirmationDialog(newPIN, newPINField, confirmPINField, messageLabel);
+            // Reset PIN on card
+            resetPINOnCard(adminPIN, newPIN, adminPINField, newPINField, confirmPINField, messageLabel);
         });
         buttonPanel.add(resetButton);
         
@@ -275,6 +514,7 @@ public class AdminPanel extends JPanel {
         cancelButton.setFocusPainted(false);
         cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         cancelButton.addActionListener(e -> {
+            adminPINField.setText("");
             newPINField.setText("");
             confirmPINField.setText("");
             messageLabel.setText(" ");
@@ -409,7 +649,7 @@ public class AdminPanel extends JPanel {
      */
     private void showAddCardDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Thêm Thẻ Mới", true);
-        dialog.setSize(600, 600);
+        dialog.setSize(500, 300);
         dialog.setLocationRelativeTo(null);
         dialog.setResizable(false);
         
@@ -438,23 +678,6 @@ public class AdminPanel extends JPanel {
         gbc.insets = new Insets(0, 0, 15, 0);
         contentPanel.add(fullNameField, gbc);
         
-        // Phone
-        JLabel phoneLabel = new JLabel("Số Điện Thoại:");
-        phoneLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField phoneField = new JTextField();
-        phoneField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        phoneField.setPreferredSize(new Dimension(200, 35));
-        
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(phoneLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(phoneField, gbc);
-        
         // DOB
         JLabel dobLabel = new JLabel("Ngày Sinh (YYYY-MM-DD):");
         dobLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -463,7 +686,7 @@ public class AdminPanel extends JPanel {
         dobField.setPreferredSize(new Dimension(200, 35));
         
         gbc.gridx = 0;
-        gbc.gridy = 2;
+        gbc.gridy = 1;
         gbc.weightx = 0.3;
         gbc.insets = new Insets(0, 0, 15, 15);
         contentPanel.add(dobLabel, gbc);
@@ -471,84 +694,6 @@ public class AdminPanel extends JPanel {
         gbc.weightx = 0.7;
         gbc.insets = new Insets(0, 0, 15, 0);
         contentPanel.add(dobField, gbc);
-        
-        // Member Type
-        JLabel memberTypeLabel = new JLabel("Loại Thẻ:");
-        memberTypeLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField memberTypeField = new JTextField();
-        memberTypeField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        memberTypeField.setPreferredSize(new Dimension(200, 35));
-        
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(memberTypeLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(memberTypeField, gbc);
-        
-        // Photo upload
-        JLabel photoLabel = new JLabel("Ảnh:");
-        photoLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        
-        JPanel photoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        photoPanel.setOpaque(false);
-        
-        JLabel photoPathLabel = new JLabel("Chưa chọn ảnh");
-        photoPathLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        photoPathLabel.setForeground(new Color(100, 100, 100));
-        
-        JButton choosePhotoButton = new JButton("Chọn Ảnh") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isPressed()) {
-                    g2d.setColor(new Color(0, 100, 180));
-                } else if (getModel().isRollover()) {
-                    g2d.setColor(new Color(0, 120, 215).brighter());
-                } else {
-                    g2d.setColor(new Color(0, 120, 215));
-                }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
-                g2d.dispose();
-                super.paintComponent(g);
-            }
-        };
-        choosePhotoButton.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        choosePhotoButton.setForeground(Color.WHITE);
-        choosePhotoButton.setPreferredSize(new Dimension(100, 32));
-        choosePhotoButton.setBorderPainted(false);
-        choosePhotoButton.setContentAreaFilled(false);
-        choosePhotoButton.setFocusPainted(false);
-        choosePhotoButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        final String[] selectedImagePath = {null};
-        choosePhotoButton.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                "Image Files", "jpg", "jpeg", "png", "gif", "bmp"));
-            int result = fileChooser.showOpenDialog(dialog);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                selectedImagePath[0] = fileChooser.getSelectedFile().getAbsolutePath();
-                photoPathLabel.setText(fileChooser.getSelectedFile().getName());
-            }
-        });
-        
-        photoPanel.add(choosePhotoButton);
-        photoPanel.add(photoPathLabel);
-        
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(photoLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(photoPanel, gbc);
         
         // Button panel
         JPanel buttonPanel = new JPanel();
@@ -559,23 +704,96 @@ public class AdminPanel extends JPanel {
         saveButton.setPreferredSize(new Dimension(100, 40));
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
-            String phone = phoneField.getText().trim();
             String dob = dobField.getText().trim();
-            String memberType = memberTypeField.getText().trim();
             
-            if (fullName.isEmpty() || phone.isEmpty() || dob.isEmpty()) {
+            if (fullName.isEmpty() || dob.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            if (insertCard(fullName, phone, dob, memberType, selectedImagePath[0])) {
-                JOptionPane.showMessageDialog(dialog, "Thêm thẻ thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-                dialog.dispose();
-                // Refresh table
-                loadCardsToTable(tableModel);
-            } else {
-                JOptionPane.showMessageDialog(dialog, "Lỗi khi thêm thẻ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+            // Process in background thread
+            new Thread(() -> {
+                try {
+                    // Step 1: Show PIN input dialog
+                    String[] pins = showPinInputDialog();
+                    if (pins == null || pins.length < 2) {
+                        SwingUtilities.invokeLater(() -> 
+                            JOptionPane.showMessageDialog(dialog, "Nhập PIN bị hủy!", "Lỗi", JOptionPane.ERROR_MESSAGE)
+                        );
+                        return;
+                    }
+                    
+                    String userPin = pins[0];
+                    String adminPin = pins[1];
+                    
+                    // Validate PINs
+                    if (userPin.length() != 6 || adminPin.length() != 6) {
+                        SwingUtilities.invokeLater(() -> 
+                            JOptionPane.showMessageDialog(dialog, "PIN phải có đúng 6 số!", "Lỗi", JOptionPane.ERROR_MESSAGE)
+                        );
+                        return;
+                    }
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        dialog.dispose();
+                    });
+                    
+                    // Step 2: Generate CardID
+                    String cardId = generateCardId();
+                    
+                    // Step 3: Format DOB from YYYY-MM-DD to DDMMYYYY
+                    String formattedDob = convertDateFormat(dob);
+                    String regDate = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy"));
+                    
+                    // Step 4: Setup card (connect, getPublicKey, setupCard, initUserData)
+                    connManager = new CardConnectionManager();
+                    connManager.connectCard();
+                    
+                    CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
+                    setupManager.getPublicKey();
+                    setupManager.setupCard(userPin, adminPin);
+                    setupManager.verifyPin(userPin);  // REQUIRED: Verify PIN after setup
+                    setupManager.initUserData(cardId, fullName, formattedDob, regDate);
+                    
+                    connManager.disconnectCard();
+                    
+                    // Step 5: Insert to database
+                    if (insertCard(cardId, fullName, "", dob, "Basic", null)) {
+                        // Step 6: Save card public key to database AFTER successful insert
+                        try {
+                            byte[] pubBytes = setupManager.getKeyManager().getCardPublicKeyEncoded();
+                            if (pubBytes != null) {
+                                cardService.updateCardPublicKey(cardId, pubBytes);
+                            }
+                        } catch (Exception _e) {
+                            System.err.println("Warning: failed to save card public key to DB: " + _e.getMessage());
+                        }
+                        
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(
+                                SwingUtilities.getWindowAncestor(AdminPanel.this),
+                                "Thêm thẻ thành công!\nCardID: " + cardId + 
+                                "\nUser PIN: " + userPin +
+                                "\nAdmin PIN: " + adminPin, 
+                                "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                            loadCardsToTable(tableModel);
+                        });
+                    } else {
+                        SwingUtilities.invokeLater(() -> 
+                            JOptionPane.showMessageDialog(
+                                SwingUtilities.getWindowAncestor(AdminPanel.this),
+                                "Lỗi khi thêm thẻ vào database!", "Lỗi", JOptionPane.ERROR_MESSAGE)
+                        );
+                    }
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> 
+                        JOptionPane.showMessageDialog(
+                            SwingUtilities.getWindowAncestor(AdminPanel.this),
+                            "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE)
+                    );
+                    ex.printStackTrace();
+                }
+            }).start();
         });
         buttonPanel.add(saveButton);
         
@@ -585,7 +803,7 @@ public class AdminPanel extends JPanel {
         buttonPanel.add(cancelButton);
         
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 2;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(0, 0, 0, 0);
         contentPanel.add(buttonPanel, gbc);
@@ -597,10 +815,10 @@ public class AdminPanel extends JPanel {
     /**
      * Insert new card to database
      */
-    private boolean insertCard(String fullName, String phone, String dob, String memberType, String imagePath) {
-        // Generate CardID (e.g., CARD + timestamp or auto-increment)
-        String cardId = "CARD_" + System.currentTimeMillis();
-        
+    /**
+     * Insert new card to database
+     */
+    private boolean insertCard(String cardId, String fullName, String phone, String dob, String memberType, String imagePath) {
         String sql = "INSERT INTO Cards (CardID, FullName, Phone, DOB, RegisterDate, MemberType, TotalSpent, TotalPoints, FineDebt, IsBlocked, CreatedAt, UpdatedAt) " +
                     "VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, datetime('now'), datetime('now'))";
         try (Connection conn = DBConnect.getConnection();
@@ -621,6 +839,61 @@ public class AdminPanel extends JPanel {
     
     /**
      * Show PIN confirmation dialog
+     */
+    /**
+     * Reset PIN on smart card
+     */
+    private void resetPINOnCard(String adminPIN, String newUserPIN, 
+                                JPasswordField adminPINField, 
+                                JPasswordField newPINField, 
+                                JPasswordField confirmPINField, 
+                                JLabel messageLabel) {
+        new Thread(() -> {
+            try {
+                SwingUtilities.invokeLater(() -> {
+                    messageLabel.setForeground(new Color(0, 123, 255));
+                    messageLabel.setText("Đang kết nối thẻ...");
+                });
+                
+                // Connect to card (like other functions)
+                connManager = new CardConnectionManager();
+                connManager.connectCard();
+                
+                SwingUtilities.invokeLater(() -> {
+                    messageLabel.setText("Đang reset PIN trên thẻ...");
+                });
+                
+                // Create PIN manager and reset
+                smartcard.CardPinManager pinManager = new smartcard.CardPinManager(connManager.getChannel());
+                boolean success = pinManager.resetUserPin(adminPIN, newUserPIN);
+                
+                if (success) {
+                    SwingUtilities.invokeLater(() -> {
+                        messageLabel.setForeground(SUCCESS_COLOR);
+                        messageLabel.setText("Reset PIN thành công! PIN mới: " + newUserPIN);
+                        adminPINField.setText("");
+                        newPINField.setText("");
+                        confirmPINField.setText("");
+                    });
+                } else {
+                    throw new Exception("Reset PIN thất bại");
+                }
+                
+                // Disconnect
+                connManager.disconnectCard();
+                
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    messageLabel.setForeground(new Color(220, 53, 69));
+                    messageLabel.setText("Lỗi: " + ex.getMessage());
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Show PIN confirmation dialog (DEPRECATED - No longer used)
      */
     private void showPINConfirmationDialog(String newPIN, JPasswordField newPINField, JPasswordField confirmPINField, JLabel messageLabel) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Xac Nhan PIN", true);
@@ -766,5 +1039,322 @@ public class AdminPanel extends JPanel {
         
         dialog.add(contentPanel);
         dialog.setVisible(true);
+    }
+    
+    /**
+     * Generate unique Card ID with format CARDLIBRARY + 6-digit counter
+     */
+    /**
+     * Generate unique Card ID with format CARDLIBRARY + 5-digit counter
+     * Limited to 16 characters total
+     */
+    private String generateCardId() {
+        String prefix = "CARD";
+        long counter = System.currentTimeMillis() % 1000000000000L; // 12 digits max
+        String cardId = prefix + String.format("%012d", counter);
+        
+        // Ensure exactly 16 characters
+        if (cardId.length() > 16) {
+            cardId = cardId.substring(0, 16);
+        }
+        
+        return cardId;
+    }
+    
+    /**
+     * Convert date format from YYYY-MM-DD to DDMMYYYY
+     */
+    private String convertDateFormat(String dateStr) {
+        try {
+            if (dateStr == null || dateStr.isEmpty()) {
+                return "";
+            }
+            String[] parts = dateStr.split("-");
+            if (parts.length != 3) {
+                return "";
+            }
+            return parts[2] + parts[1] + parts[0]; // DD + MM + YYYY
+        } catch (Exception e) {
+            return "";
+        }
+    }
+    
+    /**
+     * Create Get User Info tab
+     */
+    private JPanel createGetInfoPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(new Color(245, 245, 250));
+        panel.setBorder(new EmptyBorder(40, 40, 40, 40));
+        
+        // Center panel
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setOpaque(false);
+        centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        // Title
+        JLabel titleLabel = new JLabel("LẤY THÔNG TIN NGƯỜI DÙNG");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(ADMIN_COLOR);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.add(titleLabel);
+        centerPanel.add(Box.createVerticalStrut(30));
+        
+        // Info text area
+        JTextArea infoArea = new JTextArea();
+        infoArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        infoArea.setEditable(false);
+        infoArea.setLineWrap(true);
+        infoArea.setWrapStyleWord(true);
+        infoArea.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        infoArea.setBackground(Color.WHITE);
+        infoArea.setPreferredSize(new Dimension(300, 150));
+        
+        JScrollPane scrollPane = new JScrollPane(infoArea);
+        centerPanel.add(scrollPane);
+        centerPanel.add(Box.createVerticalStrut(20));
+        
+        // Get Info button
+        JButton getInfoButton = new JButton("LẤY THÔNG TIN") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isPressed()) {
+                    g2d.setColor(SUCCESS_COLOR.darker());
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(SUCCESS_COLOR.brighter());
+                } else {
+                    g2d.setColor(SUCCESS_COLOR);
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
+        getInfoButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        getInfoButton.setForeground(Color.WHITE);
+        getInfoButton.setPreferredSize(new Dimension(200, 45));
+        getInfoButton.setMaximumSize(new Dimension(200, 45));
+        getInfoButton.setBorderPainted(false);
+        getInfoButton.setContentAreaFilled(false);
+        getInfoButton.setFocusPainted(false);
+        getInfoButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        getInfoButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        getInfoButton.addActionListener(e -> {
+            // Run in background thread
+            new Thread(() -> {
+                try {
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText("Đang kết nối đến thẻ...");
+                    });
+                    
+                    // Connect to card
+                    connManager = new CardConnectionManager();
+                    connManager.connectCard();
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText("Đang lấy thông tin...");
+                    });
+                    
+                    // Get info using CardKeyManager and CardInfoManager
+                    CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
+                    keyManager.getPublicKey();
+                    
+                    // Load app keypair from file (don't generate new one!)
+                    if (!keyManager.loadAppKeyPair()) {
+                        throw new Exception("Không tìm thấy app keypair. Vui lòng thêm thẻ mới trước.");
+                    }
+                    
+                    CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
+                    CardInfoManager.UserInfo userInfo = infoManager.getInfo();
+                    
+                    // Save card public key into DB for this card
+                    try {
+                        byte[] pubBytes = keyManager.getCardPublicKeyEncoded();
+                        if (pubBytes != null && userInfo != null && userInfo.cardId != null && !userInfo.cardId.isEmpty()) {
+                            cardService.updateCardPublicKey(userInfo.cardId, pubBytes);
+                        }
+                    } catch (Exception _e) {
+                        System.err.println("Warning: failed to save card public key to DB: " + _e.getMessage());
+                    }
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText(userInfo.toString());
+                    });
+                    
+                    // Disconnect
+                    connManager.disconnectCard();
+                    
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText("Lỗi: " + ex.getMessage());
+                        JOptionPane.showMessageDialog(
+                            SwingUtilities.getWindowAncestor(centerPanel),
+                            "Lỗi khi lấy thông tin: " + ex.getMessage(),
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    });
+                    ex.printStackTrace();
+                }
+            }).start();
+        });
+        
+        centerPanel.add(getInfoButton);
+        
+        panel.add(centerPanel, BorderLayout.CENTER);
+        return panel;
+    }
+    
+    /**
+     * Show PIN input dialog for user and admin
+     * @return String array [userPin, adminPin] or null if cancelled
+     */
+    private String[] showPinInputDialog() {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Nhập Mã PIN", true);
+        dialog.setSize(500, 350);
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(false);
+        
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBorder(new EmptyBorder(30, 40, 30, 40));
+        contentPanel.setBackground(Color.WHITE);
+        
+        // Title
+        JLabel titleLabel = new JLabel("Nhập Mã PIN");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(ADMIN_COLOR);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        contentPanel.add(titleLabel);
+        contentPanel.add(Box.createVerticalStrut(20));
+        
+        // User PIN
+        JLabel userPinLabel = new JLabel("PIN Người Dùng (6 số):");
+        userPinLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        userPinLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(userPinLabel);
+        
+        JPasswordField userPinField = new JPasswordField();
+        userPinField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        userPinField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        userPinField.setPreferredSize(new Dimension(300, 35));
+        userPinField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        contentPanel.add(userPinField);
+        contentPanel.add(Box.createVerticalStrut(15));
+        
+        // Admin PIN
+        JLabel adminPinLabel = new JLabel("PIN Admin (6 số):");
+        adminPinLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        adminPinLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(adminPinLabel);
+        
+        JPasswordField adminPinField = new JPasswordField();
+        adminPinField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        adminPinField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        adminPinField.setPreferredSize(new Dimension(300, 35));
+        adminPinField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        contentPanel.add(adminPinField);
+        contentPanel.add(Box.createVerticalStrut(20));
+        
+        // Error label
+        JLabel errorLabel = new JLabel(" ");
+        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        errorLabel.setForeground(new Color(220, 53, 69));
+        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(errorLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+        
+        // Button panel
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false);
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        final String[][] result = {{null, null}};
+        
+        JButton okButton = new JButton("OK") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isPressed()) {
+                    g2d.setColor(SUCCESS_COLOR.darker());
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(SUCCESS_COLOR.brighter());
+                } else {
+                    g2d.setColor(SUCCESS_COLOR);
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
+        okButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        okButton.setForeground(Color.WHITE);
+        okButton.setPreferredSize(new Dimension(100, 35));
+        okButton.setBorderPainted(false);
+        okButton.setContentAreaFilled(false);
+        okButton.setFocusPainted(false);
+        okButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        okButton.addActionListener(e -> {
+            String userPin = new String(userPinField.getPassword());
+            String adminPin = new String(adminPinField.getPassword());
+            
+            if (userPin.isEmpty() || adminPin.isEmpty()) {
+                errorLabel.setText("Vui lòng nhập cả 2 mã PIN!");
+                return;
+            }
+            
+            if (userPin.length() != 6 || adminPin.length() != 6) {
+                errorLabel.setText("Mỗi mã PIN phải có đúng 6 ký tự!");
+                return;
+            }
+            
+            result[0][0] = userPin;
+            result[0][1] = adminPin;
+            dialog.dispose();
+        });
+        
+        buttonPanel.add(okButton);
+        
+        JButton cancelButton = new JButton("HỦY") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isPressed()) {
+                    g2d.setColor(new Color(190, 190, 190));
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(new Color(220, 220, 220));
+                } else {
+                    g2d.setColor(new Color(200, 200, 200));
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        cancelButton.setForeground(new Color(60, 60, 60));
+        cancelButton.setPreferredSize(new Dimension(100, 35));
+        cancelButton.setBorderPainted(false);
+        cancelButton.setContentAreaFilled(false);
+        cancelButton.setFocusPainted(false);
+        cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        cancelButton.addActionListener(e -> dialog.dispose());
+        
+        buttonPanel.add(cancelButton);
+        contentPanel.add(buttonPanel);
+        
+        dialog.add(contentPanel);
+        dialog.setVisible(true);
+        
+        return (result[0][0] != null && result[0][1] != null) ? result[0] : null;
     }
 }

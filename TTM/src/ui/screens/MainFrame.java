@@ -23,6 +23,7 @@ public class MainFrame extends javax.swing.JFrame {
     private HomePanel homePanel;
     private thongtincanhan personalPanel;
     private phihv membershipPanel;
+    private doipin changePinPanel;
     
     // Colors
     private static final java.awt.Color ACTIVE_COLOR = new java.awt.Color(0, 120, 215);
@@ -58,6 +59,8 @@ public class MainFrame extends javax.swing.JFrame {
         mainPanel.add(topUpPanel, "topup");
         mainPanel.add(new lichsu(), "history");
         mainPanel.add(new quanlithe(), "card");
+        changePinPanel = new doipin();
+        mainPanel.add(changePinPanel, "changepin");
         
         // Thêm mainPanel vào content pane
         getContentPane().add(mainPanel, java.awt.BorderLayout.CENTER);
@@ -125,6 +128,9 @@ public class MainFrame extends javax.swing.JFrame {
                 break;
             case "card":
                 setButtonActive(btnCard);
+                break;
+            case "changepin":
+                setButtonActive(btnChangePin);
                 break;
         }
     }
@@ -198,6 +204,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnTopUp = new javax.swing.JButton();
         btnHistory = new javax.swing.JButton();
         btnCard = new javax.swing.JButton();
+        btnChangePin = new javax.swing.JButton();
         separator = new javax.swing.JSeparator();
         btnExit = new javax.swing.JButton();
 
@@ -359,7 +366,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnCard.setBackground(INACTIVE_COLOR);
         btnCard.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnCard.setForeground(new java.awt.Color(255, 255, 255));
-        btnCard.setText("Quản lý thẻ");
+        btnCard.setText("Quan ly the");
         btnCard.setBorderPainted(false);
         btnCard.setFocusPainted(false);
         btnCard.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
@@ -367,6 +374,19 @@ public class MainFrame extends javax.swing.JFrame {
         btnCard.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
         btnCard.addActionListener(this::btnCardActionPerformed);
         btnCard.addMouseListener(createButtonHoverAdapter(btnCard));
+
+        // Button Change PIN
+        btnChangePin.setBackground(INACTIVE_COLOR);
+        btnChangePin.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        btnChangePin.setForeground(new java.awt.Color(255, 255, 255));
+        btnChangePin.setText("Doi ma PIN");
+        btnChangePin.setBorderPainted(false);
+        btnChangePin.setFocusPainted(false);
+        btnChangePin.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
+        btnChangePin.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
+        btnChangePin.setPreferredSize(new java.awt.Dimension(Integer.MAX_VALUE, 45));
+        btnChangePin.addActionListener(this::btnChangePinActionPerformed);
+        btnChangePin.addMouseListener(createButtonHoverAdapter(btnChangePin));
 
         // Separator
         separator.setBackground(new java.awt.Color(100, 100, 100));
@@ -438,6 +458,8 @@ public class MainFrame extends javax.swing.JFrame {
         buttonsBox.add(btnHistory);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnCard);
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
+        buttonsBox.add(btnChangePin);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
         buttonsBox.add(separator);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
@@ -484,6 +506,10 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void btnCardActionPerformed(java.awt.event.ActionEvent evt) {
         showScreen("card");
+    }
+
+    private void btnChangePinActionPerformed(java.awt.event.ActionEvent evt) {
+        showScreen("changepin");
     }
 
     private void btnOfficeActionPerformed(java.awt.event.ActionEvent evt) {
@@ -630,6 +656,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JButton btnOffice;
     private javax.swing.JButton btnPersonal;
     private javax.swing.JButton btnTopUp;
+    private javax.swing.JButton btnChangePin;
     private javax.swing.JLabel headerLabel;
     private javax.swing.JPanel sidebarPanel;
     private javax.swing.JSeparator separator;

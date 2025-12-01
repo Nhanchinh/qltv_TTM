@@ -399,34 +399,40 @@ public class CardConnectionPanel extends JFrame {
             // Close this frame
             this.dispose();
             
-            // Show login selection dialog
-            int loginMode = LoginSelectDialog.showSelectionDialog(null);
+            // Loop for role selection and authentication
+            boolean systemRunning = true;
             
-            if (loginMode == 0) {
-                System.exit(0);
-                return;
-            }
-            
-            boolean authenticated = false;
-            if (loginMode == 1) {
-                authenticated = PinLoginDialog.showPinDialog(null);
-            } else if (loginMode == 2) {
-                authenticated = AdminLoginDialog.showAdminLoginDialog(null);
-            }
-            
-            if (!authenticated) {
-                System.exit(0);
-                return;
-            }
-            
-            // Show appropriate interface
-            java.awt.EventQueue.invokeLater(() -> {
-                if (loginMode == 1) {
-                    new MainFrame().setVisible(true);
-                } else {
-                    new AppFrame(loginMode);
+            while (systemRunning) {
+                // Show login selection dialog
+                int loginMode = LoginSelectDialog.showSelectionDialog(null);
+                
+                if (loginMode == 0) {
+                    System.exit(0);
+                    return;
                 }
-            });
+                
+                boolean authenticated = false;
+                if (loginMode == 1) {
+                    authenticated = PinLoginDialog.showPinDialog(null);
+                } else if (loginMode == 2) {
+                    authenticated = AdminLoginDialog.showAdminLoginDialog(null);
+                }
+                
+                if (!authenticated) {
+                    // Go back to role selection instead of exiting
+                    continue;
+                }
+                
+                // Authentication successful - show appropriate interface
+                systemRunning = false;
+                java.awt.EventQueue.invokeLater(() -> {
+                    if (loginMode == 1) {
+                        new MainFrame().setVisible(true);
+                    } else {
+                        new AppFrame(loginMode);
+                    }
+                });
+            }
         }
     }
     
