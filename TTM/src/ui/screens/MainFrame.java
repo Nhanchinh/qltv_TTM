@@ -613,49 +613,9 @@ public class MainFrame extends javax.swing.JFrame {
         }
         //</editor-fold>
         
-        // Show login selection dialog first
-        int loginMode = LoginSelectDialog.showSelectionDialog(null);
-        
-        if (loginMode == 0) {
-            // User cancelled - exit application
-            System.exit(0);
-            return;
-        }
-        
-        boolean authenticated = false;
-        if (loginMode == 1) {
-            // User mode - show PIN login dialog
-            authenticated = PinLoginDialog.showPinDialog(null);
-        } else if (loginMode == 2) {
-            // Admin mode - show admin login dialog
-            authenticated = AdminLoginDialog.showAdminLoginDialog(null);
-        }
-        
-        if (!authenticated) {
-            // User cancelled or credentials were wrong - exit application
-            System.exit(0);
-            return;
-        }
-        
-        // Check database connection
-        Connection conn = (Connection) DBConnect.getConnection();
-        if (conn == null) {
-            System.err.println("Ket noi DB loi!");
-            javax.swing.JOptionPane.showMessageDialog(null, 
-                "Loi ket noi database!\nVui long kiem tra SQLite JDBC driver da duoc them vao project chua.",
-                "Loi ket noi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
-            System.exit(1);
-            return;
-        }
-
-        /* Create and display the form */
+        /* Create and display the card connection panel first */
         java.awt.EventQueue.invokeLater(() -> {
-            if (loginMode == 1) {
-                new MainFrame().setVisible(true);
-            } else {
-                new AppFrame(loginMode);
-            }
+            new CardConnectionPanel().setVisible(true);
         });
     }
 

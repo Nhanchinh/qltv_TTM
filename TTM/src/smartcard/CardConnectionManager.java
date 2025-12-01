@@ -1,0 +1,190 @@
+package smartcard;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.smartcardio.Card;
+import javax.smartcardio.CardChannel;
+import javax.smartcardio.CardException;
+import javax.smartcardio.CardTerminal;
+import javax.smartcardio.CommandAPDU;
+import javax.smartcardio.ResponseAPDU;
+import javax.smartcardio.TerminalFactory;
+
+/**
+ * Manager class for handling smart card connection
+ * Provides methods for connecting and disconnecting from a smart card
+ */
+public class CardConnectionManager {
+    
+    private static final Logger LOGGER = Logger.getLogger(CardConnectionManager.class.getName());
+    
+    private TerminalFactory factory;
+    private CardTerminal terminal;
+    private Card card;
+    private CardChannel channel;
+    
+    public CardConnectionManager() {
+        this.factory = null;
+        this.terminal = null;
+        this.card = null;
+        this.channel = null;
+    }
+    
+    /**
+     * Attempts to connect to the first available smart card terminal
+     * @return true if connection successful, false otherwise
+     * @throws Exception if connection fails
+     */
+    public boolean connectCard() throws Exception {
+        try {
+            // Initialize terminal factory
+            if (factory == null) {
+                factory = TerminalFactory.getDefault();
+                if (factory == null) {
+                    throw new Exception("Terminal Factory mặc định trả về null");
+                }
+            }
+            
+            // Get list of available terminals
+            List<CardTerminal> terminals = factory.terminals().list();
+            if (terminals.isEmpty()) {
+                throw new Exception("Không tìm thấy đầu đọc thẻ (Card terminal)!");
+            }
+            
+            System.out.println("Số lượng terminal tìm được: " + terminals.size());
+            
+            // Prefer a terminal that already has a card present
+            Optional<CardTerminal> withCard = terminals.stream()
+                .filter(t -> {
+                    try {
+                        return t.isCardPresent();
+                    } catch (CardException ex) {
+                        LOGGER.log(Level.WARNING, "Không thể kiểm tra trạng thái thẻ cho terminal " + t, ex);
+                        return false;
+                    }
+                })
+                .findFirst();
+            
+            terminal = withCard.orElse(terminals.get(0));
+            System.out.println("Kết nối tới: " + terminal.getName());
+            
+            // Try to connect with T=1 protocol first (Extended APDU support)
+            try {
+                card = terminal.connect("T=1");
+                System.out.println("Đã kết nối với protocol: T=1 (Hỗ trợ Extended APDU)");
+            } catch (CardException e) {
+                System.out.println("Cảnh báo: T=1 không được hỗ trợ, thử kết nối với * (T=0 có thể không hỗ trợ Extended APDU)");
+                card = terminal.connect("*");
+            }
+            
+            // Get basic channel
+            channel = card.getBasicChannel();
+            if (channel == null) {
+                throw new Exception("Không thể lấy basic channel!");
+            }
+            
+            // Select applet using AID
+            byte[] aid = hexStringToByteArray("11223344550300");
+            ResponseAPDU response = channel.transmit(new CommandAPDU(0x00, 0xA4, 0x04, 0x00, aid));
+            
+            System.out.println("SELECT Applet: " + String.format("%04X", response.getSW()));
+            
+            // Check if selection was successful
+            if (response.getSW() != 0x9000) {
+                channel = null;
+                card = null;
+                throw new Exception("SELECT Applet thất bại. SW: " + String.format("%04X", response.getSW()));
+            }
+            
+            System.out.println(">>> Kết nối thành công!");
+            return true;
+            
+        } catch (Exception e) {
+            // Clean up on failure
+            cleanup();
+            LOGGER.log(Level.SEVERE, "Lỗi kết nối thẻ: " + e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Disconnects from the smart card
+     * @return true if disconnection successful
+     */
+    public boolean disconnectCard() {
+        try {
+            if (card != null) {
+                card.disconnect(false);
+                System.out.println(">>> Đã ngắt kết nối khỏi thẻ!");
+            }
+            return true;
+        } catch (CardException e) {
+            LOGGER.log(Level.SEVERE, "Lỗi khi ngắt kết nối: " + e.getMessage(), e);
+            return false;
+        } finally {
+            cleanup();
+        }
+    }
+    
+    /**
+     * Check if currently connected to a smart card
+     * @return true if connected, false otherwise
+     */
+    public boolean isConnected() {
+        return card != null && channel != null;
+    }
+    
+    /**
+     * Get ATR (Answer to Reset) of the current card
+     * @return ATR string in hex format
+     */
+    public String getATR() {
+        if (card == null) {
+            return "";
+        }
+        byte[] atrBytes = card.getATR().getBytes();
+        return bytesToHex(atrBytes);
+    }
+    
+    /**
+     * Convert hex string to byte array
+     * @param s hex string
+     * @return byte array
+     */
+    private static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+    
+    /**
+     * Convert byte array to hex string
+     * @param data byte array
+     * @return hex string
+     */
+    private static String bytesToHex(byte[] data) {
+        if (data == null || data.length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(data.length * 2);
+        for (byte b : data) {
+            sb.append(String.format("%02X", b));
+        }
+        return sb.toString();
+    }
+    
+    /**
+     * Clean up resources
+     */
+    private void cleanup() {
+        card = null;
+        channel = null;
+        terminal = null;
+    }
+}
