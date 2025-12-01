@@ -173,10 +173,18 @@ public class AdminPanel extends JPanel {
             }
             
             boolean authenticated = false;
+            boolean cardBlocked = false;
             if (loginMode == 1) {
-                authenticated = PinLoginDialog.showPinDialog(null);
+                PinLoginDialog.LoginResult result = PinLoginDialog.showPinDialog(null);
+                cardBlocked = result == PinLoginDialog.LoginResult.CARD_BLOCKED;
+                authenticated = result == PinLoginDialog.LoginResult.SUCCESS;
             } else if (loginMode == 2) {
                 authenticated = AdminLoginDialog.showAdminLoginDialog(null);
+            }
+            
+            if (cardBlocked) {
+                java.awt.EventQueue.invokeLater(() -> new CardConnectionPanel().setVisible(true));
+                return;
             }
             
             if (!authenticated) {
@@ -184,7 +192,6 @@ public class AdminPanel extends JPanel {
                 return;
             }
             
-            // Show appropriate interface
             java.awt.EventQueue.invokeLater(() -> {
                 if (loginMode == 1) {
                     new MainFrame().setVisible(true);

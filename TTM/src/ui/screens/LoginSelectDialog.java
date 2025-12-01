@@ -140,14 +140,14 @@ public class LoginSelectDialog extends JDialog {
         cancelButton.addActionListener(e -> {
             int option = JOptionPane.showConfirmDialog(
                 this,
-                "Bạn có chắc chắn muốn thoát?",
+                "Bạn muốn quay lại màn hình chính?",
                 "Xác nhận",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
             );
             if (option == JOptionPane.YES_OPTION) {
                 selectedOption = 0;
-                System.exit(0);
+                dispose();
             }
         });
         buttonPanel.add(cancelButton);

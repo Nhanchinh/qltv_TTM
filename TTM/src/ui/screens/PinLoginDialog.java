@@ -39,7 +39,6 @@ public class PinLoginDialog extends JDialog {
     private boolean authenticated = false;
     private boolean cardBlocked = false;
     private SettingsService settingsService;
-    
     // Colors
     private static final Color PRIMARY_COLOR = new Color(0, 120, 215);
     private static final Color PRIMARY_DARK = new Color(0, 100, 180);
@@ -295,6 +294,7 @@ public class PinLoginDialog extends JDialog {
         // Verify PIN on smart card in background thread
         new Thread(() -> {
             CardConnectionManager connManager = null;
+            boolean shouldDisconnect = true;
             try {
                 // Connect to card
                 connManager = new CardConnectionManager();
@@ -343,6 +343,10 @@ public class PinLoginDialog extends JDialog {
                 
             } catch (Exception ex) {
                 ex.printStackTrace();
+                boolean isCardBlocked = "CARD_BLOCKED".equals(ex.getMessage());
+                if (isCardBlocked) {
+                    shouldDisconnect = false;
+                }
                 SwingUtilities.invokeLater(() -> {
                     String errorMsg = ex.getMessage();
                     
@@ -354,41 +358,8 @@ public class PinLoginDialog extends JDialog {
                         pinField.requestFocus();
                         loginButton.setEnabled(true);
                         shakeDialog();
-                    } else if ("CARD_BLOCKED".equals(errorMsg)) {
-                        // Thẻ bị khóa - thoát ra màn hình chọn vai trò
-                        JOptionPane.showMessageDialog(
-                            PinLoginDialog.this,
-                            "The da bi khoa!\nVui long lien he quan tri vien.",
-                            "The bi khoa",
-                            JOptionPane.ERROR_MESSAGE
-                        );
-                        // Immediately route to role selection without exiting app
-                        authenticated = false;
-                        PinLoginDialog.this.cardBlocked = true;
-                        // Show role selection dialog and handle choice
-                        Frame owner = (Frame) SwingUtilities.getWindowAncestor(PinLoginDialog.this);
-                        int loginMode = LoginSelectDialog.showSelectionDialog(owner);
-                        
-                        if (loginMode == 0) {
-                            // User chose to exit login flow only
-                            dispose();
-                            return;
-                        } else if (loginMode == 1) {
-                            // Loop back to PIN login
-                            dispose();
-                            // Relaunch PIN dialog
-                            SwingUtilities.invokeLater(() -> {
-                                PinLoginDialog.showPinDialog(owner);
-                            });
-                            return;
-                        } else if (loginMode == 2) {
-                            // Launch admin login
-                            dispose();
-                            SwingUtilities.invokeLater(() -> {
-                                AdminLoginDialog.showAdminLoginDialog(owner);
-                            });
-                            return;
-                        }
+                    } else if (isCardBlocked) {
+                        handleCardBlockedScenario();
                     } else {
                         // Lỗi khác
                         errorLabel.setForeground(new Color(220, 53, 69));
@@ -401,7 +372,7 @@ public class PinLoginDialog extends JDialog {
                 });
             } finally {
                 // Always disconnect card at the end
-                if (connManager != null) {
+                if (connManager != null && shouldDisconnect) {
                     try {
                         connManager.disconnectCard();
                     } catch (Exception e) {
@@ -410,6 +381,20 @@ public class PinLoginDialog extends JDialog {
                 }
             }
         }).start();
+    }
+    
+    private void handleCardBlockedScenario() {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(
+                PinLoginDialog.this,
+                "The da bi khoa!\nVui long ket noi lai the truoc khi tiep tuc.",
+                "The bi khoa",
+                JOptionPane.ERROR_MESSAGE
+            );
+            authenticated = false;
+            PinLoginDialog.this.cardBlocked = true;
+            dispose();
+        });
     }
     
     private void shakeDialog() {
@@ -542,8 +527,13 @@ public class PinLoginDialog extends JDialog {
     }
     
     
-    public static boolean showPinDialog(Frame parent) {
-        // Check database connection first
+    public enum LoginResult {
+        SUCCESS,
+        CANCELLED,
+        CARD_BLOCKED
+    }
+    
+    public static LoginResult showPinDialog(Frame parent) {
         if (DBConnect.getConnection() == null) {
             JOptionPane.showMessageDialog(
                 parent,
@@ -551,33 +541,24 @@ public class PinLoginDialog extends JDialog {
                 "Loi ket noi",
                 JOptionPane.ERROR_MESSAGE
             );
-            return false;
+            return LoginResult.CANCELLED;
         }
         
-        // Loop to handle card blocked case
-        while (true) {
-            // Initialize default PIN if needed
-            SettingsService settingsService = new SettingsService();
-            settingsService.initializeDefaultPin();
-            
-            // Show PIN dialog
-            PinLoginDialog dialog = new PinLoginDialog(parent);
-            dialog.setVisible(true);
-            
-            if (dialog.isAuthenticated()) {
-                // User authenticated successfully
-                return true;
-            }
-            
-            if (dialog.isCardBlocked()) {
-                // Card is blocked - automatically return to login selection screen
-                // Return false so caller can show login selection again
-                return false;
-            } else {
-                // Other error or user cancelled
-                return false;
-            }
+        SettingsService settingsService = new SettingsService();
+        settingsService.initializeDefaultPin();
+        
+        PinLoginDialog dialog = new PinLoginDialog(parent);
+        dialog.setVisible(true);
+        
+        if (dialog.isAuthenticated()) {
+            return LoginResult.SUCCESS;
         }
+        
+        if (dialog.isCardBlocked()) {
+            return LoginResult.CARD_BLOCKED;
+        }
+        
+        return LoginResult.CANCELLED;
     }
 }
 

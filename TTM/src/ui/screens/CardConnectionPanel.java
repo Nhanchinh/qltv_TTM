@@ -396,14 +396,12 @@ public class CardConnectionPanel extends JFrame {
      */
     private void handleContinueButtonClick() {
         if (isConnected) {
-            // Close this frame
             this.dispose();
             
-            // Loop for role selection and authentication
             boolean systemRunning = true;
+            boolean restartConnectionFlow = false;
             
             while (systemRunning) {
-                // Show login selection dialog
                 int loginMode = LoginSelectDialog.showSelectionDialog(null);
                 
                 if (loginMode == 0) {
@@ -412,18 +410,24 @@ public class CardConnectionPanel extends JFrame {
                 }
                 
                 boolean authenticated = false;
+                boolean cardBlocked = false;
                 if (loginMode == 1) {
-                    authenticated = PinLoginDialog.showPinDialog(null);
+                    PinLoginDialog.LoginResult result = PinLoginDialog.showPinDialog(null);
+                    cardBlocked = result == PinLoginDialog.LoginResult.CARD_BLOCKED;
+                    authenticated = result == PinLoginDialog.LoginResult.SUCCESS;
                 } else if (loginMode == 2) {
                     authenticated = AdminLoginDialog.showAdminLoginDialog(null);
                 }
                 
+                if (cardBlocked) {
+                    restartConnectionFlow = true;
+                    break;
+                }
+                
                 if (!authenticated) {
-                    // Go back to role selection instead of exiting
                     continue;
                 }
                 
-                // Authentication successful - show appropriate interface
                 systemRunning = false;
                 java.awt.EventQueue.invokeLater(() -> {
                     if (loginMode == 1) {
@@ -432,6 +436,11 @@ public class CardConnectionPanel extends JFrame {
                         new AppFrame(loginMode);
                     }
                 });
+            }
+            
+            if (restartConnectionFlow) {
+                java.awt.EventQueue.invokeLater(() -> new CardConnectionPanel().setVisible(true));
+                return;
             }
         }
     }

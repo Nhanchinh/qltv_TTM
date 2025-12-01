@@ -20,6 +20,9 @@ public class CardConnectionManager {
     
     private static final Logger LOGGER = Logger.getLogger(CardConnectionManager.class.getName());
     
+    private static final int MAX_CONNECT_ATTEMPTS = 3;
+    private static final long RETRY_DELAY_MS = 800L;
+    
     private TerminalFactory factory;
     private CardTerminal terminal;
     private Card card;
@@ -38,75 +41,116 @@ public class CardConnectionManager {
      * @throws Exception if connection fails
      */
     public boolean connectCard() throws Exception {
-        try {
-            // Initialize terminal factory
-            if (factory == null) {
-                factory = TerminalFactory.getDefault();
-                if (factory == null) {
-                    throw new Exception("Terminal Factory mặc định trả về null");
+        return connectCardWithRetries(MAX_CONNECT_ATTEMPTS);
+    }
+    
+    /**
+     * Attempts to connect with limited retries.
+     * @param maxAttempts Total attempts (including the first one)
+     */
+    public boolean connectCardWithRetries(int maxAttempts) throws Exception {
+        Exception lastException = null;
+        
+        for (int attempt = 1; attempt <= Math.max(1, maxAttempts); attempt++) {
+            try {
+                if (attempt > 1) {
+                    LOGGER.info(String.format("Thử kết nối lại thẻ (%d/%d)...", attempt, maxAttempts));
+                }
+                boolean connected = performSingleConnectionAttempt();
+                if (connected) {
+                    return true;
+                }
+            } catch (Exception e) {
+                lastException = e;
+                cleanup();
+                
+                Level logLevel = (attempt == maxAttempts) ? Level.SEVERE : Level.WARNING;
+                LOGGER.log(logLevel, "Lỗi kết nối thẻ (lần " + attempt + "/" + maxAttempts + "): " + e.getMessage(), e);
+                
+                if (attempt == maxAttempts) {
+                    throw e;
+                }
+                
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    throw new Exception("Thread bị gián đoạn trong khi chờ kết nối lại", interruptedException);
                 }
             }
-            
-            // Get list of available terminals
-            List<CardTerminal> terminals = factory.terminals().list();
-            if (terminals.isEmpty()) {
-                throw new Exception("Không tìm thấy đầu đọc thẻ (Card terminal)!");
-            }
-            
-            System.out.println("Số lượng terminal tìm được: " + terminals.size());
-            
-            // Prefer a terminal that already has a card present
-            Optional<CardTerminal> withCard = terminals.stream()
-                .filter(t -> {
-                    try {
-                        return t.isCardPresent();
-                    } catch (CardException ex) {
-                        LOGGER.log(Level.WARNING, "Không thể kiểm tra trạng thái thẻ cho terminal " + t, ex);
-                        return false;
-                    }
-                })
-                .findFirst();
-            
-            terminal = withCard.orElse(terminals.get(0));
-            System.out.println("Kết nối tới: " + terminal.getName());
-            
-            // Try to connect with T=1 protocol first (Extended APDU support)
-            try {
-                card = terminal.connect("T=1");
-                System.out.println("Đã kết nối với protocol: T=1 (Hỗ trợ Extended APDU)");
-            } catch (CardException e) {
-                System.out.println("Cảnh báo: T=1 không được hỗ trợ, thử kết nối với * (T=0 có thể không hỗ trợ Extended APDU)");
-                card = terminal.connect("*");
-            }
-            
-            // Get basic channel
-            channel = card.getBasicChannel();
-            if (channel == null) {
-                throw new Exception("Không thể lấy basic channel!");
-            }
-            
-            // Select applet using AID
-            byte[] aid = hexStringToByteArray("11223344550300");
-            ResponseAPDU response = channel.transmit(new CommandAPDU(0x00, 0xA4, 0x04, 0x00, aid));
-            
-            System.out.println("SELECT Applet: " + String.format("%04X", response.getSW()));
-            
-            // Check if selection was successful
-            if (response.getSW() != 0x9000) {
-                channel = null;
-                card = null;
-                throw new Exception("SELECT Applet thất bại. SW: " + String.format("%04X", response.getSW()));
-            }
-            
-            System.out.println(">>> Kết nối thành công!");
-            return true;
-            
-        } catch (Exception e) {
-            // Clean up on failure
-            cleanup();
-            LOGGER.log(Level.SEVERE, "Lỗi kết nối thẻ: " + e.getMessage(), e);
-            throw e;
         }
+        
+        if (lastException != null) {
+            throw lastException;
+        }
+        throw new Exception("Không thể kết nối thẻ sau nhiều lần thử.");
+    }
+    
+    /**
+     * Thực hiện một lần kết nối (không retry).
+     */
+    private boolean performSingleConnectionAttempt() throws Exception {
+        // Initialize terminal factory
+        if (factory == null) {
+            factory = TerminalFactory.getDefault();
+            if (factory == null) {
+                throw new Exception("Terminal Factory mặc định trả về null");
+            }
+        }
+        
+        // Get list of available terminals
+        List<CardTerminal> terminals = factory.terminals().list();
+        if (terminals.isEmpty()) {
+            throw new Exception("Không tìm thấy đầu đọc thẻ (Card terminal)!");
+        }
+        
+        System.out.println("Số lượng terminal tìm được: " + terminals.size());
+        
+        // Prefer a terminal that already has a card present
+        Optional<CardTerminal> withCard = terminals.stream()
+            .filter(t -> {
+                try {
+                    return t.isCardPresent();
+                } catch (CardException ex) {
+                    LOGGER.log(Level.WARNING, "Không thể kiểm tra trạng thái thẻ cho terminal " + t, ex);
+                    return false;
+                }
+            })
+            .findFirst();
+        
+        terminal = withCard.orElse(terminals.get(0));
+        System.out.println("Kết nối tới: " + terminal.getName());
+        
+        // Try to connect with T=1 protocol first (Extended APDU support)
+        try {
+            card = terminal.connect("T=1");
+            System.out.println("Đã kết nối với protocol: T=1 (Hỗ trợ Extended APDU)");
+        } catch (CardException e) {
+            System.out.println("Cảnh báo: T=1 không được hỗ trợ, thử kết nối với * (T=0 có thể không hỗ trợ Extended APDU)");
+            card = terminal.connect("*");
+        }
+        
+        // Get basic channel
+        channel = card.getBasicChannel();
+        if (channel == null) {
+            throw new Exception("Không thể lấy basic channel!");
+        }
+        
+        // Select applet using AID
+        byte[] aid = hexStringToByteArray("11223344550300");
+        ResponseAPDU response = channel.transmit(new CommandAPDU(0x00, 0xA4, 0x04, 0x00, aid));
+        
+        System.out.println("SELECT Applet: " + String.format("%04X", response.getSW()));
+        
+        // Check if selection was successful
+        if (response.getSW() != 0x9000) {
+            channel = null;
+            card = null;
+            throw new Exception("SELECT Applet thất bại. SW: " + String.format("%04X", response.getSW()));
+        }
+        
+        System.out.println(">>> Kết nối thành công!");
+        return true;
     }
     
     /**
