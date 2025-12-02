@@ -78,26 +78,26 @@ public class PinLoginDialog extends JDialog {
         cardPanel.setBackground(CARD_BACKGROUND);
         cardPanel.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(new Color(220, 220, 220), 1, true),
-            new EmptyBorder(60, 80, 60, 80)
+            new EmptyBorder(40, 50, 40, 50)
         ));
         cardPanel.setOpaque(true);
         
         // Title section
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setOpaque(false);
-        titlePanel.setBorder(new EmptyBorder(0, 0, 50, 0));
+        titlePanel.setBorder(new EmptyBorder(0, 0, 30, 0));
         
         JLabel titleLabel = new JLabel("NHAP MA PIN");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 36));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(PRIMARY_COLOR);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         
         JLabel subtitleLabel = new JLabel("Vui long nhap ma PIN de truy cap he thong");
-        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         subtitleLabel.setForeground(new Color(120, 120, 120));
         subtitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        subtitleLabel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        subtitleLabel.setBorder(new EmptyBorder(10, 0, 0, 0));
         titlePanel.add(subtitleLabel, BorderLayout.SOUTH);
         
         cardPanel.add(titlePanel, BorderLayout.NORTH);
@@ -105,61 +105,70 @@ public class PinLoginDialog extends JDialog {
         // Center panel for PIN input - simplified layout
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setOpaque(false);
-        centerPanel.setBorder(new EmptyBorder(20, 0, 20, 0));
+        centerPanel.setBorder(new EmptyBorder(15, 0, 15, 0));
         
-        // PIN field - MUCH LARGER
+        // Wrapper panel để giới hạn kích thước PIN field
+        JPanel pinWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        pinWrapper.setOpaque(false);
+        
+        // PIN field - ĐÃ ĐIỀU CHỈNH KÍCH THƯỚC NHỎ LẠI
         pinField = new JPasswordField() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
             }
         };
-        pinField.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        // Giảm font size xuống 18
+        pinField.setFont(new Font("Segoe UI", Font.BOLD, 18)); 
         pinField.setHorizontalAlignment(JTextField.CENTER);
-        pinField.setPreferredSize(new Dimension(600, 90));
+        // Giảm kích thước xuống 250x45 và set cả maximumSize để không bị kéo dãn
+        pinField.setPreferredSize(new Dimension(250, 45));
+        pinField.setMaximumSize(new Dimension(250, 45));
+        pinField.setMinimumSize(new Dimension(250, 45));
         pinField.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(new Color(180, 180, 180), 3, true),
-            new EmptyBorder(20, 25, 20, 25)
+            new LineBorder(new Color(180, 180, 180), 1, true), // Viền mỏng hơn
+            new EmptyBorder(6, 10, 6, 10) // Giảm padding bên trong
         ));
         pinField.setEchoChar('●');
-        pinField.setMargin(new Insets(10, 10, 10, 10));
+        pinField.setMargin(new Insets(5, 5, 5, 5));
         pinField.addActionListener(e -> attemptLogin());
         pinField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
                 pinField.setBorder(BorderFactory.createCompoundBorder(
-                    new LineBorder(PRIMARY_COLOR, 4, true),
-                    new EmptyBorder(20, 25, 20, 25)
+                    new LineBorder(PRIMARY_COLOR, 2, true),
+                    new EmptyBorder(6, 10, 6, 10)
                 ));
             }
             
             @Override
             public void focusLost(FocusEvent e) {
                 pinField.setBorder(BorderFactory.createCompoundBorder(
-                    new LineBorder(new Color(180, 180, 180), 3, true),
-                    new EmptyBorder(20, 25, 20, 25)
+                    new LineBorder(new Color(180, 180, 180), 1, true),
+                    new EmptyBorder(6, 10, 6, 10)
                 ));
             }
         });
         
-        centerPanel.add(pinField, BorderLayout.CENTER);
+        pinWrapper.add(pinField);
+        centerPanel.add(pinWrapper, BorderLayout.CENTER);
         
         // Error label below PIN field
         errorLabel = new JLabel(" ");
-        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         errorLabel.setForeground(new Color(220, 53, 69));
         errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        errorLabel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        errorLabel.setBorder(new EmptyBorder(10, 0, 0, 0));
         centerPanel.add(errorLabel, BorderLayout.SOUTH);
         
         cardPanel.add(centerPanel, BorderLayout.CENTER);
         
         // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 25, 0));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         buttonPanel.setOpaque(false);
-        buttonPanel.setBorder(new EmptyBorder(40, 0, 0, 0));
+        buttonPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
         
-        // Login button with modern styling - larger
+        // Login button
         loginButton = new JButton("DANG NHAP") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -172,14 +181,14 @@ public class PinLoginDialog extends JDialog {
                 } else {
                     g2d.setColor(PRIMARY_COLOR);
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
                 g2d.dispose();
                 super.paintComponent(g);
             }
         };
-        loginButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        loginButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
         loginButton.setForeground(Color.WHITE);
-        loginButton.setPreferredSize(new Dimension(200, 60));
+        loginButton.setPreferredSize(new Dimension(160, 50));
         loginButton.setBorderPainted(false);
         loginButton.setContentAreaFilled(false);
         loginButton.setFocusPainted(false);
@@ -187,7 +196,7 @@ public class PinLoginDialog extends JDialog {
         loginButton.addActionListener(e -> attemptLogin());
         buttonPanel.add(loginButton);
         
-        // Cancel button with modern styling - larger
+        // Cancel button
         cancelButton = new JButton("THOAT") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -200,14 +209,14 @@ public class PinLoginDialog extends JDialog {
                 } else {
                     g2d.setColor(new Color(220, 220, 220));
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
                 g2d.dispose();
                 super.paintComponent(g);
             }
         };
-        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
         cancelButton.setForeground(new Color(60, 60, 60));
-        cancelButton.setPreferredSize(new Dimension(200, 60));
+        cancelButton.setPreferredSize(new Dimension(160, 50));
         cancelButton.setBorderPainted(false);
         cancelButton.setContentAreaFilled(false);
         cancelButton.setFocusPainted(false);
@@ -221,7 +230,6 @@ public class PinLoginDialog extends JDialog {
                 JOptionPane.QUESTION_MESSAGE
             );
             if (option == JOptionPane.YES_OPTION) {
-                // Do not exit app; just close dialog and return false
                 authenticated = false;
                 cardBlocked = false;
                 dispose();
@@ -232,15 +240,15 @@ public class PinLoginDialog extends JDialog {
         cardPanel.add(buttonPanel, BorderLayout.SOUTH);
         
         // Add card panel to main container with padding
-        mainContainer.setBorder(new EmptyBorder(50, 50, 50, 50));
+        mainContainer.setBorder(new EmptyBorder(30, 30, 30, 30));
         mainContainer.add(cardPanel, BorderLayout.CENTER);
         
         add(mainContainer);
     }
     
     private void setupDialog() {
-        // Set dialog size - MUCH LARGER
-        setSize(900, 700);
+        // Set dialog size - giảm kích thước cho cân đối với input nhỏ hơn
+        setSize(650, 550);
         setLocationRelativeTo(null);
         
         // Focus on PIN field
@@ -261,7 +269,6 @@ public class PinLoginDialog extends JDialog {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                // Close dialog without exiting app
                 authenticated = false;
                 cardBlocked = false;
                 dispose();
@@ -429,12 +436,6 @@ public class PinLoginDialog extends JDialog {
         return cardBlocked;
     }
     
-    /**
-     * Authenticate user after PIN verification
-     * Step 1: Get CardID from smart card using CardInfoManager
-     * Step 2: Get public key from database using CardID
-     * Step 3: Verify public key exists (consistency check)
-     */
     private void authenticateUserAfterLogin(javax.smartcardio.CardChannel channel) throws Exception {
         System.out.println("\n========== USER AUTHENTICATION AFTER LOGIN ==========");
         
@@ -466,12 +467,6 @@ public class PinLoginDialog extends JDialog {
         System.out.println("========== AUTHENTICATION COMPLETED SUCCESSFULLY ==========\n");
     }
     
-
-    
-    /**
-     * Query database to get card's public key
-     * Public key is stored as BLOB in Cards table
-     */
     private byte[] getCardPublicKeyFromDatabase(String cardId) throws Exception {
         String sql = "SELECT CardPublicKey FROM Cards WHERE CardID = ?";
         
@@ -495,21 +490,13 @@ public class PinLoginDialog extends JDialog {
         return null;
     }
     
-    /**
-     * Convert public key bytes (X.509 encoded) to PublicKey object
-     */
     private PublicKey bytesToPublicKey(byte[] pubKeyBytes) throws Exception {
-        // This assumes pubKeyBytes is in X.509 format
-        // If stored as raw RSA modulus/exponent, parse accordingly
-        
         try {
             java.security.spec.X509EncodedKeySpec keySpec = 
                 new java.security.spec.X509EncodedKeySpec(pubKeyBytes);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             return keyFactory.generatePublic(keySpec);
         } catch (Exception e) {
-            // If X.509 format fails, try parsing as raw RSA key (modulus only, assume exponent 65537)
-            // Assume first 128 bytes are the modulus
             if (pubKeyBytes.length >= 128) {
                 BigInteger modulus = new BigInteger(1, Arrays.copyOfRange(pubKeyBytes, 0, 128));
                 BigInteger exponent = BigInteger.valueOf(65537);
@@ -525,7 +512,6 @@ public class PinLoginDialog extends JDialog {
             throw e;
         }
     }
-    
     
     public enum LoginResult {
         SUCCESS,
@@ -561,4 +547,3 @@ public class PinLoginDialog extends JDialog {
         return LoginResult.CANCELLED;
     }
 }
-
