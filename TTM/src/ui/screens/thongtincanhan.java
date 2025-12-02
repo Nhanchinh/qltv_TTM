@@ -7,11 +7,13 @@ package ui.screens;
 import services.CardService;
 import ui.DBConnect;
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import smartcard.CardConnectionManager;
+import smartcard.CardKeyManager;
+import smartcard.CardInfoManager;
 
 /**
  *
@@ -21,6 +23,7 @@ public class thongtincanhan extends javax.swing.JPanel {
     
     private CardService cardService;
     private String currentCardId = "CARD001";
+    private boolean isEditing = false;
 
     /**
      * Creates new form PersonalInfoPanel
@@ -35,19 +38,75 @@ public class thongtincanhan extends javax.swing.JPanel {
      * Load card information from database
      */
     private void loadCardInfo() {
-        // Recalculate TotalSpent from history to ensure accuracy
-        cardService.recalculateTotalSpent(currentCardId);
+        // 1. Thử lấy thông tin trực tiếp từ thẻ (giống AdminPanel -> CardInfoManager)
+        String cardIdFromCard = null;
+        CardInfoManager.UserInfo userInfoFromCard = null;
         
-        CardService.Card card = cardService.getCardById(currentCardId);
-        if (card != null) {
+        try {
+            CardConnectionManager connManager = new CardConnectionManager();
+            connManager.connectCard();
+            try {
+                CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
+                keyManager.getPublicKey();
+                
+                // Load app keypair từ file (đã tạo khi admin thêm thẻ)
+                if (!keyManager.loadAppKeyPair()) {
+                    throw new Exception("Không tìm thấy App KeyPair. Vui lòng thêm thẻ mới trước.");
+                }
+                
+                CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
+                userInfoFromCard = infoManager.getInfo();
+                if (userInfoFromCard != null && userInfoFromCard.cardId != null && !userInfoFromCard.cardId.isEmpty()) {
+                    cardIdFromCard = userInfoFromCard.cardId;
+                    currentCardId = cardIdFromCard; // Đồng bộ CardID hiện tại với thẻ
+                }
+            } finally {
+                connManager.disconnectCard();
+            }
+        } catch (Exception e) {
+            System.err.println("Không thể lấy thông tin từ thẻ, sẽ dùng dữ liệu DB. Lỗi: " + e.getMessage());
+        }
+        
+        // 2. Lấy thông tin từ DB theo CardID (ưu tiên CardID đọc từ thẻ nếu có)
+        if (currentCardId != null && !currentCardId.isEmpty()) {
+            // Recalculate TotalSpent from history to ensure accuracy
+            cardService.recalculateTotalSpent(currentCardId);
+        }
+        
+        CardService.Card card = (currentCardId != null) ? cardService.getCardById(currentCardId) : null;
+        
+        if (userInfoFromCard != null) {
+            // Hiển thị THÔNG TIN CƠ BẢN theo đúng dữ liệu trên thẻ
+            cardIdField.setText(userInfoFromCard.cardId);
+            nameField.setText(userInfoFromCard.name);
+            phoneField.setText(userInfoFromCard.phone);
+            addressField.setText(userInfoFromCard.address != null ? userInfoFromCard.address : "");
+            
+            // DOB trên thẻ dạng DDMMYYYY -> hiển thị DD/MM/YYYY
+            if (userInfoFromCard.dob != null && userInfoFromCard.dob.length() == 8) {
+                String dob = userInfoFromCard.dob;
+                dobField.setText(dob.substring(0, 2) + "/" + dob.substring(2, 4) + "/" + dob.substring(4));
+            } else {
+                dobField.setText(userInfoFromCard.dob != null ? userInfoFromCard.dob : "");
+            }
+            
+            // Ngày đăng ký trên thẻ dạng DDMMYYYY
+            if (userInfoFromCard.regDate != null && userInfoFromCard.regDate.length() == 8) {
+                String reg = userInfoFromCard.regDate;
+                registerDateField.setText(reg.substring(0, 2) + "/" + reg.substring(2, 4) + "/" + reg.substring(4));
+            } else {
+                registerDateField.setText(userInfoFromCard.regDate != null ? userInfoFromCard.regDate : "");
+            }
+        } else if (card != null) {
+            // Fallback: chỉ có dữ liệu DB
             cardIdField.setText(card.cardId);
             nameField.setText(card.fullName);
             phoneField.setText(card.phone);
+            addressField.setText(card.address != null ? card.address : "");
             
-            // Format date if exists
+            // DOB từ DB (YYYY-MM-DD -> DD/MM/YYYY)
             if (card.dob != null && !card.dob.isEmpty()) {
                 try {
-                    // Parse date from database format (YYYY-MM-DD) to DD/MM/YYYY
                     if (card.dob.contains("-")) {
                         String[] parts = card.dob.split("-");
                         if (parts.length == 3) {
@@ -67,7 +126,6 @@ public class thongtincanhan extends javax.swing.JPanel {
             
             if (card.registerDate != null && !card.registerDate.isEmpty()) {
                 try {
-                    // Parse date from database format
                     if (card.registerDate.contains("-")) {
                         String[] parts = card.registerDate.split("-");
                         if (parts.length == 3) {
@@ -84,22 +142,31 @@ public class thongtincanhan extends javax.swing.JPanel {
             } else {
                 registerDateField.setText("");
             }
-            
-            // Member info - Calculate TotalSpent from history to ensure accuracy
-            double actualTotalSpent = cardService.calculateTotalSpentFromHistory(currentCardId);
+        } else {
+            // Không có dữ liệu nào
+            cardIdField.setText(currentCardId != null ? currentCardId : "");
+            nameField.setText("");
+            phoneField.setText("");
+            addressField.setText("");
+            dobField.setText("");
+            registerDateField.setText("");
+        }
+        
+        // Sau khi load xong, luôn về trạng thái chỉ xem
+        setFieldsEditable(false);
+        isEditing = false;
+        saveButton.setEnabled(false);
+        
+        // 3. Thông tin hội viên (luôn lấy từ DB, vì chỉ DB có tổng chi, điểm, nợ phạt,...)
+        if (card != null) {
+            double actualTotalSpent = cardService.calculateTotalSpentFromHistory(card.cardId);
             memberTypeField.setText(card.memberType != null ? card.memberType : "Basic");
             NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
             totalSpentField.setText(nf.format(actualTotalSpent) + " đ");
             totalPointsField.setText(nf.format(card.totalPoints) + " điểm");
             fineDebtField.setText(nf.format(card.fineDebt) + " đ");
-            isBlockedField.setText(card.isBlocked ? "Bi khoa" : "Hoat dong");
+            isBlockedField.setText(card.isBlocked ? "Bị khóa" : "Hoạt động");
         } else {
-            // Set default values if card not found
-            cardIdField.setText(currentCardId);
-            nameField.setText("");
-            phoneField.setText("");
-            dobField.setText("");
-            registerDateField.setText("");
             memberTypeField.setText("Basic");
             totalSpentField.setText("0 đ");
             totalPointsField.setText("0 điểm");
@@ -113,6 +180,19 @@ public class thongtincanhan extends javax.swing.JPanel {
      */
     public void reloadCardInfo() {
         loadCardInfo();
+    }
+    
+    private void setFieldsEditable(boolean editable) {
+        nameField.setEditable(editable);
+        phoneField.setEditable(editable);
+        addressField.setEditable(editable);
+        dobField.setEditable(editable);
+        
+        // Khi không ở chế độ chỉnh sửa thì cũng không cho focus để tránh hiện con trỏ nháy
+        nameField.setFocusable(editable);
+        phoneField.setFocusable(editable);
+        addressField.setFocusable(editable);
+        dobField.setFocusable(editable);
     }
 
     /**
@@ -132,6 +212,8 @@ public class thongtincanhan extends javax.swing.JPanel {
         nameField = new javax.swing.JTextField();
         phoneLabel = new javax.swing.JLabel();
         phoneField = new javax.swing.JTextField();
+        addressLabel = new javax.swing.JLabel();
+        addressField = new javax.swing.JTextField();
         dobLabel = new javax.swing.JLabel();
         dobField = new javax.swing.JTextField();
         registerDateLabel = new javax.swing.JLabel();
@@ -179,6 +261,10 @@ public class thongtincanhan extends javax.swing.JPanel {
         phoneLabel.setForeground(new java.awt.Color(60, 60, 60));
         phoneLabel.setText("Số điện thoại:");
 
+        addressLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        addressLabel.setForeground(new java.awt.Color(60, 60, 60));
+        addressLabel.setText("Địa chỉ:");
+
         dobLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         dobLabel.setForeground(new java.awt.Color(60, 60, 60));
         dobLabel.setText("Ngày sinh:");
@@ -216,6 +302,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         ));
         cardIdField.setColumns(30);
         cardIdField.setEditable(false);
+        cardIdField.setFocusable(false);
 
         nameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         nameField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
@@ -223,13 +310,26 @@ public class thongtincanhan extends javax.swing.JPanel {
             javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
         ));
         nameField.setColumns(30);
+        nameField.setEditable(false);
+        nameField.setFocusable(false);
 
         phoneField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         phoneField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+        javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
         ));
         phoneField.setColumns(30);
+        phoneField.setEditable(false);
+        phoneField.setFocusable(false);
+
+        addressField.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        addressField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+        javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+        javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        addressField.setColumns(30);
+        addressField.setEditable(false);
+        addressField.setFocusable(false);
 
         dobField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         dobField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
@@ -237,6 +337,8 @@ public class thongtincanhan extends javax.swing.JPanel {
             javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
         ));
         dobField.setColumns(30);
+        dobField.setEditable(false);
+        dobField.setFocusable(false);
 
         registerDateField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         registerDateField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
@@ -288,17 +390,34 @@ public class thongtincanhan extends javax.swing.JPanel {
         isBlockedField.setEditable(false);
 
         // Thiết lập button
+        editButton = new javax.swing.JButton();
+        saveButton = new javax.swing.JButton();
+
+        // Nút chỉnh sửa
+        editButton.setBackground(new java.awt.Color(108, 117, 125));
+        editButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        editButton.setForeground(new java.awt.Color(255, 255, 255));
+        editButton.setText("✏️ Chỉnh sửa");
+        editButton.setBorderPainted(false);
+        editButton.setFocusPainted(false);
+        editButton.setPreferredSize(new java.awt.Dimension(140, 40));
+        editButton.addActionListener(this::editButtonActionPerformed);
+
+        // Nút lưu
         saveButton.setBackground(new java.awt.Color(0, 120, 215));
         saveButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
         saveButton.setForeground(new java.awt.Color(255, 255, 255));
         saveButton.setText("💾 Lưu thông tin");
         saveButton.setBorderPainted(false);
         saveButton.setFocusPainted(false);
-        saveButton.setPreferredSize(new java.awt.Dimension(0, 40));
+        saveButton.setPreferredSize(new java.awt.Dimension(160, 40));
+        saveButton.setEnabled(false);
         saveButton.addActionListener(this::saveButtonActionPerformed);
         saveButton.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                saveButton.setBackground(new java.awt.Color(0, 100, 180));
+                if (saveButton.isEnabled()) {
+                    saveButton.setBackground(new java.awt.Color(0, 100, 180));
+                }
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 saveButton.setBackground(new java.awt.Color(0, 120, 215));
@@ -330,6 +449,7 @@ public class thongtincanhan extends javax.swing.JPanel {
                     .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(nameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(phoneLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(addressLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(dobLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(registerDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, 10)
@@ -337,6 +457,7 @@ public class thongtincanhan extends javax.swing.JPanel {
                     .addComponent(cardIdField)
                     .addComponent(nameField)
                     .addComponent(phoneField)
+                    .addComponent(addressField)
                     .addComponent(dobField)
                     .addComponent(registerDateField))
                 .addContainerGap())
@@ -357,6 +478,10 @@ public class thongtincanhan extends javax.swing.JPanel {
                 .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(phoneLabel)
                     .addComponent(phoneField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(addressLabel)
+                    .addComponent(addressField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(dobLabel)
@@ -459,18 +584,31 @@ public class thongtincanhan extends javax.swing.JPanel {
         javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
         buttonPanel.setBackground(new java.awt.Color(245, 245, 250));
         buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 0, 10, 0));
-        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER));
+        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 15, 0));
+        editButton.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
         saveButton.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
+        buttonPanel.add(editButton);
         buttonPanel.add(saveButton);
         contentPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
         
         add(contentPanel, java.awt.BorderLayout.CENTER);
     }
 
+    private void editButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        isEditing = !isEditing;
+        setFieldsEditable(isEditing);
+        saveButton.setEnabled(isEditing);
+        if (!isEditing) {
+            // Hủy chỉnh sửa -> reload lại dữ liệu từ DB/thẻ
+            loadCardInfo();
+        }
+    }
+
     private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
         String name = nameField.getText().trim();
         String phone = phoneField.getText().trim();
         String dob = dobField.getText().trim();
+        String address = addressField.getText().trim();
         
         // Validate
         if (name.isEmpty()) {
@@ -489,6 +627,14 @@ public class thongtincanhan extends javax.swing.JPanel {
             return;
         }
         
+        if (address.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(this, 
+                "Vui long nhap dia chi!",
+                "Loi",
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
         // Update to database
         try {
             Connection dbConn = DBConnect.getConnection();
@@ -502,12 +648,13 @@ public class thongtincanhan extends javax.swing.JPanel {
                     }
                 }
                 
-                String sql = "UPDATE Cards SET FullName = ?, Phone = ?, DOB = ? WHERE CardID = ?";
+                String sql = "UPDATE Cards SET FullName = ?, Phone = ?, Address = ?, DOB = ? WHERE CardID = ?";
                 try (PreparedStatement pstmt = dbConn.prepareStatement(sql)) {
                     pstmt.setString(1, name);
                     pstmt.setString(2, phone);
-                    pstmt.setString(3, dobFormatted.isEmpty() ? null : dobFormatted);
-                    pstmt.setString(4, currentCardId);
+                    pstmt.setString(3, address);
+                    pstmt.setString(4, dobFormatted.isEmpty() ? null : dobFormatted);
+                    pstmt.setString(5, currentCardId);
                     
                     if (pstmt.executeUpdate() > 0) {
                         javax.swing.JOptionPane.showMessageDialog(this, 
@@ -547,6 +694,8 @@ public class thongtincanhan extends javax.swing.JPanel {
     private javax.swing.JTextField nameField;
     private javax.swing.JLabel phoneLabel;
     private javax.swing.JTextField phoneField;
+    private javax.swing.JLabel addressLabel;
+    private javax.swing.JTextField addressField;
     private javax.swing.JLabel dobLabel;
     private javax.swing.JTextField dobField;
     private javax.swing.JLabel registerDateLabel;
@@ -562,6 +711,7 @@ public class thongtincanhan extends javax.swing.JPanel {
     private javax.swing.JTextField fineDebtField;
     private javax.swing.JLabel isBlockedLabel;
     private javax.swing.JTextField isBlockedField;
+    private javax.swing.JButton editButton;
     private javax.swing.JButton saveButton;
 }
 

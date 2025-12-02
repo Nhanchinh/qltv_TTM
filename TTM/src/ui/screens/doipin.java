@@ -3,14 +3,6 @@ package ui.screens;
 import smartcard.CardConnectionManager;
 import smartcard.CardVerifyManager;
 import smartcard.CardSetupManager;
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.smartcardio.CardChannel;
-import javax.smartcardio.CommandAPDU;
-import javax.smartcardio.ResponseAPDU;
-import java.security.PublicKey;
 
 /**
  * Screen for changing user PIN
@@ -18,13 +10,8 @@ import java.security.PublicKey;
  * Communicates with smart card to change PIN
  */
 public class doipin extends javax.swing.JPanel {
-    
-    private static final byte INS_CHANGE_PIN = (byte) 0x25;
-    private static final byte CLA = 0x00;
-    
+
     private CardConnectionManager connManager;
-    private PublicKey cardPublicKey;
-    private CardChannel channel;
 
     /**
      * Creates new form ChangePinPanel
@@ -76,7 +63,7 @@ public class doipin extends javax.swing.JPanel {
         // Title
         titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
         titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Doi ma PIN");
+        titleLabel.setText("Đổi mã PIN");
         titleLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 10, 40));
         add(titleLabel, java.awt.BorderLayout.NORTH);
 
@@ -87,7 +74,7 @@ public class doipin extends javax.swing.JPanel {
         // ============ LEFT PANEL - INSTRUCTION ============
         instructionPanel.setBackground(new java.awt.Color(255, 255, 255));
         instructionPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Huong dan",
+        javax.swing.BorderFactory.createTitledBorder(null, "Hướng dẫn",
                 javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
                 javax.swing.border.TitledBorder.DEFAULT_POSITION,
                 new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
@@ -97,20 +84,20 @@ public class doipin extends javax.swing.JPanel {
 
         instructionTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
         instructionTitle.setForeground(new java.awt.Color(0, 120, 215));
-        instructionTitle.setText("Cach thay doi ma PIN");
+        instructionTitle.setText("Cách thay đổi mã PIN");
         instructionPanel.add(instructionTitle, java.awt.BorderLayout.NORTH);
 
         instructionText.setEditable(false);
         instructionText.setLineWrap(true);
         instructionText.setWrapStyleWord(true);
-        instructionText.setText("1. Hay nhap ma PIN cu cua ban\n\n" +
-                                "2. Nhap ma PIN moi (6 ky tu)\n\n" +
-                                "3. Xac nhan lai ma PIN moi\n\n" +
-                                "4. Nhan nut 'Doi PIN'\n\n" +
-                                "Luu y:\n" +
-                                "- Ma PIN phai co dung 6 ky tu\n" +
-                                "- Ma PIN moi phai khac ma PIN cu\n" +
-                                "- Hay bao quan ma PIN cua ban");
+        instructionText.setText("1. Hãy nhập mã PIN cũ của bạn\n\n" +
+                                "2. Nhập mã PIN mới (6 ký tự)\n\n" +
+                                "3. Xác nhận lại mã PIN mới\n\n" +
+                                "4. Nhấn nút 'Đổi PIN'\n\n" +
+                                "Lưu ý:\n" +
+                                "- Mã PIN phải có đúng 6 ký tự\n" +
+                                "- Mã PIN mới phải khác mã PIN cũ\n" +
+                                "- Hãy bảo quản mã PIN của bạn");
         instructionText.setFont(new java.awt.Font("Segoe UI", 0, 12));
         instructionText.setForeground(new java.awt.Color(100, 100, 100));
         instructionText.setBorder(null);
@@ -122,7 +109,7 @@ public class doipin extends javax.swing.JPanel {
         // ============ RIGHT PANEL - FORM ============
         formPanel.setBackground(new java.awt.Color(255, 255, 255));
         formPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Form doi PIN",
+        javax.swing.BorderFactory.createTitledBorder(null, "Form đổi PIN",
                 javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
                 javax.swing.border.TitledBorder.DEFAULT_POSITION,
                 new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
@@ -131,7 +118,7 @@ public class doipin extends javax.swing.JPanel {
 
         formTitle.setFont(new java.awt.Font("Segoe UI", 1, 18));
         formTitle.setForeground(new java.awt.Color(0, 120, 215));
-        formTitle.setText("Nhap thong tin");
+        formTitle.setText("Nhập thông tin");
 
         // Create form fields layout
         javax.swing.JPanel formFieldsPanel = new javax.swing.JPanel();
@@ -139,17 +126,17 @@ public class doipin extends javax.swing.JPanel {
         formFieldsPanel.setLayout(formLayout);
         formFieldsPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        oldPinLabel.setText("Ma PIN cu:");
+        oldPinLabel.setText("Mã PIN cũ:");
         oldPinLabel.setFont(new java.awt.Font("Segoe UI", 0, 13));
 
         oldPinField.setFont(new java.awt.Font("Segoe UI", 0, 13));
 
-        newPinLabel.setText("Ma PIN moi:");
+        newPinLabel.setText("Mã PIN mới:");
         newPinLabel.setFont(new java.awt.Font("Segoe UI", 0, 13));
 
         newPinField.setFont(new java.awt.Font("Segoe UI", 0, 13));
 
-        confirmPinLabel.setText("Xac nhan PIN moi:");
+        confirmPinLabel.setText("Xác nhận PIN mới:");
         confirmPinLabel.setFont(new java.awt.Font("Segoe UI", 0, 13));
 
         confirmPinField.setFont(new java.awt.Font("Segoe UI", 0, 13));
@@ -203,7 +190,7 @@ public class doipin extends javax.swing.JPanel {
         buttonPanel.setBackground(new java.awt.Color(255, 255, 255));
         buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 15, 0));
 
-        changeButton.setText("Doi PIN");
+        changeButton.setText("Đổi PIN");
         changeButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
         changeButton.setBackground(new java.awt.Color(0, 120, 215));
         changeButton.setForeground(java.awt.Color.WHITE);
@@ -213,7 +200,7 @@ public class doipin extends javax.swing.JPanel {
         changeButton.addActionListener(this::changeButtonActionPerformed);
         buttonPanel.add(changeButton);
 
-        cancelButton.setText("Xoa");
+        cancelButton.setText("Xóa");
         cancelButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
         cancelButton.setBackground(new java.awt.Color(108, 117, 125));
         cancelButton.setForeground(java.awt.Color.WHITE);
@@ -239,17 +226,17 @@ public class doipin extends javax.swing.JPanel {
 
         // Validation
         if (oldPin.isEmpty() || newPin.isEmpty() || confirmPin.isEmpty()) {
-            setStatus("Vui long nhap day du thong tin!", false);
+            setStatus("Vui lòng nhập đầy đủ thông tin!", false);
             return;
         }
 
         if (oldPin.length() != 6 || newPin.length() != 6) {
-            setStatus("Ma PIN phai co dung 6 ky tu!", false);
+            setStatus("Mã PIN phải có đúng 6 ký tự!", false);
             return;
         }
 
         if (!newPin.equals(confirmPin)) {
-            setStatus("Ma PIN xac nhan khong khop!", false);
+            setStatus("Mã PIN xác nhận không khớp!", false);
             newPinField.setText("");
             confirmPinField.setText("");
             newPinField.requestFocus();
@@ -257,13 +244,13 @@ public class doipin extends javax.swing.JPanel {
         }
 
         if (oldPin.equals(newPin)) {
-            setStatus("Ma PIN moi phai khac ma PIN cu!", false);
+            setStatus("Mã PIN mới phải khác mã PIN cũ!", false);
             return;
         }
 
         // Disable button and show loading
         changeButton.setEnabled(false);
-        setStatus("Dang ket noi the...", true);
+        setStatus("Đang kết nối thẻ...", true);
 
         // Change PIN in background thread
         new Thread(() -> {
@@ -274,22 +261,18 @@ public class doipin extends javax.swing.JPanel {
                 connManager.connectCard();
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    setStatus("Dang xac thuc PIN cu...", true);
+                    setStatus("Đang xác thực PIN cũ...", true);
                 });
 
                 // Get card setup manager
                 CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
-                
-                // Load card public key
+                // Lấy public key (giống các luồng khác, nhưng dùng cho changePin PLAINTEXT)
                 if (!setupManager.getPublicKey()) {
                     throw new Exception("Failed to get card public key");
                 }
 
-                this.channel = connManager.getChannel();
-                this.cardPublicKey = setupManager.getKeyManager().getCardPublicKey();
-
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    setStatus("Dang xac thuc PIN cu...", true);
+                    setStatus("Đang xác thực PIN cũ...", true);
                 });
 
                 // Step 1: Verify old PIN first
@@ -301,15 +284,11 @@ public class doipin extends javax.swing.JPanel {
                 }
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    setStatus("Dang thay doi ma PIN...", true);
+                    setStatus("Đang thay đổi mã PIN...", true);
                 });
 
-                // Step 2: Send change PIN command (old PIN + new PIN)
-                byte[] payload = new byte[12];
-                System.arraycopy(oldPin.getBytes(), 0, payload, 0, 6);
-                System.arraycopy(newPin.getBytes(), 0, payload, 6, 6);
-
-                sendSecureCommand(INS_CHANGE_PIN, payload);
+                // Step 2: Gửi lệnh đổi PIN dạng PLAINTEXT thông qua CardSetupManager
+                setupManager.changePin(oldPin, newPin);
                 
                 System.out.println("PIN change command sent. Reconnecting to verify...");
                 
@@ -317,7 +296,7 @@ public class doipin extends javax.swing.JPanel {
                 connManager.disconnectCard();
                 
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    setStatus("Dang xac thuc PIN moi...", true);
+                    setStatus("Đang xác thực PIN mới...", true);
                 });
                 
                 Thread.sleep(500); // Wait a bit for card to settle
@@ -336,7 +315,7 @@ public class doipin extends javax.swing.JPanel {
                 System.out.println("New PIN verified successfully!");
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    setStatus("Thay doi ma PIN thanh cong!", true);
+                    setStatus("Thay đổi mã PIN thành công!", true);
                     
                     // Clear fields
                     oldPinField.setText("");
@@ -354,7 +333,7 @@ public class doipin extends javax.swing.JPanel {
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     String errorMsg = ex.getMessage();
                     if ("CARD_BLOCKED".equals(errorMsg)) {
-                        setStatus("The da bi khoa!", false);
+                        setStatus("Thẻ đã bị khóa!", false);
                     } else {
                         setStatus("Loi: " + (errorMsg != null ? errorMsg : ex.getClass().getSimpleName()), false);
                     }
@@ -382,59 +361,6 @@ public class doipin extends javax.swing.JPanel {
         confirmPinField.setText("");
         statusLabel.setText(" ");
         oldPinField.requestFocus();
-    }
-
-    /**
-     * Send secure command to smart card
-     * Using hybrid encryption: RSA for session key, AES for data
-     */
-    private void sendSecureCommand(byte ins, byte[] rawData) throws Exception {
-        if (channel == null || cardPublicKey == null) {
-            throw new Exception("Card not connected or public key not loaded");
-        }
-
-        // Generate AES session key
-        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(128);
-        SecretKey sessionKey = keyGen.generateKey();
-
-        // Encrypt session key with RSA
-        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        rsaCipher.init(Cipher.ENCRYPT_MODE, cardPublicKey);
-        byte[] encryptedSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
-
-        // Pad data to multiple of 16 bytes
-        int blockSize = 16;
-        int paddedLength = ((rawData.length / blockSize) + 1) * blockSize;
-        if (rawData.length % blockSize == 0 && rawData.length > 0) {
-            paddedLength = rawData.length;
-        } else if (rawData.length == 0) {
-            paddedLength = 16;
-        }
-
-        byte[] paddedData = new byte[paddedLength];
-        System.arraycopy(rawData, 0, paddedData, 0, rawData.length);
-
-        // Encrypt data with AES
-        IvParameterSpec ivSpec = new IvParameterSpec(new byte[16]);
-        Cipher aesCipher = Cipher.getInstance("AES/CBC/NoPadding");
-        aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey, ivSpec);
-        byte[] encryptedData = aesCipher.doFinal(paddedData);
-
-        // Build APDU: [encrypted session key][encrypted data]
-        byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
-        System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
-        System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
-
-        System.out.println("Sending Secure CMD (INS: " + String.format("0x%02X", ins) + ")...");
-        ResponseAPDU response = channel.transmit(new CommandAPDU(CLA, ins, 0x00, 0x00, apduData));
-
-        System.out.println("Response SW: " + String.format("0x%04X", response.getSW()));
-        if (response.getSW() != 0x9000) {
-            throw new Exception("Change PIN failed (SW: " + String.format("0x%04X", response.getSW()) + ")");
-        }
-
-        System.out.println(">>> SUCCESS");
     }
 
     /**

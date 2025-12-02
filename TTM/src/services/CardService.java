@@ -9,6 +9,7 @@ public class CardService {
         public String cardId;
         public String fullName;
         public String phone;
+        public String address;
         public String dob;
         public String registerDate;
         public String memberType;
@@ -17,11 +18,12 @@ public class CardService {
         public double fineDebt;
         public boolean isBlocked;
         
-        public Card(String cardId, String fullName, String phone, String dob, String registerDate,
+        public Card(String cardId, String fullName, String phone, String address, String dob, String registerDate,
                    String memberType, double totalSpent, int totalPoints, double fineDebt, boolean isBlocked) {
             this.cardId = cardId;
             this.fullName = fullName;
             this.phone = phone;
+            this.address = address;
             this.dob = dob;
             this.registerDate = registerDate;
             this.memberType = memberType;
@@ -43,6 +45,7 @@ public class CardService {
                         rs.getString("CardID"),
                         rs.getString("FullName"),
                         rs.getString("Phone"),
+                        rs.getString("Address"),
                         rs.getString("DOB"),
                         rs.getString("RegisterDate"),
                         rs.getString("MemberType"),

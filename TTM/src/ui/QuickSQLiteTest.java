@@ -19,6 +19,7 @@ public class QuickSQLiteTest {
                 System.out.println("CardID: " + rs.getString("CardID"));
                 System.out.println("  FullName: " + rs.getString("FullName"));
                 System.out.println("  Phone: " + rs.getString("Phone"));
+                System.out.println("  Address: " + rs.getString("Address"));
                 System.out.println("  DOB: " + rs.getString("DOB"));
                 System.out.println("  RegisterDate: " + rs.getString("RegisterDate"));
                 System.out.println("  MemberType: " + rs.getString("MemberType"));

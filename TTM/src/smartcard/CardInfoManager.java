@@ -1,11 +1,8 @@
 package smartcard;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
 import javax.smartcardio.CardChannel;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.security.KeyPair;
 import java.util.Arrays;
 
 /**
@@ -21,9 +18,9 @@ public class CardInfoManager {
     private static final byte INS_GET_INFO = (byte) 0x30;
     private static final byte CLA = 0x00;
     
-    // Expected response sizes
-    private static final int RSA_BLOCK_SIZE = 128;    // RSA-1024
-    private static final int EXPECTED_RESPONSE_SIZE = 200; // Le (expected length)
+    // Expected plaintext response size (match BookstoreClientTest.getInfo)
+    // Structure on card: [CardID 16][Name 64][DOB 16][Phone 16][Address 64][RegDate 16] = 192 bytes
+    private static final int EXPECTED_RESPONSE_SIZE = 192;
     
     public CardInfoManager(CardChannel channel, CardKeyManager keyManager) {
         this.channel = channel;
@@ -31,17 +28,13 @@ public class CardInfoManager {
     }
     
     /**
-     * Retrieve and decrypt user information from card
-     * Response format: [128 bytes RSA encrypted session key][AES encrypted data]
-     * Data: [CardID 16][Name 64][DOB 16][RegDate 16] = 112 bytes
+     * Retrieve user information from card (PLAINTEXT)
+     * Data format (plaintext, not encrypted):
+     * [CardID 16][Name 64][DOB 16][Phone 16][Address 64][RegDate 16] = 192 bytes
      */
     public UserInfo getInfo() throws Exception {
-        if (!keyManager.hasAppKeyPair()) {
-            throw new Exception("App KeyPair not available. Call getPublicKey() first.");
-        }
-        
         try {
-            // Send GET_INFO command
+            // Send GET_INFO command (PLAINTEXT), giống BookstoreClientTest.getInfo()
             ResponseAPDU response = channel.transmit(
                 new CommandAPDU(CLA, INS_GET_INFO, 0x00, 0x00, EXPECTED_RESPONSE_SIZE)
             );
@@ -50,38 +43,15 @@ public class CardInfoManager {
                 throw new Exception("Get Info failed: " + String.format("0x%04X", response.getSW()));
             }
             
-            byte[] encData = response.getData();
-            System.out.println("Received encrypted data length: " + encData.length);
+            byte[] plainData = response.getData();
+            System.out.println("Received data length: " + plainData.length);
             
-            if (encData.length < RSA_BLOCK_SIZE) {
-                throw new Exception("Invalid response: data too short");
+            if (plainData.length < EXPECTED_RESPONSE_SIZE) {
+                throw new Exception("Invalid response: data too short. Expected at least " 
+                                    + EXPECTED_RESPONSE_SIZE + " bytes, got " + plainData.length);
             }
             
-            // Step 1: Extract RSA encrypted session key (first 128 bytes)
-            byte[] encSessionKey = new byte[RSA_BLOCK_SIZE];
-            System.arraycopy(encData, 0, encSessionKey, 0, RSA_BLOCK_SIZE);
-            
-            // Step 2: Decrypt session key with app's private key
-            KeyPair appKeyPair = keyManager.getAppKeyPair();
-            byte[] sessionKeyBytes = CryptoUtils.decryptSessionKeyWithRSA(
-                encSessionKey, 
-                appKeyPair.getPrivate()
-            );
-            
-            System.out.println("Session key decrypted, length: " + sessionKeyBytes.length);
-            
-            // Step 3: Extract AES encrypted data (remaining bytes)
-            int aesDataLen = encData.length - RSA_BLOCK_SIZE;
-            byte[] aesEncData = new byte[aesDataLen];
-            System.arraycopy(encData, RSA_BLOCK_SIZE, aesEncData, 0, aesDataLen);
-            
-            // Step 4: Decrypt AES data with session key
-            SecretKey sessionKey = CryptoUtils.createAESKeyFromBytes(sessionKeyBytes);
-            byte[] plainData = CryptoUtils.decryptDataWithAES(aesEncData, sessionKey);
-            
-            System.out.println("Data decrypted, length: " + plainData.length);
-            
-            // Step 5: Parse plaintext
+            // Parse plaintext data
             UserInfo userInfo = parseUserData(plainData);
             System.out.println(">>> User info retrieved successfully");
             
@@ -93,8 +63,9 @@ public class CardInfoManager {
     }
     
     /**
-     * Parse user data from decrypted plaintext
-     * Format: [CardID 16][Name 64][DOB 16][RegDate 16]
+     * Parse user data from plaintext
+     * Full format from card: 
+     * [CardID 16][Name 64][DOB 16][Phone 16][Address 64][RegDate 16] = 192 bytes
      */
     private UserInfo parseUserData(byte[] plainData) {
         int offset = 0;
@@ -111,10 +82,18 @@ public class CardInfoManager {
         String dob = extractString(plainData, offset, 16);
         offset += 16;
         
-        // Extract RegDate (16 bytes) - format: DDMMYYYY
+        // Extract Phone (16 bytes)
+        String phone = extractString(plainData, offset, 16);
+        offset += 16;
+        
+        // Extract Address (64 bytes)
+        String address = extractString(plainData, offset, 64);
+        offset += 64;
+        
+        // Extract RegDate (16 bytes) - format: DDMMYYYY (cuối cùng)
         String regDate = extractString(plainData, offset, 16);
         
-        return new UserInfo(cardId, name, dob, regDate);
+        return new UserInfo(cardId, name, dob, phone, address, regDate);
     }
     
     /**
@@ -132,20 +111,29 @@ public class CardInfoManager {
         public final String cardId;
         public final String name;
         public final String dob;      // DDMMYYYY format
+        public final String phone;
+        public final String address;
         public final String regDate;  // DDMMYYYY format
         
-        public UserInfo(String cardId, String name, String dob, String regDate) {
+        public UserInfo(String cardId, String name, String dob, String phone, String address, String regDate) {
             this.cardId = cardId;
             this.name = name;
             this.dob = dob;
+            this.phone = phone;
+            this.address = address;
             this.regDate = regDate;
         }
         
         @Override
         public String toString() {
             return String.format(
-                "CardID: %s%nName: %s%nDOB: %s%nRegDate: %s",
-                cardId, name, dob, regDate
+                "CardID : %s%n" +
+                "Name   : %s%n" +
+                "DOB    : %s%n" +
+                "Phone  : %s%n" +
+                "Address: %s%n" +
+                "RegDate: %s",
+                cardId, name, dob, phone, address, regDate
             );
         }
     }

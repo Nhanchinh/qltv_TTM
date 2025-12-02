@@ -42,6 +42,7 @@ public class DatabaseInit {
                         CardID TEXT PRIMARY KEY,
                         FullName TEXT,
                         Phone TEXT,
+                        Address TEXT,
                         DOB DATE,
                         RegisterDate DATE,
                         MemberType TEXT,
@@ -56,6 +57,16 @@ public class DatabaseInit {
                 """;
                 st.execute(sqlCards);
                 System.out.println("Tạo bảng Cards thành công!");
+                
+                // Thử thêm cột Address nếu DB cũ chưa có (migration an toàn)
+                try {
+                    String addAddressColumn = "ALTER TABLE Cards ADD COLUMN Address TEXT";
+                    st.execute(addAddressColumn);
+                    System.out.println("Đã thêm cột Address vào bảng Cards (migration).");
+                } catch (SQLException ex) {
+                    // Nếu cột đã tồn tại thì bỏ qua lỗi
+                    System.out.println("Cột Address đã tồn tại trong bảng Cards, bỏ qua migration.");
+                }
                 
                 // Tạo bảng Books
                 String sqlBooks = """

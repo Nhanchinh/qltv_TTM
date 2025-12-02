@@ -62,10 +62,6 @@ public class CardSetupManager {
      * Exactly like Main.java sendSecureCommand() method
      */
     public boolean setupCard(String userPin, String adminPin) throws Exception {
-        if (!keyManager.hasCardPublicKey()) {
-            throw new Exception("Card public key not loaded. Call getPublicKey() first.");
-        }
-        
         try {
             // Validate PINs
             if (userPin == null || adminPin == null) {
@@ -80,57 +76,17 @@ public class CardSetupManager {
             System.out.println("User PIN: " + userPin + " (length=" + userPin.length() + ")");
             System.out.println("Admin PIN: " + adminPin + " (length=" + adminPin.length() + ")");
             
-            // Prepare 12-byte payload (exactly like Main.java line 329-331)
-            byte[] rawData = new byte[12];
-            System.arraycopy(userPin.getBytes(), 0, rawData, 0, 6);
-            System.arraycopy(adminPin.getBytes(), 0, rawData, 6, 6);
-            
-            System.out.println("Raw PIN Data (12 bytes): " + CryptoUtils.bytesToHex(rawData));
-            
-            // Pad to 16 bytes (exactly like Main.java line 333-349)
-            int blockSize = 16;
-            int paddedLength = ((rawData.length / blockSize) + 1) * blockSize;
-            if (rawData.length % blockSize == 0 && rawData.length > 0) {
-                paddedLength = rawData.length;
-            } else if (rawData.length == 0) {
-                paddedLength = 16;
-            }
-            
-            byte[] paddedData = new byte[paddedLength];
-            System.arraycopy(rawData, 0, paddedData, 0, rawData.length);
-            // Rest is zero-padded automatically
-            
-            System.out.println("Padded PIN Data (" + paddedLength + " bytes): " + CryptoUtils.bytesToHex(paddedData));
-            
-            // Generate session key (exactly like Main.java line 333)
-            SecretKey sessionKey = CryptoUtils.generateSessionKey();
-            System.out.println("Generated Session Key (128-bit AES)");
-            
-            // Encrypt session key with RSA (exactly like Main.java line 334-336)
-            byte[] encryptedSessionKey = CryptoUtils.encryptSessionKeyWithRSA(
-                sessionKey, 
-                keyManager.getCardPublicKey()
+            // Chuẩn bị payload 12 byte: [6 byte user PIN][6 byte admin PIN]
+            byte[] setupData = new byte[12];
+            System.arraycopy(userPin.getBytes(), 0, setupData, 0, 6);
+            System.arraycopy(adminPin.getBytes(), 0, setupData, 6, 6);
+
+            System.out.println("Sending Setup Data (PLAINTEXT, 12 bytes)...");
+
+            // Gửi APDU dạng plaintext (giống BookstoreClientTest.setupCard)
+            ResponseAPDU response = channel.transmit(
+                new CommandAPDU(CLA, INS_SETUP_CARD, 0x00, 0x00, setupData)
             );
-            System.out.println("Encrypted Session Key (" + encryptedSessionKey.length + " bytes): " + 
-                             CryptoUtils.bytesToHex(encryptedSessionKey).substring(0, Math.min(32, CryptoUtils.bytesToHex(encryptedSessionKey).length())) + "...");
-            
-            // Encrypt payload with AES (exactly like Main.java line 338-340)
-            byte[] encryptedData = CryptoUtils.encryptDataWithAES(paddedData, sessionKey);
-            System.out.println("Encrypted Payload (" + encryptedData.length + " bytes): " + 
-                             CryptoUtils.bytesToHex(encryptedData).substring(0, Math.min(32, CryptoUtils.bytesToHex(encryptedData).length())) + "...");
-            
-            // Build APDU (exactly like Main.java line 343-345)
-            byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
-            System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
-            System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
-            
-            System.out.println("Total APDU Data (" + apduData.length + " bytes)");
-            System.out.println("Sending: CLA=0x" + String.format("%02X", CLA) + 
-                             ", INS=0x" + String.format("%02X", INS_SETUP_CARD) + 
-                             ", P1=0x00, P2=0x00, Data=" + apduData.length + " bytes");
-            
-            // Send APDU (exactly like Main.java line 347)
-            ResponseAPDU response = channel.transmit(new CommandAPDU(CLA, INS_SETUP_CARD, 0x00, 0x00, apduData));
             
             int sw = response.getSW();
             System.out.println("Response SW: 0x" + String.format("%04X", sw));
@@ -152,13 +108,9 @@ public class CardSetupManager {
     
     /**
      * Step 2.5: Verify user PIN (REQUIRED before initUserData)
-     * Exactly like Main.java verifyPin() method
+     * Hiện dùng dạng PLAINTEXT giống BookstoreClientTest.verifyPin()
      */
     public boolean verifyPin(String userPin) throws Exception {
-        if (!keyManager.hasCardPublicKey()) {
-            throw new Exception("Card public key not loaded. Call getPublicKey() first.");
-        }
-        
         try {
             if (userPin == null || userPin.length() != 6) {
                 throw new Exception("User PIN must be exactly 6 characters");
@@ -167,39 +119,15 @@ public class CardSetupManager {
             System.out.println("\n========== VERIFY PIN (STEP 2.5) ==========");
             System.out.println("Verifying User PIN: " + userPin);
             
-            // Prepare 6-byte PIN
-            byte[] rawData = userPin.getBytes();
-            
-            // Pad to 16 bytes (exactly like setupCard)
-            int blockSize = 16;
-            int paddedLength = blockSize;
-            byte[] paddedData = new byte[paddedLength];
-            System.arraycopy(rawData, 0, paddedData, 0, rawData.length);
-            
-            // Generate session key
-            SecretKey sessionKey = CryptoUtils.generateSessionKey();
-            
-            // Encrypt session key with RSA
-            byte[] encryptedSessionKey = CryptoUtils.encryptSessionKeyWithRSA(
-                sessionKey, 
-                keyManager.getCardPublicKey()
+            // Gửi PIN dạng PLAINTEXT giống BookstoreClientTest.verifyPin()
+            byte[] pinData = userPin.getBytes();
+
+            System.out.println("Sending VERIFY_PIN (PLAINTEXT), length = " + pinData.length + " bytes");
+
+            // Send APDU (PLAINTEXT)
+            ResponseAPDU response = channel.transmit(
+                new CommandAPDU(CLA, INS_VERIFY_PIN, 0x00, 0x00, pinData)
             );
-            
-            // Encrypt payload with AES
-            byte[] encryptedData = CryptoUtils.encryptDataWithAES(paddedData, sessionKey);
-            
-            // Build APDU
-            byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
-            System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
-            System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
-            
-            System.out.println("Total APDU Data (" + apduData.length + " bytes)");
-            System.out.println("Sending: CLA=0x" + String.format("%02X", CLA) + 
-                             ", INS=0x" + String.format("%02X", INS_VERIFY_PIN) + 
-                             ", P1=0x00, P2=0x00, Data=" + apduData.length + " bytes");
-            
-            // Send APDU
-            ResponseAPDU response = channel.transmit(new CommandAPDU(CLA, INS_VERIFY_PIN, 0x00, 0x00, apduData));
             
             int sw = response.getSW();
             System.out.println("Response SW: 0x" + String.format("%04X", sw));
@@ -221,19 +149,24 @@ public class CardSetupManager {
     
     /**
      * Step 3: Initialize user data on card
-     * Format: 16 bytes (CardID) + 64 bytes (Name) + 16 bytes (DOB: DDMMYYYY) 
-     *         + 16 bytes (RegDate: DDMMYYYY) + 128 bytes (App Public Key modulus)
-     * Total: 240 bytes
-     * NOTE: Sent as RAW payload (NOT encrypted) - exactly matching Main.java initUserDataExtended()
+     * Full format (giống BookstoreClientTest.initUserDataExtended & applet hiện tại):
+     *   [CardID 16]
+     *   [Name 64]
+     *   [DOB 16]
+     *   [Phone 16]
+     *   [Address 64]
+     *   [RegDate 16]      --> Tổng phần text: 192 bytes
+     *   [App PubKey 128]  --> Modulus 1024-bit
+     * Tổng cộng: 320 bytes, gửi RAW (PLAINTEXT, KHÔNG mã hóa)
      */
-    public boolean initUserData(String cardId, String userName, String dob, String regDate) throws Exception {
+    public boolean initUserData(String cardId, String userName, String dob, String phone, String address, String regDate) throws Exception {
         if (!keyManager.hasCardPublicKey() || !keyManager.hasAppKeyPair()) {
             throw new Exception("Card setup not completed. Call getPublicKey() and setupCard() first.");
         }
         
         try {
-            // Prepare 240-byte payload (RAW, NOT ENCRYPTED)
-            byte[] payload = new byte[240];
+            // Prepare 320-byte payload (RAW, NOT ENCRYPTED)
+            byte[] payload = new byte[320];
             int offset = 0;
             
             // 1. CardID (16 bytes) - at offset 0
@@ -248,17 +181,24 @@ public class CardSetupManager {
             System.arraycopy(CryptoUtils.createFixedLengthData(dob, 16), 0, payload, offset, 16);
             offset += 16;
             
-            // 4. RegDate DDMMYYYY (16 bytes) - at offset 96
+            // 4. Phone (16 bytes) - at offset 96
+            System.arraycopy(CryptoUtils.createFixedLengthData(phone, 16), 0, payload, offset, 16);
+            offset += 16;
+            
+            // 5. Address (64 bytes) - at offset 112
+            System.arraycopy(CryptoUtils.createFixedLengthData(address, 64), 0, payload, offset, 64);
+            offset += 64;
+            
+            // 6. RegDate DDMMYYYY (16 bytes) - at offset 176
             System.arraycopy(CryptoUtils.createFixedLengthData(regDate, 16), 0, payload, offset, 16);
             offset += 16;
             
-            // 5. App Public Key modulus (128 bytes for 1024-bit RSA) - at offset 112
+            // 7. App Public Key modulus (128 bytes for 1024-bit RSA) - at offset 192
             PublicKey appPubKey = keyManager.getAppKeyPair().getPublic();
             java.security.interfaces.RSAPublicKey rsaPubKey = (java.security.interfaces.RSAPublicKey) appPubKey;
             byte[] modulusBytes = rsaPubKey.getModulus().toByteArray();
             
-            // Handle leading zero byte from BigInteger.toByteArray()
-            // Exactly like Main.java (lines 248-257)
+            // Handle leading zero byte from BigInteger.toByteArray() (giống BookstoreClientTest)
             byte[] modulusFixed = new byte[128];
             if (modulusBytes.length == 129 && modulusBytes[0] == 0) {
                 System.arraycopy(modulusBytes, 1, modulusFixed, 0, 128);
@@ -274,12 +214,14 @@ public class CardSetupManager {
             
             // DEBUG: Show payload structure before sending
             System.out.println("\n========== INIT USER DATA ==========");
-            System.out.println("Payload Structure (240 bytes):");
+            System.out.println("Payload Structure (320 bytes):");
             System.out.println("  [0-15]   CardID (16): " + new String(Arrays.copyOfRange(payload, 0, 16)).trim());
             System.out.println("  [16-79]  Name (64): " + new String(Arrays.copyOfRange(payload, 16, 80)).trim());
             System.out.println("  [80-95]  DOB (16): " + new String(Arrays.copyOfRange(payload, 80, 96)).trim());
-            System.out.println("  [96-111] RegDate (16): " + new String(Arrays.copyOfRange(payload, 96, 112)).trim());
-            System.out.println("  [112-239] App PubKey Modulus (128 bytes)");
+            System.out.println("  [96-111] Phone (16): " + new String(Arrays.copyOfRange(payload, 96, 112)).trim());
+            System.out.println("  [112-175] Address (64): " + new String(Arrays.copyOfRange(payload, 112, 176)).trim());
+            System.out.println("  [176-191] RegDate (16): " + new String(Arrays.copyOfRange(payload, 176, 192)).trim());
+            System.out.println("  [192-319] App PubKey Modulus (128 bytes)");
             System.out.println("Total Payload: " + payload.length + " bytes");
             System.out.println("Sending raw payload (NOT encrypted)...");
             System.out.println("====================================\n");
@@ -312,13 +254,9 @@ public class CardSetupManager {
     /**
      * Change user PIN on card
      * Format: 6 bytes (old PIN) + 6 bytes (new PIN)
-     * Exactly like Main.java changePin() method
+     * Hiện gửi PLAINTEXT giống BookstoreClientTest.changePin()
      */
     public boolean changePin(String oldPin, String newPin) throws Exception {
-        if (!keyManager.hasCardPublicKey()) {
-            throw new Exception("Card public key not loaded. Call getPublicKey() first.");
-        }
-        
         try {
             // Validate PINs
             if (oldPin == null || newPin == null) {
@@ -333,52 +271,18 @@ public class CardSetupManager {
             System.out.println("Old PIN: " + oldPin + " (length=" + oldPin.length() + ")");
             System.out.println("New PIN: " + newPin + " (length=" + newPin.length() + ")");
             
-            // Prepare 12-byte payload (old PIN + new PIN)
-            byte[] rawData = new byte[12];
-            System.arraycopy(oldPin.getBytes(), 0, rawData, 0, 6);
-            System.arraycopy(newPin.getBytes(), 0, rawData, 6, 6);
+            // Prepare 12-byte payload (old PIN + new PIN) – PLAINTEXT
+            byte[] payload = new byte[12];
+            System.arraycopy(oldPin.getBytes(), 0, payload, 0, 6);
+            System.arraycopy(newPin.getBytes(), 0, payload, 6, 6);
             
-            System.out.println("Raw PIN Data (12 bytes): " + CryptoUtils.bytesToHex(rawData));
+            System.out.println("Sending CHANGE_PIN (PLAINTEXT, 12 bytes)...");
             
-            // Pad to 16 bytes
-            int blockSize = 16;
-            int paddedLength = blockSize;
-            byte[] paddedData = new byte[paddedLength];
-            System.arraycopy(rawData, 0, paddedData, 0, rawData.length);
-            
-            System.out.println("Padded PIN Data (" + paddedLength + " bytes): " + CryptoUtils.bytesToHex(paddedData));
-            
-            // Generate session key
-            SecretKey sessionKey = CryptoUtils.generateSessionKey();
-            System.out.println("Generated Session Key (128-bit AES)");
-            
-            // Encrypt session key with RSA
-            byte[] encryptedSessionKey = CryptoUtils.encryptSessionKeyWithRSA(
-                sessionKey, 
-                keyManager.getCardPublicKey()
-            );
-            System.out.println("Encrypted Session Key (" + encryptedSessionKey.length + " bytes)");
-            
-            // Encrypt payload with AES
-            byte[] encryptedData = CryptoUtils.encryptDataWithAES(paddedData, sessionKey);
-            System.out.println("Encrypted Payload (" + encryptedData.length + " bytes)");
-            
-            // Build APDU
-            byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
-            System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
-            System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
-            
-            System.out.println("Total APDU Data (" + apduData.length + " bytes)");
-            
-            // Change PIN instruction code is 0x25
+            // INS_CHANGE_PIN = 0x25 giống BookstoreClientTest.changePin()
             byte INS_CHANGE_PIN = (byte) 0x25;
-            
-            System.out.println("Sending: CLA=0x" + String.format("%02X", CLA) + 
-                             ", INS=0x" + String.format("%02X", INS_CHANGE_PIN) + 
-                             ", P1=0x00, P2=0x00, Data=" + apduData.length + " bytes");
-            
-            // Send APDU
-            ResponseAPDU response = channel.transmit(new CommandAPDU(CLA, INS_CHANGE_PIN, 0x00, 0x00, apduData));
+            ResponseAPDU response = channel.transmit(
+                new CommandAPDU(CLA, INS_CHANGE_PIN, 0x00, 0x00, payload)
+            );
             
             int sw = response.getSW();
             System.out.println("Response SW: 0x" + String.format("%04X", sw));

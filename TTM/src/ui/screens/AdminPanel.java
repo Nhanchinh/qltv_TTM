@@ -277,35 +277,13 @@ public class AdminPanel extends JPanel {
                 connManager = new CardConnectionManager();
                 connManager.connectCard();
                 
-                CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
-                setupManager.getPublicKey();
-                
-                // Send unlock command (0x26)
+                // Gửi lệnh UNBLOCK (0x26) dạng PLAINTEXT giống BookstoreClientTest.unblockCard()
                 byte INS_UNBLOCK_PIN = (byte) 0x26;
-                byte[] payload = adminPin.getBytes();
-                
-                byte[] paddedData = new byte[16];
-                System.arraycopy(payload, 0, paddedData, 0, Math.min(payload.length, 16));
-                
-                javax.crypto.KeyGenerator keyGen = javax.crypto.KeyGenerator.getInstance("AES");
-                keyGen.init(128);
-                javax.crypto.SecretKey sessionKey = keyGen.generateKey();
-                
-                javax.crypto.Cipher rsaCipher = javax.crypto.Cipher.getInstance("RSA/ECB/PKCS1Padding");
-                rsaCipher.init(javax.crypto.Cipher.ENCRYPT_MODE, setupManager.getKeyManager().getCardPublicKey());
-                byte[] encryptedSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
-                
-                javax.crypto.spec.IvParameterSpec ivSpec = new javax.crypto.spec.IvParameterSpec(new byte[16]);
-                javax.crypto.Cipher aesCipher = javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
-                aesCipher.init(javax.crypto.Cipher.ENCRYPT_MODE, sessionKey, ivSpec);
-                byte[] encryptedData = aesCipher.doFinal(paddedData);
-                
-                byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
-                System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
-                System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
-                
+                byte[] payload = new byte[6];
+                System.arraycopy(adminPin.getBytes(), 0, payload, 0, 6);
+
                 javax.smartcardio.ResponseAPDU response = connManager.getChannel().transmit(
-                    new javax.smartcardio.CommandAPDU(0x00, INS_UNBLOCK_PIN, 0x00, 0x00, apduData)
+                    new javax.smartcardio.CommandAPDU(0x00, INS_UNBLOCK_PIN, 0x00, 0x00, payload)
                 );
                 
                 if (response.getSW() == 0x9000) {
@@ -656,13 +634,14 @@ public class AdminPanel extends JPanel {
      */
     private void showAddCardDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Thêm Thẻ Mới", true);
-        dialog.setSize(500, 300);
+        dialog.setSize(520, 360);
         dialog.setLocationRelativeTo(null);
         dialog.setResizable(false);
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new GridBagLayout());
-        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        // Giảm padding dưới để không che nút, giữ top/left/right đẹp
+        contentPanel.setBorder(new EmptyBorder(20, 20, 10, 20));
         contentPanel.setBackground(Color.WHITE);
         
         GridBagConstraints gbc = new GridBagConstraints();
@@ -685,6 +664,23 @@ public class AdminPanel extends JPanel {
         gbc.insets = new Insets(0, 0, 15, 0);
         contentPanel.add(fullNameField, gbc);
         
+        // Phone
+        JLabel phoneLabel = new JLabel("Số điện thoại:");
+        phoneLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JTextField phoneField = new JTextField();
+        phoneField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        phoneField.setPreferredSize(new Dimension(200, 35));
+        
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 15, 15);
+        contentPanel.add(phoneLabel, gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        contentPanel.add(phoneField, gbc);
+        
         // DOB
         JLabel dobLabel = new JLabel("Ngày Sinh (YYYY-MM-DD):");
         dobLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -693,7 +689,7 @@ public class AdminPanel extends JPanel {
         dobField.setPreferredSize(new Dimension(200, 35));
         
         gbc.gridx = 0;
-        gbc.gridy = 1;
+        gbc.gridy = 2;
         gbc.weightx = 0.3;
         gbc.insets = new Insets(0, 0, 15, 15);
         contentPanel.add(dobLabel, gbc);
@@ -701,6 +697,23 @@ public class AdminPanel extends JPanel {
         gbc.weightx = 0.7;
         gbc.insets = new Insets(0, 0, 15, 0);
         contentPanel.add(dobField, gbc);
+        
+        // Address
+        JLabel addressLabel = new JLabel("Địa chỉ:");
+        addressLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JTextField addressField = new JTextField();
+        addressField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        addressField.setPreferredSize(new Dimension(200, 35));
+        
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 15, 15);
+        contentPanel.add(addressLabel, gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        contentPanel.add(addressField, gbc);
         
         // Button panel
         JPanel buttonPanel = new JPanel();
@@ -711,10 +724,12 @@ public class AdminPanel extends JPanel {
         saveButton.setPreferredSize(new Dimension(100, 40));
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
+            String phone = phoneField.getText().trim();
             String dob = dobField.getText().trim();
+            String address = addressField.getText().trim();
             
-            if (fullName.isEmpty() || dob.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            if (fullName.isEmpty() || dob.isEmpty() || phone.isEmpty() || address.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ Họ tên, SĐT, Ngày sinh và Địa chỉ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
@@ -760,12 +775,12 @@ public class AdminPanel extends JPanel {
                     setupManager.getPublicKey();
                     setupManager.setupCard(userPin, adminPin);
                     setupManager.verifyPin(userPin);  // REQUIRED: Verify PIN after setup
-                    setupManager.initUserData(cardId, fullName, formattedDob, regDate);
+                    setupManager.initUserData(cardId, fullName, formattedDob, phone, address, regDate);
                     
                     connManager.disconnectCard();
                     
                     // Step 5: Insert to database
-                    if (insertCard(cardId, fullName, "", dob, "Basic", null)) {
+                    if (insertCard(cardId, fullName, phone, dob, "Basic", null)) {
                         // Step 6: Save card public key to database AFTER successful insert
                         try {
                             byte[] pubBytes = setupManager.getKeyManager().getCardPublicKeyEncoded();
@@ -810,7 +825,7 @@ public class AdminPanel extends JPanel {
         buttonPanel.add(cancelButton);
         
         gbc.gridx = 0;
-        gbc.gridy = 2;
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(0, 0, 0, 0);
         contentPanel.add(buttonPanel, gbc);
@@ -826,16 +841,17 @@ public class AdminPanel extends JPanel {
      * Insert new card to database
      */
     private boolean insertCard(String cardId, String fullName, String phone, String dob, String memberType, String imagePath) {
-        String sql = "INSERT INTO Cards (CardID, FullName, Phone, DOB, RegisterDate, MemberType, TotalSpent, TotalPoints, FineDebt, IsBlocked, CreatedAt, UpdatedAt) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, datetime('now'), datetime('now'))";
+        String sql = "INSERT INTO Cards (CardID, FullName, Phone, Address, DOB, RegisterDate, MemberType, TotalSpent, TotalPoints, FineDebt, IsBlocked, CreatedAt, UpdatedAt) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, datetime('now'), datetime('now'))";
         try (Connection conn = DBConnect.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, cardId);
             pstmt.setString(2, fullName);
             pstmt.setString(3, phone);
-            pstmt.setString(4, dob);
-            pstmt.setString(5, LocalDate.now().toString());
-            pstmt.setString(6, memberType);
+            pstmt.setString(4, ""); // Address hiện chưa lưu ở AdminPanel (có thể mở rộng sau)
+            pstmt.setString(5, dob);
+            pstmt.setString(6, LocalDate.now().toString());
+            pstmt.setString(7, memberType);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Loi khi them the: " + e.getMessage());

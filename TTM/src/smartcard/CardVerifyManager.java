@@ -1,14 +1,8 @@
 package smartcard;
 
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 import javax.smartcardio.CardChannel;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import java.security.PublicKey;
-import smartcard.CryptoUtils;
 
 /**
  * Manages PIN verification on the smart card
@@ -66,65 +60,19 @@ public class CardVerifyManager {
     
     /**
      * Send secure command with hybrid encryption
-     * Uses RSA to encrypt AES session key, then AES to encrypt data
+     * (ĐÃ ĐƯỢC ĐƠN GIẢN HÓA): Gửi dữ liệu PLAINTEXT giống BookstoreClientTest.verifyPin()
      */
     private boolean sendSecureCommand(byte ins, byte[] rawData) throws Exception {
-        // Get card public key
-        PublicKey cardPublicKey = keyManager.getCardPublicKey();
-        if (cardPublicKey == null) {
-            throw new Exception("Card public key not available");
+        // Gửi trực tiếp dữ liệu raw (PLAINTEXT) xuống thẻ
+        if (rawData == null) {
+            rawData = new byte[0];
         }
-        
-        // Generate AES session key
-        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(128);
-        SecretKey sessionKey = keyGen.generateKey();
-        
-        System.out.println("Session Key: " + CryptoUtils.bytesToHex(sessionKey.getEncoded()));
-        
-        // Encrypt session key with card's RSA public key
-        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        rsaCipher.init(Cipher.ENCRYPT_MODE, cardPublicKey);
-        byte[] encryptedSessionKey = rsaCipher.doFinal(sessionKey.getEncoded());
-        
-        System.out.println("Encrypted Session Key (" + encryptedSessionKey.length + " bytes): " + 
-                         CryptoUtils.bytesToHex(encryptedSessionKey));
-        
-        // Pad data to 16-byte blocks
-        int blockSize = 16;
-        int paddedLength = ((rawData.length / blockSize) + 1) * blockSize;
-        if (rawData.length % blockSize == 0 && rawData.length > 0) {
-            paddedLength = rawData.length;
-        } else if (rawData.length == 0) {
-            paddedLength = 16;
-        }
-        
-        byte[] paddedData = new byte[paddedLength];
-        System.arraycopy(rawData, 0, paddedData, 0, rawData.length);
-        // Rest is already zero-padded by Java
-        
-        System.out.println("Padded Data (" + paddedData.length + " bytes): " + 
-                         CryptoUtils.bytesToHex(paddedData));
-        
-        // Encrypt data with AES session key (CBC mode, zero IV)
-        IvParameterSpec ivSpec = new IvParameterSpec(new byte[16]);
-        Cipher aesCipher = Cipher.getInstance("AES/CBC/NoPadding");
-        aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey, ivSpec);
-        byte[] encryptedData = aesCipher.doFinal(paddedData);
-        
-        System.out.println("Encrypted Data (" + encryptedData.length + " bytes): " + 
-                         CryptoUtils.bytesToHex(encryptedData));
-        
-        // Combine encrypted session key + encrypted data
-        byte[] apduData = new byte[encryptedSessionKey.length + encryptedData.length];
-        System.arraycopy(encryptedSessionKey, 0, apduData, 0, encryptedSessionKey.length);
-        System.arraycopy(encryptedData, 0, apduData, encryptedSessionKey.length, encryptedData.length);
-        
-        System.out.println("Total APDU Data (" + apduData.length + " bytes)");
-        System.out.println("Sending Secure CMD (INS: " + String.format("0x%02X", ins) + ")...");
-        
-        // Send command
-        CommandAPDU command = new CommandAPDU(CLA, ins, 0x00, 0x00, apduData);
+
+        System.out.println("Sending PLAINTEXT CMD (INS: " + String.format("0x%02X", ins) +
+                           "), Data length = " + rawData.length + " bytes");
+
+        // Gửi lệnh giống BookstoreClientTest.verifyPin()
+        CommandAPDU command = new CommandAPDU(CLA, ins, 0x00, 0x00, rawData);
         ResponseAPDU response = channel.transmit(command);
         
         System.out.println("Response SW: " + Integer.toHexString(response.getSW()));
