@@ -6,6 +6,7 @@ import smartcard.CardConnectionManager;
 import smartcard.CardVerifyManager;
 import smartcard.CardKeyManager;
 import smartcard.CardIdExtractor;
+import javax.smartcardio.CardChannel;
 import ui.DBConnect;
 import java.awt.*;
 import java.awt.event.*;
@@ -46,6 +47,9 @@ public class PinLoginDialog extends JDialog {
     private static final Color BACKGROUND_GRADIENT_END = new Color(230, 240, 255);
     private static final Color CARD_BACKGROUND = Color.WHITE;
     
+    // APDU instruction for getting PIN tries
+    private static final byte INS_GET_PIN_TRIES = (byte) 0x33;
+    
     public PinLoginDialog(Frame parent) {
         super(parent, true);
         settingsService = new SettingsService();
@@ -54,7 +58,7 @@ public class PinLoginDialog extends JDialog {
     }
     
     private void initComponents() {
-        setTitle("Dang nhap he thong");
+        setTitle("Đăng nhập hệ thống");
         setResizable(false);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         
@@ -87,13 +91,13 @@ public class PinLoginDialog extends JDialog {
         titlePanel.setOpaque(false);
         titlePanel.setBorder(new EmptyBorder(0, 0, 30, 0));
         
-        JLabel titleLabel = new JLabel("NHAP MA PIN");
+        JLabel titleLabel = new JLabel("NHẬP MÃ PIN");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(PRIMARY_COLOR);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         
-        JLabel subtitleLabel = new JLabel("Vui long nhap ma PIN de truy cap he thong");
+        JLabel subtitleLabel = new JLabel("Vui lòng nhập mã PIN để truy cập hệ thống");
         subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         subtitleLabel.setForeground(new Color(120, 120, 120));
         subtitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -169,7 +173,7 @@ public class PinLoginDialog extends JDialog {
         buttonPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
         
         // Login button
-        loginButton = new JButton("DANG NHAP") {
+        loginButton = new JButton("ĐĂNG NHẬP") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
@@ -197,7 +201,7 @@ public class PinLoginDialog extends JDialog {
         buttonPanel.add(loginButton);
         
         // Cancel button
-        cancelButton = new JButton("THOAT") {
+        cancelButton = new JButton("THOÁT") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
@@ -224,8 +228,8 @@ public class PinLoginDialog extends JDialog {
         cancelButton.addActionListener(e -> {
             int option = JOptionPane.showConfirmDialog(
                 this,
-                "Ban co chac chan muon thoat?",
-                "Xac nhan",
+                "Bạn có chắc chắn muốn thoát?",
+                "Xác nhận",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
             );
@@ -280,14 +284,14 @@ public class PinLoginDialog extends JDialog {
         String enteredPin = new String(pinField.getPassword());
         
         if (enteredPin.isEmpty()) {
-            errorLabel.setText("Vui long nhap ma PIN!");
+            errorLabel.setText("Vui lòng nhập mã PIN!");
             pinField.setText("");
             pinField.requestFocus();
             return;
         }
         
         if (enteredPin.length() != 6) {
-            errorLabel.setText("Ma PIN phai co dung 6 ky tu!");
+            errorLabel.setText("Mã PIN phải có đúng 6 ký tự!");
             pinField.setText("");
             pinField.requestFocus();
             return;
@@ -296,7 +300,7 @@ public class PinLoginDialog extends JDialog {
         // Disable button and show loading
         loginButton.setEnabled(false);
         errorLabel.setForeground(PRIMARY_COLOR);
-        errorLabel.setText("Dang ket noi the...");
+        errorLabel.setText("Đang kết nối thẻ...");
         
         // Verify PIN on smart card in background thread
         new Thread(() -> {
@@ -308,7 +312,7 @@ public class PinLoginDialog extends JDialog {
                 connManager.connectCard();
                 
                 SwingUtilities.invokeLater(() -> {
-                    errorLabel.setText("Dang xac thuc PIN...");
+                    errorLabel.setText("Đang xác thực PIN...");
                 });
                 
                 // Verify PIN on card
@@ -319,7 +323,7 @@ public class PinLoginDialog extends JDialog {
                     // PIN verified - now authenticate user (BEFORE disconnecting)
                     try {
                         SwingUtilities.invokeLater(() -> {
-                            errorLabel.setText("Dang xac thuc the...");
+                            errorLabel.setText("Đang xác thực thẻ...");
                         });
                         
                         // Get card public key and authenticate (channel still connected)
@@ -333,14 +337,14 @@ public class PinLoginDialog extends JDialog {
                         authEx.printStackTrace();
                         SwingUtilities.invokeLater(() -> {
                             errorLabel.setForeground(new Color(220, 53, 69));
-                            errorLabel.setText("Loi xac thuc: " + authEx.getMessage());
+                            errorLabel.setText("Lỗi xác thực: " + authEx.getMessage());
                             loginButton.setEnabled(true);
                         });
                     }
                 } else {
                     SwingUtilities.invokeLater(() -> {
                         errorLabel.setForeground(new Color(220, 53, 69));
-                        errorLabel.setText("Ma PIN khong dung!");
+                        errorLabel.setText("Mã PIN không đúng!");
                         pinField.setText("");
                         pinField.requestFocus();
                         loginButton.setEnabled(true);
@@ -354,13 +358,37 @@ public class PinLoginDialog extends JDialog {
                 if (isCardBlocked) {
                     shouldDisconnect = false;
                 }
+                
+                // DEBUG: In ra error message để kiểm tra
+                System.out.println("DEBUG - Exception message: " + ex.getMessage());
+                
                 SwingUtilities.invokeLater(() -> {
                     String errorMsg = ex.getMessage();
+                    System.out.println("DEBUG - Error message in UI thread: " + errorMsg);
                     
-                    if ("WRONG_PIN".equals(errorMsg)) {
-                        // PIN sai - cho phép thử lại
+                    if (errorMsg != null && errorMsg.startsWith("WRONG_PIN")) {
+                        // PIN sai - hiển thị số lần còn lại
                         errorLabel.setForeground(new Color(220, 53, 69));
-                        errorLabel.setText("Sai ma PIN! Vui long thu lai.");
+                        
+                        // Parse remaining attempts from error message
+                        if (errorMsg.contains(":")) {
+                            try {
+                                String[] parts = errorMsg.split(":");
+                                int remainingAttempts = Integer.parseInt(parts[1]);
+                                
+                                if (remainingAttempts > 0) {
+                                    errorLabel.setText("Nhập sai mã pin còn lại " + remainingAttempts + " lần nhập.");
+                                } else {
+                                    errorLabel.setText("Nhập sai mã pin còn lại 0 lần nhập. Thẻ đã bị khóa!");
+                                }
+                            } catch (Exception e) {
+                                errorLabel.setText("Sai mã PIN! Vui lòng thử lại.");
+                            }
+                        } else {
+                            // Không lấy được số lần thử, hiển thị thông báo mặc định
+                            errorLabel.setText("Sai mã PIN! Vui lòng thử lại.");
+                        }
+                        
                         pinField.setText("");
                         pinField.requestFocus();
                         loginButton.setEnabled(true);
@@ -370,7 +398,7 @@ public class PinLoginDialog extends JDialog {
                     } else {
                         // Lỗi khác
                         errorLabel.setForeground(new Color(220, 53, 69));
-                        errorLabel.setText("Loi: " + errorMsg);
+                        errorLabel.setText("Lỗi: " + errorMsg);
                         pinField.setText("");
                         pinField.requestFocus();
                         loginButton.setEnabled(true);
@@ -394,8 +422,8 @@ public class PinLoginDialog extends JDialog {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(
                 PinLoginDialog.this,
-                "The da bi khoa!\nVui long ket noi lai the truoc khi tiep tuc.",
-                "The bi khoa",
+                "Thẻ đã bị khóa!\nVui lòng kết nối lại thẻ trước khi tiếp tục.",
+                "Thẻ bị khóa",
                 JOptionPane.ERROR_MESSAGE
             );
             authenticated = false;
@@ -513,6 +541,51 @@ public class PinLoginDialog extends JDialog {
         }
     }
     
+    /**
+     * Get PIN tries from smart card
+     * Returns the number of failed attempts (0-3)
+     * Returns -1 if failed to get tries
+     */
+    private int getPinTriesFromCard(CardChannel channel) {
+        try {
+            if (channel == null) {
+                System.err.println("Card channel is null!");
+                return -1;
+            }
+
+            System.out.println("Getting PIN Tries from card...");
+            ResponseAPDU response = channel.transmit(new CommandAPDU(0x00, INS_GET_PIN_TRIES, 0x00, 0x00));
+
+            if (response.getSW() != 0x9000) {
+                System.err.println("Failed to get PIN Tries. SW: " + String.format("%04X", response.getSW()));
+                return -1;
+            }
+
+            byte[] data = response.getData();
+            if (data.length < 1) {
+                System.err.println("Error: Empty response data from getPinTries");
+                return -1;
+            }
+
+            // Get first byte (number of failed tries)
+            byte tries = data[0];
+            System.out.println("PIN Tries (failed attempts): " + tries);
+
+            if (tries >= 3) {
+                System.out.println(">>> CARD IS BLOCKED!");
+            } else {
+                System.out.println(">>> Remaining attempts: " + (3 - tries));
+            }
+            
+            return tries;
+
+        } catch (Exception e) {
+            System.err.println("Error getting PIN tries: " + e.getMessage());
+            e.printStackTrace();
+            return -1;
+        }
+    }
+    
     public enum LoginResult {
         SUCCESS,
         CANCELLED,
@@ -523,8 +596,8 @@ public class PinLoginDialog extends JDialog {
         if (DBConnect.getConnection() == null) {
             JOptionPane.showMessageDialog(
                 parent,
-                "Loi ket noi database!\nVui long kiem tra SQLite JDBC driver.",
-                "Loi ket noi",
+                "Lỗi kết nối database!\nVui lòng kiểm tra SQLite JDBC driver.",
+                "Lỗi kết nối",
                 JOptionPane.ERROR_MESSAGE
             );
             return LoginResult.CANCELLED;

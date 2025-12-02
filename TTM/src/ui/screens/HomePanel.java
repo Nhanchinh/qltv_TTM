@@ -161,7 +161,7 @@ public class HomePanel extends javax.swing.JPanel {
         subtitleLabel.setFont(new java.awt.Font("Segoe UI", 0, 16));
         subtitleLabel.setForeground(new java.awt.Color(100, 100, 100));
         subtitleLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        subtitleLabel.setText("Hệ thống quản lý thư viện TTM");
+        subtitleLabel.setText("Hệ thống quản lý nhà sách TTM");
 
         welcomePanel.add(welcomeLabel, java.awt.BorderLayout.CENTER);
         welcomePanel.add(subtitleLabel, java.awt.BorderLayout.SOUTH);

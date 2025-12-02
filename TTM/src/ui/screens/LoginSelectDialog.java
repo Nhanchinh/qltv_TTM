@@ -30,7 +30,7 @@ public class LoginSelectDialog extends JDialog {
     }
     
     private void initComponents() {
-        setTitle("Lua chon che do dang nhap");
+        setTitle("Lựa chọn chế độ đăng nhập");
         setResizable(false);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         

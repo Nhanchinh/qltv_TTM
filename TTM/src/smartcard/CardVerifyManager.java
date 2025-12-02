@@ -135,11 +135,40 @@ public class CardVerifyManager {
             return true;
         } else {
             System.out.println(">>> FAILED (SW: " + Integer.toHexString(response.getSW()) + ")");
+            
+            // Get PIN tries when verification fails
+            int remainingTries = -1;
+            int sw = response.getSW();
+            
+            // Check if SW is in range 0x6600-0x66FF (wrong PIN with debug hash)
+            // or exactly 0x6300 (SW_VERIFICATION_FAILED)
+            boolean isWrongPin = (sw >= 0x6600 && sw <= 0x66FF) || sw == 0x6300;
+            
+            if (isWrongPin) {
+                try {
+                    System.out.println("Getting remaining PIN tries...");
+                    CommandAPDU getPinTriesCmd = new CommandAPDU(0x00, (byte)0x33, 0x00, 0x00);
+                    ResponseAPDU triesResponse = channel.transmit(getPinTriesCmd);
+                    
+                    if (triesResponse.getSW() == 0x9000 && triesResponse.getData().length > 0) {
+                        byte tries = triesResponse.getData()[0];
+                        remainingTries = 3 - tries;
+                        System.out.println("Failed attempts: " + tries + ", Remaining: " + remainingTries);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Could not get PIN tries: " + e.getMessage());
+                }
+            }
+            
             System.out.println("=====================================\n");
             
             // Provide specific error messages
-            if (response.getSW() == 0x6602) {
-                throw new Exception("WRONG_PIN");
+            if (isWrongPin) {
+                if (remainingTries >= 0) {
+                    throw new Exception("WRONG_PIN:" + remainingTries);
+                } else {
+                    throw new Exception("WRONG_PIN");
+                }
             } else if (response.getSW() == 0x6983) {
                 throw new Exception("CARD_BLOCKED");
             } else {

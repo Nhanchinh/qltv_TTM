@@ -20,7 +20,7 @@ public class AppFrame extends JFrame {
     
     private void initFrame() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setTitle("He thong quan ly thu vien - TTM");
+        setTitle("Hệ thống quản lý nhà sách - TTM");
         setResizable(true);
         setSize(1200, 700);
         setLocationRelativeTo(null);

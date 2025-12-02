@@ -209,7 +209,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnExit = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
-        setTitle("Hệ thống quản lý thư viện - TTM");
+        setTitle("Hệ thống quản lý nhà sách - TTM");
         setResizable(true);
         getContentPane().setLayout(new java.awt.BorderLayout());
         
@@ -234,7 +234,7 @@ public class MainFrame extends javax.swing.JFrame {
         headerLabel.setFont(new java.awt.Font("Segoe UI", 1, 20));
         headerLabel.setForeground(new java.awt.Color(255, 255, 255));
         headerLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        headerLabel.setText("THƯ VIỆN TTM");
+        headerLabel.setText("Nhà Sách TTM");
         headerLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 10, 20, 10));
         headerPanel.add(headerLabel, java.awt.BorderLayout.CENTER);
 
@@ -366,7 +366,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnCard.setBackground(INACTIVE_COLOR);
         btnCard.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnCard.setForeground(new java.awt.Color(255, 255, 255));
-        btnCard.setText("Quan ly the");
+        btnCard.setText("Quản lý thẻ");
         btnCard.setBorderPainted(false);
         btnCard.setFocusPainted(false);
         btnCard.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
@@ -379,7 +379,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnChangePin.setBackground(INACTIVE_COLOR);
         btnChangePin.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnChangePin.setForeground(new java.awt.Color(255, 255, 255));
-        btnChangePin.setText("Doi ma PIN");
+        btnChangePin.setText("Đổi mã PIN");
         btnChangePin.setBorderPainted(false);
         btnChangePin.setFocusPainted(false);
         btnChangePin.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
@@ -420,7 +420,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnLogout.setBackground(new java.awt.Color(150, 150, 150));
         btnLogout.setFont(new java.awt.Font("Segoe UI", 1, 13));
         btnLogout.setForeground(new java.awt.Color(255, 255, 255));
-        btnLogout.setText("Dang Xuat");
+        btnLogout.setText("Đăng xuất"  );
         btnLogout.setBorderPainted(false);
         btnLogout.setFocusPainted(false);
         btnLogout.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);

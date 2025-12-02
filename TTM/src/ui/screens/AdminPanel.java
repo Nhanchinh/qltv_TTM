@@ -139,9 +139,9 @@ public class AdminPanel extends JPanel {
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
         tabbedPane.setBackground(new Color(245, 245, 250));
         
-        tabbedPane.addTab("Reset PIN", createResetPINPanel());
-        tabbedPane.addTab("Nap Data The", createImportCardDataPanel());
-        tabbedPane.addTab("Lay Thong Tin", createGetInfoPanel());
+        tabbedPane.addTab("Đổi Mã PIN", createResetPINPanel());
+        tabbedPane.addTab("Nạp Dữ Liệu Thẻ", createImportCardDataPanel());
+        tabbedPane.addTab("Lấy Thông Tin", createGetInfoPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
         
@@ -363,7 +363,7 @@ public class AdminPanel extends JPanel {
         centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         // Title
-        JLabel titleLabel = new JLabel("RESET MÃ PIN THẺ");
+        JLabel titleLabel = new JLabel("ĐỔI MÃ PIN THẺ");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(ADMIN_COLOR);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -378,8 +378,8 @@ public class AdminPanel extends JPanel {
         
         JPasswordField adminPINField = new JPasswordField();
         adminPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        adminPINField.setMaximumSize(new Dimension(300, 45));
-        adminPINField.setPreferredSize(new Dimension(300, 45));
+        adminPINField.setMaximumSize(new Dimension(360, 45));
+        adminPINField.setPreferredSize(new Dimension(360, 45));
         adminPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
         adminPINField.setHorizontalAlignment(JTextField.CENTER);
         centerPanel.add(adminPINField);
@@ -393,8 +393,8 @@ public class AdminPanel extends JPanel {
         
         JPasswordField newPINField = new JPasswordField();
         newPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        newPINField.setMaximumSize(new Dimension(300, 45));
-        newPINField.setPreferredSize(new Dimension(300, 45));
+        newPINField.setMaximumSize(new Dimension(360, 45));
+        newPINField.setPreferredSize(new Dimension(360, 45));
         newPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
         newPINField.setHorizontalAlignment(JTextField.CENTER);
         centerPanel.add(newPINField);
@@ -408,8 +408,8 @@ public class AdminPanel extends JPanel {
         
         JPasswordField confirmPINField = new JPasswordField();
         confirmPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        confirmPINField.setMaximumSize(new Dimension(300, 45));
-        confirmPINField.setPreferredSize(new Dimension(300, 45));
+        confirmPINField.setMaximumSize(new Dimension(360, 45));
+        confirmPINField.setPreferredSize(new Dimension(360, 45));
         confirmPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
         confirmPINField.setHorizontalAlignment(JTextField.CENTER);
         centerPanel.add(confirmPINField);
@@ -426,7 +426,7 @@ public class AdminPanel extends JPanel {
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 0));
         
-        JButton resetButton = new JButton("RESET PIN") {
+        JButton resetButton = new JButton("ĐỔI MÃ PIN") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
@@ -867,7 +867,7 @@ public class AdminPanel extends JPanel {
                 connManager.connectCard();
                 
                 SwingUtilities.invokeLater(() -> {
-                    messageLabel.setText("Đang reset PIN trên thẻ...");
+                    messageLabel.setText("Đang đổi mã PIN trên thẻ...");
                 });
                 
                 // Create PIN manager and reset
@@ -877,13 +877,13 @@ public class AdminPanel extends JPanel {
                 if (success) {
                     SwingUtilities.invokeLater(() -> {
                         messageLabel.setForeground(SUCCESS_COLOR);
-                        messageLabel.setText("Reset PIN thành công! PIN mới: " + newUserPIN);
+                        messageLabel.setText("Đổi mã PIN thành công! Mã PIN mới: " + newUserPIN);
                         adminPINField.setText("");
                         newPINField.setText("");
                         confirmPINField.setText("");
                     });
                 } else {
-                    throw new Exception("Reset PIN thất bại");
+                    throw new Exception("Đổi mã PIN thất bại");
                 }
                 
                 // Disconnect
