@@ -124,7 +124,7 @@ public class StationeryService {
                 }
                 
                 double unitPrice = item.price;
-                double finalPrice = (unitPrice * quantity) - (pointsUsed * 1000.0); // 1 point = 1000 VND
+                double finalPrice = (unitPrice * quantity) - (pointsUsed * 1.0); // 1 điểm = 1 VND
                 if (finalPrice < 0) finalPrice = 0;
                 
                 // Insert sale - su dung cung connection

@@ -31,6 +31,16 @@ public class naptien extends javax.swing.JPanel {
         loadCardInfo();
     }
     
+    /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            loadCardInfo();
+        }
+    }
+    
 
     /**
      * Khởi tạo các component của giao diện

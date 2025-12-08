@@ -73,7 +73,7 @@ public class PurchaseService {
                 
                 double unitPrice = book.price;
                 double finalPrice = unitPrice * quantity * (1 - discountPercent / 100.0);
-                int pointsEarned = (int) (finalPrice / 1000.0); // 1 point per 1000 VND
+                int pointsEarned = (int) (finalPrice * 0.03); // 3% số tiền giao dịch → điểm
                 
                 // Insert purchase history - su dung cung connection
                 String sql = "INSERT INTO PurchaseBookHistory (CardID, BookID, Quantity, UnitPrice, DiscountPercent, FinalPrice, PointsEarned, PurchaseDate, SignatureStore, SignatureCard) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

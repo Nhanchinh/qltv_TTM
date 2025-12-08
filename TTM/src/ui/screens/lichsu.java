@@ -39,6 +39,16 @@ public class lichsu extends javax.swing.JPanel {
         initComponents();
         loadAllHistory();
     }
+    
+    /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            loadAllHistory(); // Reload tất cả lịch sử với CardID mới
+        }
+    }
 
     /**
      * Khởi tạo các component của giao diện

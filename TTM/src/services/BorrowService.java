@@ -101,15 +101,48 @@ public class BorrowService {
             conn.setAutoCommit(false); // Bat dau transaction
             
             try {
-                // Update BorrowHistory
-                String sql = "UPDATE BorrowHistory SET ReturnDate = ?, Status = ? WHERE ID = ? AND CardID = ?";
+                // Get DueDate before updating ReturnDate - su dung cung connection
+                String getDueDateSql = "SELECT DueDate FROM BorrowHistory WHERE ID = ? AND CardID = ?";
+                LocalDate dueDate = null;
+                try (PreparedStatement getDueDateStmt = conn.prepareStatement(getDueDateSql)) {
+                    getDueDateStmt.setInt(1, borrowId);
+                    getDueDateStmt.setString(2, cardId);
+                    try (ResultSet rs = getDueDateStmt.executeQuery()) {
+                        if (rs.next()) {
+                            String dueDateStr = rs.getString("DueDate");
+                            if (dueDateStr != null) {
+                                dueDate = LocalDate.parse(dueDateStr);
+                            }
+                        }
+                    }
+                }
+                
+                // Update BorrowHistory with ReturnDate and calculate fine
+                LocalDate returnDate = LocalDate.now();
+                double fine = 0.0;
+                if (dueDate != null && returnDate.isAfter(dueDate)) {
+                    long daysLate = java.time.temporal.ChronoUnit.DAYS.between(dueDate, returnDate);
+                    fine = daysLate * 1000.0; // 1000 VND per day
+                }
+                
+                String sql = "UPDATE BorrowHistory SET ReturnDate = ?, Status = ?, Fine = ? WHERE ID = ? AND CardID = ?";
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    LocalDate returnDate = LocalDate.now();
                     pstmt.setString(1, returnDate.toString());
                     pstmt.setString(2, "đã trả");
-                    pstmt.setInt(3, borrowId);
-                    pstmt.setString(4, cardId);
+                    pstmt.setDouble(3, fine);
+                    pstmt.setInt(4, borrowId);
+                    pstmt.setString(5, cardId);
                     pstmt.executeUpdate();
+                }
+                
+                // Update FineDebt in Cards table if there's a fine - su dung cung connection
+                if (fine > 0) {
+                    String updateFineDebtSql = "UPDATE Cards SET FineDebt = FineDebt + ? WHERE CardID = ?";
+                    try (PreparedStatement updateFineStmt = conn.prepareStatement(updateFineDebtSql)) {
+                        updateFineStmt.setDouble(1, fine);
+                        updateFineStmt.setString(2, cardId);
+                        updateFineStmt.executeUpdate();
+                    }
                 }
                 
                 // Get book ID and update BorrowStock - su dung cung connection

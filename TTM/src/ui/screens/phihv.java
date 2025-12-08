@@ -43,6 +43,16 @@ public class phihv extends javax.swing.JPanel {
     }
     
     /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            loadCardInfo();
+        }
+    }
+    
+    /**
      * Load card information from database
      */
     private void loadCardInfo() {
@@ -51,23 +61,30 @@ public class phihv extends javax.swing.JPanel {
             cardIdField.setText(card.cardId);
             
             // Set member status
-            if (card.memberType != null && !card.memberType.isEmpty() && !card.memberType.equals("Basic")) {
-                memberStatusField.setText(card.memberType);
+            if (card.memberType != null && !card.memberType.isEmpty() && !card.memberType.equals("ThanhVien")) {
+                // Hiển thị tên hạng thành viên bằng tiếng Việt
+                String displayName = card.memberType;
+                if (card.memberType.equals("ThanhVien")) displayName = "Thành viên";
+                else if (card.memberType.equals("Bac")) displayName = "Bạc";
+                else if (card.memberType.equals("Vang")) displayName = "Vàng";
+                else if (card.memberType.equals("KimCuong")) displayName = "Kim cương";
+                
+                memberStatusField.setText(displayName);
                 
                 // Calculate expiry date (if we have register date, add membership duration)
                 if (card.registerDate != null && !card.registerDate.isEmpty()) {
                     try {
                         LocalDate registerDate = LocalDate.parse(card.registerDate);
-                        // Assume 3 months for Basic, 6 months for Premium, 12 months for VIP
+                        // Tất cả các gói trả phí đều có thời hạn 3 tháng
                         int months = 3;
-                        if (card.memberType.equals("Premium") || card.memberType.equals("Cao cap")) {
-                            months = 6;
-                        } else if (card.memberType.equals("VIP")) {
-                            months = 12;
+                        if (card.memberType.equals("ThanhVien")) {
+                            // Gói miễn phí không có thời hạn
+                            expiryDateField.setText("Không giới hạn");
+                        } else {
+                            LocalDate expiryDate = registerDate.plusMonths(months);
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                            expiryDateField.setText(expiryDate.format(formatter));
                         }
-                        LocalDate expiryDate = registerDate.plusMonths(months);
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                        expiryDateField.setText(expiryDate.format(formatter));
                     } catch (Exception e) {
                         expiryDateField.setText("--");
                     }
@@ -75,8 +92,8 @@ public class phihv extends javax.swing.JPanel {
                     expiryDateField.setText("--");
                 }
             } else {
-                memberStatusField.setText("Chua co hoi vien");
-                expiryDateField.setText("--");
+                memberStatusField.setText("Thành viên");
+                expiryDateField.setText("Không giới hạn");
             }
         } else {
             cardIdField.setText(currentCardId);
@@ -108,29 +125,36 @@ public class phihv extends javax.swing.JPanel {
         packagesPanel = new javax.swing.JPanel();
         packagesTitle = new javax.swing.JLabel();
         
-        // Package cards
-        basicPackage = new javax.swing.JPanel();
-        basicTitle = new javax.swing.JLabel();
-        basicPrice = new javax.swing.JLabel();
-        basicDuration = new javax.swing.JLabel();
-        basicFeatures = new javax.swing.JTextArea();
-        basicButton = new javax.swing.JButton();
+        // Package cards - 4 gói mới
+        freePackage = new javax.swing.JPanel();
+        freeTitle = new javax.swing.JLabel();
+        freePrice = new javax.swing.JLabel();
+        freeDuration = new javax.swing.JLabel();
+        freeFeatures = new javax.swing.JTextArea();
+        freeButton = new javax.swing.JButton();
         
-        premiumPackage = new javax.swing.JPanel();
-        premiumTitle = new javax.swing.JLabel();
-        premiumPrice = new javax.swing.JLabel();
-        premiumDuration = new javax.swing.JLabel();
-        premiumFeatures = new javax.swing.JTextArea();
-        premiumButton = new javax.swing.JButton();
-        premiumBadge = new javax.swing.JLabel();
+        silverPackage = new javax.swing.JPanel();
+        silverTitle = new javax.swing.JLabel();
+        silverPrice = new javax.swing.JLabel();
+        silverDuration = new javax.swing.JLabel();
+        silverFeatures = new javax.swing.JTextArea();
+        silverButton = new javax.swing.JButton();
         
-        vipPackage = new javax.swing.JPanel();
-        vipTitle = new javax.swing.JLabel();
-        vipPrice = new javax.swing.JLabel();
-        vipDuration = new javax.swing.JLabel();
-        vipFeatures = new javax.swing.JTextArea();
-        vipButton = new javax.swing.JButton();
-        vipBadge = new javax.swing.JLabel();
+        goldPackage = new javax.swing.JPanel();
+        goldTitle = new javax.swing.JLabel();
+        goldPrice = new javax.swing.JLabel();
+        goldDuration = new javax.swing.JLabel();
+        goldFeatures = new javax.swing.JTextArea();
+        goldButton = new javax.swing.JButton();
+        goldBadge = new javax.swing.JLabel();
+        
+        diamondPackage = new javax.swing.JPanel();
+        diamondTitle = new javax.swing.JLabel();
+        diamondPrice = new javax.swing.JLabel();
+        diamondDuration = new javax.swing.JLabel();
+        diamondFeatures = new javax.swing.JTextArea();
+        diamondButton = new javax.swing.JButton();
+        diamondBadge = new javax.swing.JLabel();
         
         // Right panel - Thông tin hội viên và thanh toán
         infoPanel = new javax.swing.JPanel();
@@ -153,7 +177,7 @@ public class phihv extends javax.swing.JPanel {
         setLayout(new java.awt.BorderLayout(0, 20));
 
         // Title
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
+        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 24));
         titleLabel.setForeground(new java.awt.Color(45, 45, 48));
         titleLabel.setText("Phí hội viên");
         titleLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 10, 40));
@@ -167,223 +191,266 @@ public class phihv extends javax.swing.JPanel {
         packagesPanel.setLayout(new java.awt.BorderLayout(0, 25));
         packagesPanel.setBackground(new java.awt.Color(245, 245, 250));
 
-        packagesTitle.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        packagesTitle.setFont(new java.awt.Font("Segoe UI", 1, 18));
         packagesTitle.setForeground(new java.awt.Color(0, 120, 215));
         packagesTitle.setText("Chọn gói hội viên");
         packagesTitle.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 10, 0));
         packagesPanel.add(packagesTitle, java.awt.BorderLayout.NORTH);
 
         javax.swing.JPanel cardsPanel = new javax.swing.JPanel();
-        cardsPanel.setLayout(new java.awt.GridLayout(1, 3, 25, 0));
+        cardsPanel.setLayout(new java.awt.GridLayout(2, 2, 20, 20));
         cardsPanel.setBackground(new java.awt.Color(245, 245, 250));
 
-        // Basic Package
-        basicPackage.setBackground(new java.awt.Color(255, 255, 255));
-        basicPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+        // Gói Thành viên (Miễn phí)
+        freePackage.setBackground(new java.awt.Color(255, 255, 255));
+        freePackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
             javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 2),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-        basicPackage.setLayout(new java.awt.BorderLayout(15, 15));
+            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+        freePackage.setLayout(new java.awt.BorderLayout(15, 15));
 
-        basicTitle.setFont(new java.awt.Font("Segoe UI", 1, 22));
-        basicTitle.setForeground(new java.awt.Color(60, 60, 60));
-        basicTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        basicTitle.setText("Gói Cơ bản");
+        freeTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        freeTitle.setForeground(new java.awt.Color(60, 60, 60));
+        freeTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        freeTitle.setText("Hạng Thành viên");
 
-        basicPrice.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        basicPrice.setForeground(new java.awt.Color(0, 120, 215));
-        basicPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        basicPrice.setText("100,000 đ");
+        freePrice.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        freePrice.setForeground(new java.awt.Color(0, 120, 215));
+        freePrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        freePrice.setText("<html>Miễn phí <span style='font-size:11px; color:#777'>(Không giới hạn)</span></html>");
 
-        basicDuration.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        basicDuration.setForeground(new java.awt.Color(100, 100, 100));
-        basicDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        basicDuration.setText("/ 3 tháng");
+        freeDuration.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        freeDuration.setForeground(new java.awt.Color(100, 100, 100));
+        freeDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        freeDuration.setText(""); // gộp vào dòng giá
 
-        basicFeatures.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        basicFeatures.setEditable(false);
-        basicFeatures.setLineWrap(true);
-        basicFeatures.setWrapStyleWord(true);
-        basicFeatures.setText("• Mượn tối đa 3 sách\n• Thời gian mượn 7 ngày\n• Hỗ trợ email\n• Giảm giá 5% khi mua sách");
-        basicFeatures.setBackground(new java.awt.Color(250, 250, 250));
-        basicFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        freeFeatures.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        freeFeatures.setEditable(false);
+        freeFeatures.setLineWrap(true);
+        freeFeatures.setWrapStyleWord(true);
+        freeFeatures.setText("• Thuê tối đa 3 quyển\n• 1 lượt thuê miễn phí\n  14 ngày mỗi tháng");
+        freeFeatures.setBackground(new java.awt.Color(250, 250, 250));
+        freeFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        basicButton.setBackground(new java.awt.Color(0, 120, 215));
-        basicButton.setForeground(new java.awt.Color(255, 255, 255));
-        basicButton.setText("Chọn gói");
-        basicButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        basicButton.setFocusPainted(false);
-        basicButton.setPreferredSize(new java.awt.Dimension(0, 45));
-        basicButton.addActionListener(e -> selectPackage("Basic", 100000, 5, 3));
+        freeButton.setBackground(new java.awt.Color(0, 120, 215));
+        freeButton.setForeground(new java.awt.Color(255, 255, 255));
+        freeButton.setText("Chọn gói");
+        freeButton.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        freeButton.setFocusPainted(false);
+        freeButton.setPreferredSize(new java.awt.Dimension(0, 38));
+        freeButton.addActionListener(e -> selectPackage("ThanhVien", 0, 0, 0));
 
         // Center panel for price, duration and features
-        javax.swing.JPanel basicCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
-        basicCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
+        javax.swing.JPanel freeCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
+        freeCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
         
         // Price panel
-        javax.swing.JPanel basicPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
-        basicPricePanel.setBackground(new java.awt.Color(255, 255, 255));
-        basicPricePanel.add(basicPrice, java.awt.BorderLayout.CENTER);
-        basicPricePanel.add(basicDuration, java.awt.BorderLayout.SOUTH);
+        javax.swing.JPanel freePricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
+        freePricePanel.setBackground(new java.awt.Color(255, 255, 255));
+        freePricePanel.add(freePrice, java.awt.BorderLayout.CENTER);
+        freePricePanel.add(freeDuration, java.awt.BorderLayout.SOUTH);
         
-        basicCenterPanel.add(basicPricePanel, java.awt.BorderLayout.NORTH);
-        basicCenterPanel.add(new javax.swing.JScrollPane(basicFeatures), java.awt.BorderLayout.CENTER);
+        freeCenterPanel.add(freePricePanel, java.awt.BorderLayout.NORTH);
+        javax.swing.JScrollPane freeScroll = new javax.swing.JScrollPane(freeFeatures);
+        freeScroll.setPreferredSize(new java.awt.Dimension(0, 150));
+        freeCenterPanel.add(freeScroll, java.awt.BorderLayout.CENTER);
 
-        // Layout for basic package card
-        basicPackage.add(basicTitle, java.awt.BorderLayout.NORTH);
-        basicPackage.add(basicCenterPanel, java.awt.BorderLayout.CENTER);
-        basicPackage.add(basicButton, java.awt.BorderLayout.SOUTH);
+        // Layout for free package card
+        freePackage.add(freeTitle, java.awt.BorderLayout.NORTH);
+        freePackage.add(freeCenterPanel, java.awt.BorderLayout.CENTER);
+        freePackage.add(freeButton, java.awt.BorderLayout.SOUTH);
 
-        // Premium Package (Nổi bật)
-        premiumPackage.setBackground(new java.awt.Color(255, 248, 220));
-        premiumPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+        // Gói Bạc
+        silverPackage.setBackground(new java.awt.Color(255, 255, 255));
+        silverPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(192, 192, 192), 2),
+            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+        silverPackage.setLayout(new java.awt.BorderLayout(15, 15));
+
+        silverTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        silverTitle.setForeground(new java.awt.Color(60, 60, 60));
+        silverTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        silverTitle.setText("Hạng Bạc");
+
+        silverPrice.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        silverPrice.setForeground(new java.awt.Color(192, 192, 192));
+        silverPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        silverPrice.setText("<html>100,000 đ <span style='font-size:11px; color:#777'>/ 3 tháng</span></html>");
+
+        silverDuration.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        silverDuration.setForeground(new java.awt.Color(100, 100, 100));
+        silverDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        silverDuration.setText(""); // gộp vào giá
+
+        silverFeatures.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        silverFeatures.setEditable(false);
+        silverFeatures.setLineWrap(true);
+        silverFeatures.setWrapStyleWord(true);
+        silverFeatures.setText("• Thuê tối đa 5 quyển\n• 3 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 3% mỗi đơn\n• Cộng 3% điểm mỗi đơn");
+        silverFeatures.setBackground(new java.awt.Color(250, 250, 250));
+        silverFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        silverButton.setBackground(new java.awt.Color(192, 192, 192));
+        silverButton.setForeground(new java.awt.Color(255, 255, 255));
+        silverButton.setText("Chọn gói");
+        silverButton.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        silverButton.setFocusPainted(false);
+        silverButton.setPreferredSize(new java.awt.Dimension(0, 38));
+        silverButton.addActionListener(e -> selectPackage("Bac", 100000, 0, 3));
+
+        // Center panel for price, duration and features
+        javax.swing.JPanel silverCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
+        silverCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
+        
+        // Price panel
+        javax.swing.JPanel silverPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
+        silverPricePanel.setBackground(new java.awt.Color(255, 255, 255));
+        silverPricePanel.add(silverPrice, java.awt.BorderLayout.CENTER);
+        silverPricePanel.add(silverDuration, java.awt.BorderLayout.SOUTH);
+        
+        silverCenterPanel.add(silverPricePanel, java.awt.BorderLayout.NORTH);
+        javax.swing.JScrollPane silverScroll = new javax.swing.JScrollPane(silverFeatures);
+        silverScroll.setPreferredSize(new java.awt.Dimension(0, 150));
+        silverCenterPanel.add(silverScroll, java.awt.BorderLayout.CENTER);
+
+        // Layout for silver package card
+        silverPackage.add(silverTitle, java.awt.BorderLayout.NORTH);
+        silverPackage.add(silverCenterPanel, java.awt.BorderLayout.CENTER);
+        silverPackage.add(silverButton, java.awt.BorderLayout.SOUTH);
+
+        // Gói Vàng (Nổi bật)
+        goldPackage.setBackground(new java.awt.Color(255, 248, 220));
+        goldPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
             javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 200, 0), 3),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-        premiumPackage.setLayout(new java.awt.BorderLayout(15, 15));
+            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+        goldPackage.setLayout(new java.awt.BorderLayout(10, 10));
 
-        premiumBadge.setFont(new java.awt.Font("Segoe UI", 1, 12));
-        premiumBadge.setForeground(new java.awt.Color(255, 255, 255));
-        premiumBadge.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        premiumBadge.setBackground(new java.awt.Color(255, 140, 0));
-        premiumBadge.setOpaque(true);
-        premiumBadge.setText("KHUYẾN MÃI");
-        premiumBadge.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        goldBadge.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        goldBadge.setForeground(new java.awt.Color(255, 255, 255));
+        goldBadge.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        goldBadge.setBackground(new java.awt.Color(255, 140, 0));
+        goldBadge.setOpaque(true);
+        goldBadge.setText("PHỔ BIẾN");
+        goldBadge.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
-        premiumTitle.setFont(new java.awt.Font("Segoe UI", 1, 22));
-        premiumTitle.setForeground(new java.awt.Color(60, 60, 60));
-        premiumTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        premiumTitle.setText("Gói Cao cấp");
+        goldTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        goldTitle.setForeground(new java.awt.Color(60, 60, 60));
+        goldTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        goldTitle.setText("Hạng Vàng");
 
-        premiumPrice.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        premiumPrice.setForeground(new java.awt.Color(255, 140, 0));
-        premiumPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        premiumPrice.setText("280,000 đ");
+        goldPrice.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        goldPrice.setForeground(new java.awt.Color(255, 140, 0));
+        goldPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        goldPrice.setText("<html>200,000 đ <span style='font-size:11px; color:#777'>/ 3 tháng</span></html>");
 
-        javax.swing.JLabel premiumOldPrice = new javax.swing.JLabel("350,000 đ");
-        premiumOldPrice.setFont(new java.awt.Font("Segoe UI", 0, 16));
-        premiumOldPrice.setForeground(new java.awt.Color(150, 150, 150));
-        premiumOldPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        premiumOldPrice.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        javax.swing.JPanel premiumPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 5));
-        premiumPricePanel.setBackground(new java.awt.Color(255, 248, 220));
-        premiumPricePanel.add(premiumPrice, java.awt.BorderLayout.CENTER);
-        premiumPricePanel.add(premiumOldPrice, java.awt.BorderLayout.SOUTH);
+        goldDuration.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        goldDuration.setForeground(new java.awt.Color(100, 100, 100));
+        goldDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        goldDuration.setText(""); // gộp vào giá
 
-        premiumDuration.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        premiumDuration.setForeground(new java.awt.Color(100, 100, 100));
-        premiumDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        premiumDuration.setText("/ 6 tháng (Ưu đãi 20%)");
+        goldFeatures.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        goldFeatures.setEditable(false);
+        goldFeatures.setLineWrap(true);
+        goldFeatures.setWrapStyleWord(true);
+        goldFeatures.setText("• Thuê tối đa 10 quyển\n• 5 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 5% mỗi đơn\n• Cộng 5% điểm mỗi đơn");
+        goldFeatures.setBackground(new java.awt.Color(255, 248, 220));
+        goldFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        premiumFeatures.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        premiumFeatures.setEditable(false);
-        premiumFeatures.setLineWrap(true);
-        premiumFeatures.setWrapStyleWord(true);
-        premiumFeatures.setText("• Mượn tối đa 5 sách\n• Thời gian mượn 14 ngày\n• Hỗ trợ 24/7\n• Giảm giá 10% khi mua sách\n• Đặt chỗ sách online");
-        premiumFeatures.setBackground(new java.awt.Color(255, 248, 220));
-        premiumFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        goldButton.setBackground(new java.awt.Color(255, 140, 0));
+        goldButton.setForeground(new java.awt.Color(255, 255, 255));
+        goldButton.setText("Chọn gói");
+        goldButton.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        goldButton.setFocusPainted(false);
+        goldButton.setPreferredSize(new java.awt.Dimension(0, 38));
+        goldButton.addActionListener(e -> selectPackage("Vang", 200000, 0, 3));
 
-        premiumButton.setBackground(new java.awt.Color(255, 140, 0));
-        premiumButton.setForeground(new java.awt.Color(255, 255, 255));
-        premiumButton.setText("Chọn gói");
-        premiumButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        premiumButton.setFocusPainted(false);
-        premiumButton.setPreferredSize(new java.awt.Dimension(0, 45));
-        premiumButton.addActionListener(e -> selectPackage("Premium", 280000, 20, 6));
-
-        // Top panel for badge and title
-        javax.swing.JPanel premiumTopPanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
-        premiumTopPanel.setBackground(new java.awt.Color(255, 248, 220));
-        premiumTopPanel.add(premiumBadge, java.awt.BorderLayout.NORTH);
-        premiumTopPanel.add(premiumTitle, java.awt.BorderLayout.CENTER);
-        
         // Center panel for price, duration and features
-        javax.swing.JPanel premiumCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
-        premiumCenterPanel.setBackground(new java.awt.Color(255, 248, 220));
+        javax.swing.JPanel goldCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
+        goldCenterPanel.setBackground(new java.awt.Color(255, 248, 220));
         
         // Price panel
-        javax.swing.JPanel premiumPriceFullPanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
-        premiumPriceFullPanel.setBackground(new java.awt.Color(255, 248, 220));
-        premiumPriceFullPanel.add(premiumPricePanel, java.awt.BorderLayout.CENTER);
-        premiumPriceFullPanel.add(premiumDuration, java.awt.BorderLayout.SOUTH);
+        javax.swing.JPanel goldPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
+        goldPricePanel.setBackground(new java.awt.Color(255, 248, 220));
+        goldPricePanel.add(goldPrice, java.awt.BorderLayout.CENTER);
+        goldPricePanel.add(goldDuration, java.awt.BorderLayout.SOUTH);
         
-        premiumCenterPanel.add(premiumPriceFullPanel, java.awt.BorderLayout.NORTH);
-        premiumCenterPanel.add(new javax.swing.JScrollPane(premiumFeatures), java.awt.BorderLayout.CENTER);
+        goldCenterPanel.add(goldPricePanel, java.awt.BorderLayout.NORTH);
+        javax.swing.JScrollPane goldScroll = new javax.swing.JScrollPane(goldFeatures);
+        goldScroll.setPreferredSize(new java.awt.Dimension(0, 150));
+        goldCenterPanel.add(goldScroll, java.awt.BorderLayout.CENTER);
 
-        premiumPackage.add(premiumTopPanel, java.awt.BorderLayout.NORTH);
-        premiumPackage.add(premiumCenterPanel, java.awt.BorderLayout.CENTER);
-        premiumPackage.add(premiumButton, java.awt.BorderLayout.SOUTH);
+        goldPackage.add(goldTitle, java.awt.BorderLayout.NORTH);
+        goldPackage.add(goldCenterPanel, java.awt.BorderLayout.CENTER);
+        goldPackage.add(goldButton, java.awt.BorderLayout.SOUTH);
 
-        // VIP Package
-        vipPackage.setBackground(new java.awt.Color(255, 255, 255));
-        vipPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+        // Gói Kim cương
+        diamondPackage.setBackground(new java.awt.Color(255, 255, 255));
+        diamondPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
             javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 0, 180), 2),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-        vipPackage.setLayout(new java.awt.BorderLayout(15, 15));
+            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+        diamondPackage.setLayout(new java.awt.BorderLayout(10, 10));
 
-        vipBadge.setFont(new java.awt.Font("Segoe UI", 1, 12));
-        vipBadge.setForeground(new java.awt.Color(255, 255, 255));
-        vipBadge.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        vipBadge.setBackground(new java.awt.Color(180, 0, 180));
-        vipBadge.setOpaque(true);
-        vipBadge.setText("VIP");
-        vipBadge.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        diamondBadge.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        diamondBadge.setForeground(new java.awt.Color(255, 255, 255));
+        diamondBadge.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        diamondBadge.setBackground(new java.awt.Color(180, 0, 180));
+        diamondBadge.setOpaque(true);
+        diamondBadge.setText("CAO CẤP");
+        diamondBadge.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
-        vipTitle.setFont(new java.awt.Font("Segoe UI", 1, 22));
-        vipTitle.setForeground(new java.awt.Color(60, 60, 60));
-        vipTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        vipTitle.setText("Gói VIP");
+        diamondTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        diamondTitle.setForeground(new java.awt.Color(60, 60, 60));
+        diamondTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        diamondTitle.setText("Hạng Kim cương");
 
-        vipPrice.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        vipPrice.setForeground(new java.awt.Color(180, 0, 180));
-        vipPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        vipPrice.setText("500,000 đ");
+        diamondPrice.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        diamondPrice.setForeground(new java.awt.Color(180, 0, 180));
+        diamondPrice.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        diamondPrice.setText("<html>300,000 đ <span style='font-size:11px; color:#777'>/ 3 tháng</span></html>");
 
-        vipDuration.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        vipDuration.setForeground(new java.awt.Color(100, 100, 100));
-        vipDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        vipDuration.setText("/ 12 tháng (Ưu đãi 30%)");
+        diamondDuration.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        diamondDuration.setForeground(new java.awt.Color(100, 100, 100));
+        diamondDuration.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        diamondDuration.setText(""); // gộp vào giá
 
-        vipFeatures.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        vipFeatures.setEditable(false);
-        vipFeatures.setLineWrap(true);
-        vipFeatures.setWrapStyleWord(true);
-        vipFeatures.setText("• Mượn không giới hạn sách\n• Thời gian mượn 30 ngày\n• Hỗ trợ 24/7 ưu tiên\n• Giảm giá 15% khi mua sách\n• Đặt chỗ sách online\n• Tham gia sự kiện đặc biệt");
-        vipFeatures.setBackground(new java.awt.Color(250, 250, 250));
-        vipFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        diamondFeatures.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        diamondFeatures.setEditable(false);
+        diamondFeatures.setLineWrap(true);
+        diamondFeatures.setWrapStyleWord(true);
+        diamondFeatures.setText("• Thuê tối đa 15 quyển\n• 10 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 10% mỗi đơn\n• Cộng 10% điểm mỗi đơn");
+        diamondFeatures.setBackground(new java.awt.Color(250, 250, 250));
+        diamondFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        vipButton.setBackground(new java.awt.Color(180, 0, 180));
-        vipButton.setForeground(new java.awt.Color(255, 255, 255));
-        vipButton.setText("Chọn gói");
-        vipButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        vipButton.setFocusPainted(false);
-        vipButton.setPreferredSize(new java.awt.Dimension(0, 45));
-        vipButton.addActionListener(e -> selectPackage("VIP", 500000, 30, 12));
+        diamondButton.setBackground(new java.awt.Color(180, 0, 180));
+        diamondButton.setForeground(new java.awt.Color(255, 255, 255));
+        diamondButton.setText("Chọn gói");
+        diamondButton.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        diamondButton.setFocusPainted(false);
+        diamondButton.setPreferredSize(new java.awt.Dimension(0, 38));
+        diamondButton.addActionListener(e -> selectPackage("KimCuong", 300000, 0, 3));
 
-        // Top panel for badge and title
-        javax.swing.JPanel vipTopPanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
-        vipTopPanel.setBackground(new java.awt.Color(255, 255, 255));
-        vipTopPanel.add(vipBadge, java.awt.BorderLayout.NORTH);
-        vipTopPanel.add(vipTitle, java.awt.BorderLayout.CENTER);
-        
         // Center panel for price, duration and features
-        javax.swing.JPanel vipCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
-        vipCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
+        javax.swing.JPanel diamondCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
+        diamondCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
         
         // Price panel
-        javax.swing.JPanel vipPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
-        vipPricePanel.setBackground(new java.awt.Color(255, 255, 255));
-        vipPricePanel.add(vipPrice, java.awt.BorderLayout.CENTER);
-        vipPricePanel.add(vipDuration, java.awt.BorderLayout.SOUTH);
+        javax.swing.JPanel diamondPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
+        diamondPricePanel.setBackground(new java.awt.Color(255, 255, 255));
+        diamondPricePanel.add(diamondPrice, java.awt.BorderLayout.CENTER);
+        diamondPricePanel.add(diamondDuration, java.awt.BorderLayout.SOUTH);
         
-        vipCenterPanel.add(vipPricePanel, java.awt.BorderLayout.NORTH);
-        vipCenterPanel.add(new javax.swing.JScrollPane(vipFeatures), java.awt.BorderLayout.CENTER);
+        diamondCenterPanel.add(diamondPricePanel, java.awt.BorderLayout.NORTH);
+        javax.swing.JScrollPane diamondScroll = new javax.swing.JScrollPane(diamondFeatures);
+        diamondScroll.setPreferredSize(new java.awt.Dimension(0, 150));
+        diamondCenterPanel.add(diamondScroll, java.awt.BorderLayout.CENTER);
 
-        vipPackage.add(vipTopPanel, java.awt.BorderLayout.NORTH);
-        vipPackage.add(vipCenterPanel, java.awt.BorderLayout.CENTER);
-        vipPackage.add(vipButton, java.awt.BorderLayout.SOUTH);
+        diamondPackage.add(diamondTitle, java.awt.BorderLayout.NORTH);
+        diamondPackage.add(diamondCenterPanel, java.awt.BorderLayout.CENTER);
+        diamondPackage.add(diamondButton, java.awt.BorderLayout.SOUTH);
 
-        cardsPanel.add(basicPackage);
-        cardsPanel.add(premiumPackage);
-        cardsPanel.add(vipPackage);
+        cardsPanel.add(freePackage);
+        cardsPanel.add(silverPackage);
+        cardsPanel.add(goldPackage);
+        cardsPanel.add(diamondPackage);
 
         packagesPanel.add(cardsPanel, java.awt.BorderLayout.CENTER);
 
@@ -518,49 +585,64 @@ public class phihv extends javax.swing.JPanel {
         
         // Display package name in Vietnamese
         String displayName = packageName;
-        if (packageName.equals("Basic")) displayName = "Co ban";
-        else if (packageName.equals("Premium")) displayName = "Cao cap";
+        if (packageName.equals("ThanhVien")) displayName = "Thành viên";
+        else if (packageName.equals("Bac")) displayName = "Bạc";
+        else if (packageName.equals("Vang")) displayName = "Vàng";
+        else if (packageName.equals("KimCuong")) displayName = "Kim cương";
         
         selectedPackageField.setText(displayName);
         discountField.setText(discount + "%");
         
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        totalField.setText(nf.format(price) + " d");
+        if (price == 0) {
+            totalField.setText("Miễn phí");
+        } else {
+            totalField.setText(nf.format(price) + " đ");
+        }
     }
 
     private void processPayment() {
         if (selectedPackageName.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Vui long chon goi hoi vien!", "Thong bao", 
+            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn gói hội viên!", "Thông báo", 
                 javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
         
-        // Check card balance
-        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
-        double balance = 0;
-        if (transactions != null) {
-            for (TransactionService.Transaction t : transactions) {
-                if (t.type.equals("Deposit")) {
-                    balance += t.amount;
-                } else if (t.type.equals("Payment")) {
-                    balance += t.amount; // amount is negative for payment
+        // Kiểm tra số dư chỉ khi gói có phí
+        if (selectedPackagePrice > 0) {
+            List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+            double balance = 0;
+            if (transactions != null) {
+                for (TransactionService.Transaction t : transactions) {
+                    if (t.type.equals("Deposit")) {
+                        balance += t.amount;
+                    } else if (t.type.equals("Payment")) {
+                        balance += t.amount; // amount is negative for payment
+                    }
                 }
+            }
+            
+            if (balance < selectedPackagePrice) {
+                javax.swing.JOptionPane.showMessageDialog(this, 
+                    "Số dư không đủ!\nSố dư hiện tại: " + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(balance) + " đ\nCần: " + 
+                    NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " đ",
+                    "Thông báo", 
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+                return;
             }
         }
         
-        if (balance < selectedPackagePrice) {
-            javax.swing.JOptionPane.showMessageDialog(this, 
-                "So du khong du!\nSo du hien tai: " + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(balance) + " d\nCan: " + 
-                NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " d",
-                "Thong bao", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
-            return;
+        String confirmMessage;
+        if (selectedPackagePrice == 0) {
+            confirmMessage = "Xác nhận đăng ký gói hội viên?\nGói: " + selectedPackageField.getText() + "\nGiá: Miễn phí";
+        } else {
+            confirmMessage = "Xác nhận thanh toán gói hội viên?\nGói: " + selectedPackageField.getText() + "\nGiá: " + 
+                NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " đ";
         }
         
         int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-            "Xac nhan thanh toan goi hoi vien?\nGoi: " + selectedPackageField.getText() + "\nGia: " + 
-            NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " d",
-            "Xac nhan",
+            confirmMessage,
+            "Xác nhận",
             javax.swing.JOptionPane.YES_NO_OPTION);
         if (option != javax.swing.JOptionPane.YES_OPTION) {
             return;
@@ -582,25 +664,34 @@ public class phihv extends javax.swing.JPanel {
                         updateCardStmt.executeUpdate();
                     }
                     
-                    // Create transaction record
-                    String transSql = "INSERT INTO Transactions (TransID, CardID, Type, Amount, PointsChanged, DateTime, SignatureCard, SignatureStore) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                    try (PreparedStatement transStmt = conn.prepareStatement(transSql)) {
-                        transStmt.setString(1, UUID.randomUUID().toString());
-                        transStmt.setString(2, currentCardId);
-                        transStmt.setString(3, "Payment");
-                        transStmt.setDouble(4, -selectedPackagePrice);
-                        transStmt.setInt(5, 0);
-                        transStmt.setString(6, java.time.LocalDateTime.now().toString());
-                        transStmt.setBytes(7, new byte[]{});
-                        transStmt.setBytes(8, new byte[]{});
-                        transStmt.executeUpdate();
+                    // Create transaction record chỉ khi gói có phí
+                    if (selectedPackagePrice > 0) {
+                        String transSql = "INSERT INTO Transactions (TransID, CardID, Type, Amount, PointsChanged, DateTime, SignatureCard, SignatureStore) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                        try (PreparedStatement transStmt = conn.prepareStatement(transSql)) {
+                            transStmt.setString(1, UUID.randomUUID().toString());
+                            transStmt.setString(2, currentCardId);
+                            transStmt.setString(3, "Payment");
+                            transStmt.setDouble(4, -selectedPackagePrice);
+                            transStmt.setInt(5, 0);
+                            transStmt.setString(6, java.time.LocalDateTime.now().toString());
+                            transStmt.setBytes(7, new byte[]{});
+                            transStmt.setBytes(8, new byte[]{});
+                            transStmt.executeUpdate();
+                        }
                     }
                     
                     conn.commit();
                     
+                    String successMessage;
+                    if (selectedPackagePrice == 0) {
+                        successMessage = "Đăng ký thành công!\nGói hội viên: " + selectedPackageField.getText();
+                    } else {
+                        successMessage = "Thanh toán thành công!\nGói hội viên: " + selectedPackageField.getText();
+                    }
+                    
                     javax.swing.JOptionPane.showMessageDialog(this, 
-                        "Thanh toan thanh cong!\nGoi hoi vien: " + selectedPackageField.getText(),
-                        "Thong bao", 
+                        successMessage,
+                        "Thông báo", 
                         javax.swing.JOptionPane.INFORMATION_MESSAGE);
                     
                     // Reset selection and reload info
@@ -635,26 +726,32 @@ public class phihv extends javax.swing.JPanel {
     private javax.swing.JPanel mainContainer;
     private javax.swing.JPanel packagesPanel;
     private javax.swing.JLabel packagesTitle;
-    private javax.swing.JPanel basicPackage;
-    private javax.swing.JLabel basicTitle;
-    private javax.swing.JLabel basicPrice;
-    private javax.swing.JLabel basicDuration;
-    private javax.swing.JTextArea basicFeatures;
-    private javax.swing.JButton basicButton;
-    private javax.swing.JPanel premiumPackage;
-    private javax.swing.JLabel premiumTitle;
-    private javax.swing.JLabel premiumPrice;
-    private javax.swing.JLabel premiumDuration;
-    private javax.swing.JTextArea premiumFeatures;
-    private javax.swing.JButton premiumButton;
-    private javax.swing.JLabel premiumBadge;
-    private javax.swing.JPanel vipPackage;
-    private javax.swing.JLabel vipTitle;
-    private javax.swing.JLabel vipPrice;
-    private javax.swing.JLabel vipDuration;
-    private javax.swing.JTextArea vipFeatures;
-    private javax.swing.JButton vipButton;
-    private javax.swing.JLabel vipBadge;
+    private javax.swing.JPanel freePackage;
+    private javax.swing.JLabel freeTitle;
+    private javax.swing.JLabel freePrice;
+    private javax.swing.JLabel freeDuration;
+    private javax.swing.JTextArea freeFeatures;
+    private javax.swing.JButton freeButton;
+    private javax.swing.JPanel silverPackage;
+    private javax.swing.JLabel silverTitle;
+    private javax.swing.JLabel silverPrice;
+    private javax.swing.JLabel silverDuration;
+    private javax.swing.JTextArea silverFeatures;
+    private javax.swing.JButton silverButton;
+    private javax.swing.JPanel goldPackage;
+    private javax.swing.JLabel goldTitle;
+    private javax.swing.JLabel goldPrice;
+    private javax.swing.JLabel goldDuration;
+    private javax.swing.JTextArea goldFeatures;
+    private javax.swing.JButton goldButton;
+    private javax.swing.JLabel goldBadge;
+    private javax.swing.JPanel diamondPackage;
+    private javax.swing.JLabel diamondTitle;
+    private javax.swing.JLabel diamondPrice;
+    private javax.swing.JLabel diamondDuration;
+    private javax.swing.JTextArea diamondFeatures;
+    private javax.swing.JButton diamondButton;
+    private javax.swing.JLabel diamondBadge;
     private javax.swing.JPanel infoPanel;
     private javax.swing.JLabel infoTitle;
     private javax.swing.JLabel cardIdLabel;
@@ -671,4 +768,3 @@ public class phihv extends javax.swing.JPanel {
     private javax.swing.JTextField totalField;
     private javax.swing.JButton paymentButton;
 }
-

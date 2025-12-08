@@ -24,6 +24,11 @@ public class MainFrame extends javax.swing.JFrame {
     private thongtincanhan personalPanel;
     private phihv membershipPanel;
     private doipin changePinPanel;
+    private muontra borrowPanel; // Panel mượn/trả sách
+    private bansach buyPanel; // Panel mua sách
+    private vpp officePanel; // Panel mua VPP
+    private lichsu historyPanel; // Panel lịch sử
+    private String currentCardId; // CardID từ thẻ đăng nhập
     
     // Colors
     private static final java.awt.Color ACTIVE_COLOR = new java.awt.Color(0, 120, 215);
@@ -34,6 +39,12 @@ public class MainFrame extends javax.swing.JFrame {
      * Creates new form MainFrame
      */
     public MainFrame() {
+        // Lấy CardID từ PinLoginDialog
+        this.currentCardId = PinLoginDialog.getLastAuthenticatedCardId();
+        if (this.currentCardId == null || this.currentCardId.isEmpty()) {
+            // Fallback nếu không có CardID (có thể là admin login)
+            this.currentCardId = "CARD001";
+        }
         initComponents();
         setupCardLayout();
     }
@@ -47,19 +58,41 @@ public class MainFrame extends javax.swing.JFrame {
         
         // Thêm các panel vào CardLayout
         homePanel = new HomePanel();
+        homePanel.setCurrentCardId(currentCardId);
         mainPanel.add(homePanel, "home");
+        
         personalPanel = new thongtincanhan();
+        personalPanel.setCurrentCardId(currentCardId);
         mainPanel.add(personalPanel, "personal");
-        mainPanel.add(new muontra(), "borrow");
-        mainPanel.add(new bansach(), "buy");
-        mainPanel.add(new vpp(), "office");
+        
+        borrowPanel = new muontra();
+        borrowPanel.setCurrentCardId(currentCardId);
+        mainPanel.add(borrowPanel, "borrow");
+        
+        buyPanel = new bansach();
+        buyPanel.setCurrentCardId(currentCardId);
+        mainPanel.add(buyPanel, "buy");
+        
+        officePanel = new vpp();
+        officePanel.setCurrentCardId(currentCardId);
+        mainPanel.add(officePanel, "office");
+        
         membershipPanel = new phihv();
+        membershipPanel.setCurrentCardId(currentCardId);
         mainPanel.add(membershipPanel, "membership");
+        
         topUpPanel = new naptien();
+        topUpPanel.setCurrentCardId(currentCardId);
         mainPanel.add(topUpPanel, "topup");
-        mainPanel.add(new lichsu(), "history");
+        
+        historyPanel = new lichsu();
+        historyPanel.setCurrentCardId(currentCardId);
+        mainPanel.add(historyPanel, "history");
+        
         mainPanel.add(new quanlithe(), "card");
+        
         changePinPanel = new doipin();
+        // changePinPanel không có setCurrentCardId, bỏ qua
         mainPanel.add(changePinPanel, "changepin");
         
         // Thêm mainPanel vào content pane
@@ -89,6 +122,22 @@ public class MainFrame extends javax.swing.JFrame {
         }
         if (name.equals("membership") && membershipPanel != null) {
             membershipPanel.reloadCardInfo();
+        }
+        if (name.equals("borrow") && borrowPanel != null) {
+            // Reload dữ liệu mượn/trả sách với CardID hiện tại
+            borrowPanel.setCurrentCardId(currentCardId);
+        }
+        if (name.equals("buy") && buyPanel != null) {
+            // Reload dữ liệu mua sách với CardID hiện tại
+            buyPanel.setCurrentCardId(currentCardId);
+        }
+        if (name.equals("office") && officePanel != null) {
+            // Reload dữ liệu mua VPP với CardID hiện tại
+            officePanel.setCurrentCardId(currentCardId);
+        }
+        if (name.equals("history") && historyPanel != null) {
+            // Reload lịch sử với CardID hiện tại
+            historyPanel.setCurrentCardId(currentCardId);
         }
     }
     

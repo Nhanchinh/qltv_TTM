@@ -41,6 +41,16 @@ public class HomePanel extends javax.swing.JPanel {
     }
     
     /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            loadStats(); // Reload stats với CardID mới
+        }
+    }
+    
+    /**
      * Load statistics from database
      */
     private void loadStats() {

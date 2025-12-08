@@ -35,6 +35,16 @@ public class thongtincanhan extends javax.swing.JPanel {
     }
     
     /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            loadCardInfo(); // Reload info với CardID mới
+        }
+    }
+    
+    /**
      * Load card information from database
      */
     private void loadCardInfo() {

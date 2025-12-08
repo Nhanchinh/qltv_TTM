@@ -20,6 +20,16 @@ public class vpp extends javax.swing.JPanel {
     private StationeryService stationeryService;
     private CardService cardService;
     private String currentCardId = "CARD001";
+    
+    /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            updateCardInfo();
+        }
+    }
     private List<CartItem> cartItems;
     
     private static class CartItem {
@@ -71,6 +81,10 @@ public class vpp extends javax.swing.JPanel {
         CardService.Card card = cardService.getCardById(currentCardId);
         if (card != null) {
             cardIdField.setText(card.cardId);
+            // Tự động set điểm sử dụng = điểm tích lũy hiện có
+            if (pointsUsedField != null) {
+                pointsUsedField.setText(String.valueOf(card.totalPoints));
+            }
         }
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
         saleDateField.setText(dateFormat.format(new java.util.Date()));
@@ -93,9 +107,34 @@ public class vpp extends javax.swing.JPanel {
             total += itemTotal;
         }
         
+        // Lấy số điểm sử dụng từ field (nếu có)
+        int pointsUsed = 0;
+        if (pointsUsedField != null) {
+            try {
+                String pointsText = pointsUsedField.getText().trim();
+                if (!pointsText.isEmpty()) {
+                    pointsUsed = Integer.parseInt(pointsText);
+                    if (pointsUsed < 0) pointsUsed = 0;
+                    
+                    // Kiểm tra không được vượt quá điểm tích lũy hiện có
+                    CardService.Card card = cardService.getCardById(currentCardId);
+                    if (card != null && pointsUsed > card.totalPoints) {
+                        pointsUsed = card.totalPoints; // Giới hạn bằng điểm tích lũy
+                        pointsUsedField.setText(String.valueOf(pointsUsed));
+                    }
+                }
+            } catch (NumberFormatException e) {
+                pointsUsed = 0;
+            }
+        }
+        
+        // Trừ điểm vào tổng tiền (1 điểm = 1 VND)
+        double finalTotal = total - pointsUsed;
+        if (finalTotal < 0) finalTotal = 0;
+        
         cartTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
         NumberFormat nf2 = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        totalField.setText(nf2.format(total) + " đ");
+        totalField.setText(nf2.format(finalTotal) + " đ");
     }
 
     /**
@@ -376,10 +415,36 @@ public class vpp extends javax.swing.JPanel {
         javax.swing.JPanel pointsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         pointsPanel.setBackground(new java.awt.Color(255, 255, 255));
         pointsUsedLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        pointsUsedLabel.setText("Điểm đã dùng:");
+        pointsUsedLabel.setText("Điểm sử dụng:");
         pointsUsedField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         pointsUsedField.setText("0");
         pointsUsedField.setEditable(true);
+        // Cập nhật tổng tiền khi nhấn Enter
+        pointsUsedField.addActionListener(e -> updateCartTable());
+        // Cập nhật tổng tiền khi rời khỏi field (focus lost)
+        pointsUsedField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                updateCartTable();
+            }
+        });
+        // Cập nhật tổng tiền khi thay đổi nội dung (với delay để tránh cập nhật quá nhiều)
+        javax.swing.Timer updateTimer = new javax.swing.Timer(500, e -> updateCartTable());
+        updateTimer.setRepeats(false); // Chỉ chạy một lần sau khi dừng gõ
+        pointsUsedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateTimer.restart();
+            }
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateTimer.restart();
+            }
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateTimer.restart();
+            }
+        });
         pointsPanel.add(pointsUsedLabel, java.awt.BorderLayout.WEST);
         pointsPanel.add(pointsUsedField, java.awt.BorderLayout.CENTER);
         
@@ -526,6 +591,12 @@ public class vpp extends javax.swing.JPanel {
             cartItems.add(new CartItem(productId, item.name, quantity, item.price));
         }
         
+        // Nếu đây là sản phẩm đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm tích lũy
+        CardService.Card card = cardService.getCardById(currentCardId);
+        if (cartItems.size() == 1 && card != null && pointsUsedField != null) {
+            pointsUsedField.setText(String.valueOf(card.totalPoints));
+        }
+        
         updateCartTable();
         javax.swing.JOptionPane.showMessageDialog(this, "Da them " + quantity + " san pham vao gio hang!", "Thong bao", 
             javax.swing.JOptionPane.INFORMATION_MESSAGE);
@@ -565,7 +636,7 @@ public class vpp extends javax.swing.JPanel {
                 return;
             }
             
-            // Calculate total amount
+            // Calculate total amount (chưa trừ điểm - để phân phối điểm theo tỷ lệ)
             double totalAmount = 0;
             for (CartItem item : cartItems) {
                 totalAmount += item.getTotalPrice();

@@ -222,5 +222,44 @@ public class CardService {
         }
         return false;
     }
+    
+    /**
+     * Pay fine debt (reduce FineDebt)
+     * @param cardId Card ID
+     * @param amount Amount to pay (will be subtracted from FineDebt)
+     * @return true if successful
+     */
+    public boolean payFineDebt(String cardId, double amount) {
+        String sql = "UPDATE Cards SET FineDebt = FineDebt - ? WHERE CardID = ? AND FineDebt >= ?";
+        try (Connection conn = DBConnect.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setDouble(1, amount);
+            pstmt.setString(2, cardId);
+            pstmt.setDouble(3, amount);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    /**
+     * Add fine debt (increase FineDebt)
+     * @param cardId Card ID
+     * @param amount Amount to add
+     * @return true if successful
+     */
+    public boolean addFineDebt(String cardId, double amount) {
+        String sql = "UPDATE Cards SET FineDebt = FineDebt + ? WHERE CardID = ?";
+        try (Connection conn = DBConnect.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setDouble(1, amount);
+            pstmt.setString(2, cardId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
 

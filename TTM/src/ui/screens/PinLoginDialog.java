@@ -40,6 +40,8 @@ public class PinLoginDialog extends JDialog {
     private boolean authenticated = false;
     private boolean cardBlocked = false;
     private SettingsService settingsService;
+    private String authenticatedCardId = null; // Lưu CardID sau khi đăng nhập thành công
+    private static String lastAuthenticatedCardId = null; // Static để các màn hình khác có thể lấy
     // Colors
     private static final Color PRIMARY_COLOR = new Color(0, 120, 215);
     private static final Color PRIMARY_DARK = new Color(0, 100, 180);
@@ -483,6 +485,10 @@ public class PinLoginDialog extends JDialog {
         }
         System.out.println(">>> Card ID retrieved from card: " + cardId);
         
+        // Lưu CardID để truyền cho MainFrame
+        this.authenticatedCardId = cardId;
+        lastAuthenticatedCardId = cardId;
+        
         // Step 3: Get public key from database using CardID
         byte[] publicKeyBytes = getCardPublicKeyFromDatabase(cardId);
         if (publicKeyBytes == null || publicKeyBytes.length == 0) {
@@ -606,6 +612,9 @@ public class PinLoginDialog extends JDialog {
         SettingsService settingsService = new SettingsService();
         settingsService.initializeDefaultPin();
         
+        // Reset CardID trước khi đăng nhập
+        lastAuthenticatedCardId = null;
+        
         PinLoginDialog dialog = new PinLoginDialog(parent);
         dialog.setVisible(true);
         
@@ -618,5 +627,13 @@ public class PinLoginDialog extends JDialog {
         }
         
         return LoginResult.CANCELLED;
+    }
+    
+    /**
+     * Lấy CardID của thẻ vừa đăng nhập thành công
+     * @return CardID hoặc null nếu chưa đăng nhập
+     */
+    public static String getLastAuthenticatedCardId() {
+        return lastAuthenticatedCardId;
     }
 }

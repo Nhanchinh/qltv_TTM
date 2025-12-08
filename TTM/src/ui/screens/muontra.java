@@ -33,6 +33,21 @@ public class muontra extends javax.swing.JPanel {
         loadAvailableBooks();
         loadBorrowedBooks();
     }
+    
+    /**
+     * Set CardID từ thẻ đăng nhập
+     */
+    public void setCurrentCardId(String cardId) {
+        if (cardId != null && !cardId.isEmpty()) {
+            this.currentCardId = cardId;
+            // Cập nhật UI field
+            if (cardIdField != null) {
+                cardIdField.setText(cardId);
+            }
+            loadAvailableBooks();
+            loadBorrowedBooks();
+        }
+    }
 
     /**
      * Khởi tạo các component của giao diện
