@@ -7,10 +7,15 @@ import smartcard.CardConnectionManager;
 import smartcard.CardSetupManager;
 import smartcard.CardKeyManager;
 import smartcard.CardInfoManager;
+import smartcard.CardImageManager;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.time.LocalDate;
+import java.io.File;
+import java.io.ByteArrayInputStream;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -142,6 +147,7 @@ public class AdminPanel extends JPanel {
         tabbedPane.addTab("Đổi Mã PIN", createResetPINPanel());
         tabbedPane.addTab("Nạp Dữ Liệu Thẻ", createImportCardDataPanel());
         tabbedPane.addTab("Lấy Thông Tin", createGetInfoPanel());
+        tabbedPane.addTab("Thêm Sách", createAddBookPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
         
@@ -634,9 +640,9 @@ public class AdminPanel extends JPanel {
      */
     private void showAddCardDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Thêm Thẻ Mới", true);
-        dialog.setSize(520, 360);
+        dialog.setSize(760, 520);
         dialog.setLocationRelativeTo(null);
-        dialog.setResizable(false);
+        dialog.setResizable(true);
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new GridBagLayout());
@@ -653,7 +659,7 @@ public class AdminPanel extends JPanel {
         fullNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         JTextField fullNameField = new JTextField();
         fullNameField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        fullNameField.setPreferredSize(new Dimension(200, 35));
+        fullNameField.setPreferredSize(new Dimension(360, 40));
         
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -669,7 +675,7 @@ public class AdminPanel extends JPanel {
         phoneLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         JTextField phoneField = new JTextField();
         phoneField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        phoneField.setPreferredSize(new Dimension(200, 35));
+        phoneField.setPreferredSize(new Dimension(240, 40));
         
         gbc.gridx = 0;
         gbc.gridy = 1;
@@ -686,7 +692,7 @@ public class AdminPanel extends JPanel {
         dobLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         JTextField dobField = new JTextField();
         dobField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        dobField.setPreferredSize(new Dimension(200, 35));
+        dobField.setPreferredSize(new Dimension(200, 40));
         
         gbc.gridx = 0;
         gbc.gridy = 2;
@@ -703,7 +709,7 @@ public class AdminPanel extends JPanel {
         addressLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         JTextField addressField = new JTextField();
         addressField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        addressField.setPreferredSize(new Dimension(200, 35));
+        addressField.setPreferredSize(new Dimension(360, 40));
         
         gbc.gridx = 0;
         gbc.gridy = 3;
@@ -715,6 +721,54 @@ public class AdminPanel extends JPanel {
         gbc.insets = new Insets(0, 0, 15, 0);
         contentPanel.add(addressField, gbc);
         
+        // Image chooser (optional)
+        JLabel imageLabelTitle = new JLabel("Ảnh đại diện:");
+        imageLabelTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JLabel imagePreview = new JLabel();
+        imagePreview.setPreferredSize(new Dimension(200, 140));
+        imagePreview.setBorder(new LineBorder(new Color(200, 200, 200), 1));
+        JButton chooseImageButton = new JButton("Chọn Ảnh");
+        chooseImageButton.setPreferredSize(new Dimension(130, 32));
+
+        final String[] selectedImage = new String[1];
+
+        chooseImageButton.addActionListener(ev -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            chooser.setAcceptAllFileFilterUsed(false);
+            chooser.addChoosableFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Image files", "jpg", "jpeg", "png", "gif", "bmp"));
+            int res = chooser.showOpenDialog(this);
+            if (res == JFileChooser.APPROVE_OPTION) {
+                File f = chooser.getSelectedFile();
+                selectedImage[0] = f.getAbsolutePath();
+                try {
+                    BufferedImage img = ImageIO.read(f);
+                    if (img != null) {
+                        Image scaled = img.getScaledInstance(imagePreview.getWidth(), imagePreview.getHeight(), Image.SCALE_SMOOTH);
+                        imagePreview.setIcon(new ImageIcon(scaled));
+                    } else {
+                        imagePreview.setIcon(null);
+                    }
+                } catch (Exception ex) {
+                    imagePreview.setIcon(null);
+                }
+            }
+        });
+
+        JPanel imageRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        imageRow.setOpaque(false);
+        imageRow.add(chooseImageButton);
+        imageRow.add(imagePreview);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 15, 15);
+        contentPanel.add(imageLabelTitle, gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        contentPanel.add(imageRow, gbc);
         // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
@@ -777,10 +831,27 @@ public class AdminPanel extends JPanel {
                     setupManager.verifyPin(userPin);  // REQUIRED: Verify PIN after setup
                     setupManager.initUserData(cardId, fullName, formattedDob, phone, address, regDate);
                     
+                    // Step 4.5: Upload image to card if selected
+                    boolean imageUploaded = false;
+                    if (selectedImage[0] != null && !selectedImage[0].isEmpty()) {
+                        File imageFile = new File(selectedImage[0]);
+                        if (imageFile.exists()) {
+                            System.out.println("[ADD_CARD] Uploading image to card...");
+                            CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+                            imageUploaded = imageManager.uploadImage(imageFile);
+                            if (imageUploaded) {
+                                System.out.println("[ADD_CARD] Image uploaded successfully!");
+                            } else {
+                                System.out.println("[ADD_CARD] Image upload failed!");
+                            }
+                        }
+                    }
+                    
                     connManager.disconnectCard();
                     
                     // Step 5: Insert to database
-                    if (insertCard(cardId, fullName, phone, dob, "Basic", null)) {
+                    final boolean imgUploaded = imageUploaded;
+                    if (insertCard(cardId, fullName, phone, dob, address, "Basic", selectedImage[0])) {
                         // Step 6: Save card public key to database AFTER successful insert
                         try {
                             byte[] pubBytes = setupManager.getKeyManager().getCardPublicKeyEncoded();
@@ -792,11 +863,15 @@ public class AdminPanel extends JPanel {
                         }
                         
                         SwingUtilities.invokeLater(() -> {
+                            String imageStatus = "";
+                            if (selectedImage[0] != null && !selectedImage[0].isEmpty()) {
+                                imageStatus = imgUploaded ? "\nẢnh: Đã upload lên thẻ ✓" : "\nẢnh: Upload thất bại ✗";
+                            }
                             JOptionPane.showMessageDialog(
                                 SwingUtilities.getWindowAncestor(AdminPanel.this),
                                 "Thêm thẻ thành công!\nCardID: " + cardId + 
                                 "\nUser PIN: " + userPin +
-                                "\nAdmin PIN: " + adminPin, 
+                                "\nAdmin PIN: " + adminPin + imageStatus, 
                                 "Thành công", JOptionPane.INFORMATION_MESSAGE);
                             loadCardsToTable(tableModel);
                         });
@@ -825,7 +900,7 @@ public class AdminPanel extends JPanel {
         buttonPanel.add(cancelButton);
         
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(0, 0, 0, 0);
         contentPanel.add(buttonPanel, gbc);
@@ -840,19 +915,50 @@ public class AdminPanel extends JPanel {
     /**
      * Insert new card to database
      */
-    private boolean insertCard(String cardId, String fullName, String phone, String dob, String memberType, String imagePath) {
-        String sql = "INSERT INTO Cards (CardID, FullName, Phone, Address, DOB, RegisterDate, MemberType, TotalSpent, TotalPoints, FineDebt, IsBlocked, CreatedAt, UpdatedAt) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, datetime('now'), datetime('now'))";
-        try (Connection conn = DBConnect.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, cardId);
-            pstmt.setString(2, fullName);
-            pstmt.setString(3, phone);
-            pstmt.setString(4, ""); // Address hiện chưa lưu ở AdminPanel (có thể mở rộng sau)
-            pstmt.setString(5, dob);
-            pstmt.setString(6, LocalDate.now().toString());
-            pstmt.setString(7, memberType);
-            return pstmt.executeUpdate() > 0;
+    private boolean insertCard(String cardId, String fullName, String phone, String dob, String address, String memberType, String imagePath) {
+        // Detect whether the Cards table has an ImagePath column. If yes, include it in insert.
+        try (Connection conn = DBConnect.getConnection()) {
+            boolean hasImagePath = false;
+            try (Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery("PRAGMA table_info(Cards);")) {
+                while (rs.next()) {
+                    String colName = rs.getString("name");
+                    if ("ImagePath".equalsIgnoreCase(colName)) {
+                        hasImagePath = true;
+                        break;
+                    }
+                }
+            }
+
+            String sql;
+            if (hasImagePath) {
+                sql = "INSERT INTO Cards (CardID, FullName, Phone, Address, DOB, RegisterDate, MemberType, ImagePath, TotalSpent, TotalPoints, FineDebt, IsBlocked, CreatedAt, UpdatedAt) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, datetime('now'), datetime('now'))";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, cardId);
+                    pstmt.setString(2, fullName);
+                    pstmt.setString(3, phone);
+                    pstmt.setString(4, address == null ? "" : address);
+                    pstmt.setString(5, dob);
+                    pstmt.setString(6, LocalDate.now().toString());
+                    pstmt.setString(7, memberType);
+                    pstmt.setString(8, imagePath == null ? "" : imagePath);
+                    return pstmt.executeUpdate() > 0;
+                }
+            } else {
+                sql = "INSERT INTO Cards (CardID, FullName, Phone, Address, DOB, RegisterDate, MemberType, TotalSpent, TotalPoints, FineDebt, IsBlocked, CreatedAt, UpdatedAt) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, datetime('now'), datetime('now'))";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setString(1, cardId);
+                    pstmt.setString(2, fullName);
+                    pstmt.setString(3, phone);
+                    pstmt.setString(4, address == null ? "" : address);
+                    pstmt.setString(5, dob);
+                    pstmt.setString(6, LocalDate.now().toString());
+                    pstmt.setString(7, memberType);
+                    return pstmt.executeUpdate() > 0;
+                }
+            }
         } catch (SQLException e) {
             System.err.println("Loi khi them the: " + e.getMessage());
             e.printStackTrace();
@@ -1109,21 +1215,51 @@ public class AdminPanel extends JPanel {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBackground(new Color(245, 245, 250));
-        panel.setBorder(new EmptyBorder(40, 40, 40, 40));
-        
-        // Center panel
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        centerPanel.setOpaque(false);
-        centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.setBorder(new EmptyBorder(30, 30, 30, 30));
         
         // Title
         JLabel titleLabel = new JLabel("LẤY THÔNG TIN NGƯỜI DÙNG");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(ADMIN_COLOR);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(titleLabel);
-        centerPanel.add(Box.createVerticalStrut(30));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setBorder(new EmptyBorder(0, 0, 20, 0));
+        panel.add(titleLabel, BorderLayout.NORTH);
+        
+        // Main content panel (horizontal layout)
+        JPanel contentPanel = new JPanel(new GridBagLayout());
+        contentPanel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        
+        // Left side - Image panel
+        JPanel imagePanel = new JPanel(new BorderLayout());
+        imagePanel.setBackground(Color.WHITE);
+        imagePanel.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(200, 200, 200), 1),
+            new EmptyBorder(10, 10, 10, 10)
+        ));
+        imagePanel.setPreferredSize(new Dimension(250, 300));
+        
+        JLabel imageLabel = new JLabel("Ảnh thẻ", SwingConstants.CENTER);
+        imageLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+        imageLabel.setForeground(new Color(150, 150, 150));
+        imageLabel.setPreferredSize(new Dimension(230, 250));
+        imagePanel.add(imageLabel, BorderLayout.CENTER);
+        
+        JLabel imageTitleLabel = new JLabel("ẢNH THẺ", SwingConstants.CENTER);
+        imageTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        imageTitleLabel.setForeground(ADMIN_COLOR);
+        imagePanel.add(imageTitleLabel, BorderLayout.NORTH);
+        
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, 0, 20);
+        gbc.anchor = GridBagConstraints.NORTH;
+        contentPanel.add(imagePanel, gbc);
+        
+        // Right side - Info panel
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setOpaque(false);
         
         // Info text area
         JTextArea infoArea = new JTextArea();
@@ -1131,13 +1267,15 @@ public class AdminPanel extends JPanel {
         infoArea.setEditable(false);
         infoArea.setLineWrap(true);
         infoArea.setWrapStyleWord(true);
-        infoArea.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        infoArea.setBorder(new EmptyBorder(10, 10, 10, 10));
         infoArea.setBackground(Color.WHITE);
-        infoArea.setPreferredSize(new Dimension(300, 150));
+        infoArea.setText("Nhấn nút 'LẤY THÔNG TIN' để đọc dữ liệu từ thẻ...");
         
         JScrollPane scrollPane = new JScrollPane(infoArea);
-        centerPanel.add(scrollPane);
-        centerPanel.add(Box.createVerticalStrut(20));
+        scrollPane.setPreferredSize(new Dimension(350, 200));
+        scrollPane.setBorder(new LineBorder(new Color(200, 200, 200), 1));
+        infoPanel.add(scrollPane);
+        infoPanel.add(Box.createVerticalStrut(20));
         
         // Get Info button
         JButton getInfoButton = new JButton("LẤY THÔNG TIN") {
@@ -1173,6 +1311,8 @@ public class AdminPanel extends JPanel {
                 try {
                     SwingUtilities.invokeLater(() -> {
                         infoArea.setText("Đang kết nối đến thẻ...");
+                        imageLabel.setIcon(null);
+                        imageLabel.setText("Đang tải...");
                     });
                     
                     // Connect to card
@@ -1204,18 +1344,60 @@ public class AdminPanel extends JPanel {
                     } catch (Exception _e) {
                         System.err.println("Warning: failed to save card public key to DB: " + _e.getMessage());
                     }
+                    
+                    // Get image from card
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText(userInfo.toString());
+                        infoArea.setText(userInfo.toString() + "\n\nĐang tải ảnh từ thẻ...");
                     });
+                    
+                    CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+                    byte[] imageData = imageManager.downloadImage();
                     
                     // Disconnect
                     connManager.disconnectCard();
                     
+                    // Update UI
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText(userInfo.toString());
+                        
+                        // Display image
+                        if (imageData != null && imageManager.isValidJpeg(imageData)) {
+                            try {
+                                BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageData));
+                                if (img != null) {
+                                    // Scale image to fit
+                                    int maxW = 220;
+                                    int maxH = 240;
+                                    int w = img.getWidth();
+                                    int h = img.getHeight();
+                                    double scale = Math.min((double) maxW / w, (double) maxH / h);
+                                    int newW = (int) (w * scale);
+                                    int newH = (int) (h * scale);
+                                    
+                                    Image scaled = img.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
+                                    imageLabel.setIcon(new ImageIcon(scaled));
+                                    imageLabel.setText("");
+                                } else {
+                                    imageLabel.setIcon(null);
+                                    imageLabel.setText("Không thể đọc ảnh");
+                                }
+                            } catch (Exception imgEx) {
+                                imageLabel.setIcon(null);
+                                imageLabel.setText("Lỗi: " + imgEx.getMessage());
+                            }
+                        } else {
+                            imageLabel.setIcon(null);
+                            imageLabel.setText("Thẻ chưa có ảnh");
+                        }
+                    });
+                    
                 } catch (Exception ex) {
                     SwingUtilities.invokeLater(() -> {
                         infoArea.setText("Lỗi: " + ex.getMessage());
+                        imageLabel.setIcon(null);
+                        imageLabel.setText("Lỗi");
                         JOptionPane.showMessageDialog(
-                            SwingUtilities.getWindowAncestor(centerPanel),
+                            SwingUtilities.getWindowAncestor(contentPanel),
                             "Lỗi khi lấy thông tin: " + ex.getMessage(),
                             "Lỗi",
                             JOptionPane.ERROR_MESSAGE
@@ -1226,10 +1408,342 @@ public class AdminPanel extends JPanel {
             }).start();
         });
         
-        centerPanel.add(getInfoButton);
+        infoPanel.add(getInfoButton);
         
-        panel.add(centerPanel, BorderLayout.CENTER);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        contentPanel.add(infoPanel, gbc);
+        
+        panel.add(contentPanel, BorderLayout.CENTER);
         return panel;
+    }
+    
+    /**
+     * Create Add Book tab
+     */
+    private JPanel createAddBookPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(new Color(245, 245, 250));
+        panel.setBorder(new EmptyBorder(30, 30, 30, 30));
+        
+        // Title
+        JLabel titleLabel = new JLabel("THÊM SÁCH MỚI");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(ADMIN_COLOR);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setBorder(new EmptyBorder(0, 0, 20, 0));
+        panel.add(titleLabel, BorderLayout.NORTH);
+        
+        // Form panel
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(200, 200, 200), 1),
+            new EmptyBorder(30, 40, 30, 40)
+        ));
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 10, 8, 10);
+        
+        // Book ID
+        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Mã Sách:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField bookIdField = createTextField(20);
+        bookIdField.setText(generateBookId());
+        formPanel.add(bookIdField, gbc);
+        
+        // Title
+        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Tên Sách:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField titleField = createTextField(30);
+        formPanel.add(titleField, gbc);
+        
+        // Author
+        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Tác Giả:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField authorField = createTextField(30);
+        formPanel.add(authorField, gbc);
+        
+        // Publisher
+        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Nhà Xuất Bản:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField publisherField = createTextField(30);
+        formPanel.add(publisherField, gbc);
+        
+        // Price
+        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Giá (VNĐ):"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField priceField = createTextField(15);
+        priceField.setText("0");
+        formPanel.add(priceField, gbc);
+        
+        // Stock
+        gbc.gridx = 0; gbc.gridy = 5;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Số Lượng:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField stockField = createTextField(10);
+        stockField.setText("1");
+        formPanel.add(stockField, gbc);
+        
+        // Category
+        gbc.gridx = 0; gbc.gridy = 6;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Thể Loại:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        String[] categories = {"Văn học", "Khoa học", "Thiếu nhi", "Manga", "Self-help", "Lập trình", "Kinh tế", "Tâm lý", "Lịch sử", "Khác"};
+        JComboBox<String> categoryCombo = new JComboBox<>(categories);
+        categoryCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        categoryCombo.setPreferredSize(new Dimension(200, 35));
+        formPanel.add(categoryCombo, gbc);
+        
+        // Image path
+        gbc.gridx = 0; gbc.gridy = 7;
+        gbc.anchor = GridBagConstraints.EAST;
+        formPanel.add(createLabel("Ảnh Bìa:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        imagePanel.setOpaque(false);
+        JTextField imagePathField = createTextField(20);
+        imagePathField.setEditable(false);
+        JButton browseButton = new JButton("Chọn...");
+        browseButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        browseButton.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Image Files", "jpg", "jpeg", "png", "gif"));
+            if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
+                imagePathField.setText(chooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+        imagePanel.add(imagePathField);
+        imagePanel.add(Box.createHorizontalStrut(10));
+        imagePanel.add(browseButton);
+        formPanel.add(imagePanel, gbc);
+        
+        // Buttons
+        gbc.gridx = 0; gbc.gridy = 8;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(25, 10, 10, 10);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        buttonPanel.setOpaque(false);
+        
+        // Add button
+        JButton addButton = new JButton("THÊM SÁCH") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isPressed()) {
+                    g2d.setColor(SUCCESS_COLOR.darker());
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(SUCCESS_COLOR.brighter());
+                } else {
+                    g2d.setColor(SUCCESS_COLOR);
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
+        addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        addButton.setForeground(Color.WHITE);
+        addButton.setPreferredSize(new Dimension(150, 45));
+        addButton.setBorderPainted(false);
+        addButton.setContentAreaFilled(false);
+        addButton.setFocusPainted(false);
+        addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        addButton.addActionListener(e -> {
+            String bookId = bookIdField.getText().trim();
+            String bookTitle = titleField.getText().trim();
+            String author = authorField.getText().trim();
+            String publisher = publisherField.getText().trim();
+            String priceStr = priceField.getText().trim();
+            String stockStr = stockField.getText().trim();
+            String category = (String) categoryCombo.getSelectedItem();
+            String imagePath = imagePathField.getText().trim();
+            
+            // Validation
+            if (bookId.isEmpty() || bookTitle.isEmpty() || author.isEmpty()) {
+                JOptionPane.showMessageDialog(panel, "Vui lòng điền đầy đủ Mã sách, Tên sách và Tác giả!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            double price;
+            int stock;
+            try {
+                price = Double.parseDouble(priceStr);
+                stock = Integer.parseInt(stockStr);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(panel, "Giá và Số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Insert to database
+            if (insertBook(bookId, bookTitle, author, publisher, price, stock, category, imagePath)) {
+                JOptionPane.showMessageDialog(panel, "Thêm sách thành công!\nMã sách: " + bookId, "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                // Reset form
+                bookIdField.setText(generateBookId());
+                titleField.setText("");
+                authorField.setText("");
+                publisherField.setText("");
+                priceField.setText("0");
+                stockField.setText("1");
+                categoryCombo.setSelectedIndex(0);
+                imagePathField.setText("");
+            } else {
+                JOptionPane.showMessageDialog(panel, "Lỗi khi thêm sách vào database!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        // Clear button
+        JButton clearButton = new JButton("XÓA FORM") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isPressed()) {
+                    g2d.setColor(Color.GRAY.darker());
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(Color.GRAY.brighter());
+                } else {
+                    g2d.setColor(Color.GRAY);
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
+        clearButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        clearButton.setForeground(Color.WHITE);
+        clearButton.setPreferredSize(new Dimension(120, 45));
+        clearButton.setBorderPainted(false);
+        clearButton.setContentAreaFilled(false);
+        clearButton.setFocusPainted(false);
+        clearButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        clearButton.addActionListener(e -> {
+            bookIdField.setText(generateBookId());
+            titleField.setText("");
+            authorField.setText("");
+            publisherField.setText("");
+            priceField.setText("0");
+            stockField.setText("1");
+            categoryCombo.setSelectedIndex(0);
+            imagePathField.setText("");
+        });
+        
+        buttonPanel.add(addButton);
+        buttonPanel.add(clearButton);
+        formPanel.add(buttonPanel, gbc);
+        
+        // Center the form
+        JPanel centerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        centerWrapper.setOpaque(false);
+        centerWrapper.add(formPanel);
+        
+        panel.add(centerWrapper, BorderLayout.CENTER);
+        return panel;
+    }
+    
+    /**
+     * Helper: Create styled label
+     */
+    private JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        return label;
+    }
+    
+    /**
+     * Helper: Create styled text field
+     */
+    private JTextField createTextField(int columns) {
+        JTextField field = new JTextField(columns);
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setPreferredSize(new Dimension(field.getPreferredSize().width, 35));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(200, 200, 200), 1),
+            new EmptyBorder(5, 10, 5, 10)
+        ));
+        return field;
+    }
+    
+    /**
+     * Generate unique Book ID (B00001 - B99999)
+     */
+    private String generateBookId() {
+        int nextNum = 1;
+        String sql = "SELECT MAX(CAST(SUBSTR(BookID, 2) AS INTEGER)) as maxNum FROM Books WHERE BookID LIKE 'B%'";
+        try (Connection conn = DBConnect.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                int maxNum = rs.getInt("maxNum");
+                if (!rs.wasNull()) {
+                    nextNum = maxNum + 1;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi sinh BookID: " + e.getMessage());
+        }
+        return "B" + String.format("%05d", nextNum);
+    }
+    
+    /**
+     * Insert book to database
+     */
+    private boolean insertBook(String bookId, String title, String author, String publisher, 
+                               double price, int stock, String category, String imagePath) {
+        String sql = "INSERT INTO Books (BookID, Title, Author, Publisher, Price, Stock, BorrowStock, Category, ImagePath) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)";
+        try (Connection conn = DBConnect.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, bookId);
+            pstmt.setString(2, title);
+            pstmt.setString(3, author);
+            pstmt.setString(4, publisher);
+            pstmt.setDouble(5, price);
+            pstmt.setInt(6, stock);
+            pstmt.setString(7, category);
+            pstmt.setString(8, imagePath.isEmpty() ? null : imagePath);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi thêm sách: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
     
     /**

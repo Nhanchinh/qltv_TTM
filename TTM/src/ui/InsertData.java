@@ -324,6 +324,23 @@ public class InsertData {
         try (Connection conn = DriverManager.getConnection(url)) {
 
             /* ============================
+             * DELETE OLD DATA FIRST
+             * ============================ */
+            System.out.println("Đang xóa dữ liệu cũ...");
+            try (Statement stmt = conn.createStatement()) {
+                // Xóa theo thứ tự để tránh lỗi foreign key
+                stmt.executeUpdate("DELETE FROM StationerySales");
+                stmt.executeUpdate("DELETE FROM PurchaseBookHistory");
+                stmt.executeUpdate("DELETE FROM BorrowHistory");
+                stmt.executeUpdate("DELETE FROM Fines");
+                stmt.executeUpdate("DELETE FROM Transactions");
+                stmt.executeUpdate("DELETE FROM Books");
+                stmt.executeUpdate("DELETE FROM Stationery");
+                stmt.executeUpdate("DELETE FROM Cards");
+                System.out.println(">>> Đã xóa dữ liệu cũ!");
+            }
+
+            /* ============================
              * INSERT Cards
              * ============================ */
             String insertCard = "INSERT OR IGNORE INTO Cards (CardID, FullName, Phone, DOB, RegisterDate, MemberType, TotalSpent, TotalPoints, FineDebt, IsBlocked, CardPublicKey, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -368,26 +385,26 @@ public class InsertData {
             String insertBook = "INSERT OR IGNORE INTO Books (BookID, Title, Author, Publisher, Price, Stock, BorrowStock, Category, ImagePath) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             Object[][] books = {
-                {"BOOK001", "Harry Potter và Hòn Đá Phù Thủy", "J.K. Rowling", "Bloomsbury", 200000.0, 20, 0, "Fantasy", "/images/harry1.jpg"},
-                {"BOOK002", "Harry Potter và Phòng Chứa Bí Mật", "J.K. Rowling", "Bloomsbury", 210000.0, 15, 0, "Fantasy", "/images/harry2.jpg"},
-                {"BOOK003", "The Lord of the Rings", "J.R.R. Tolkien", "Allen & Unwin", 300000.0, 10, 1, "Fantasy", "/images/lotr.jpg"},
-                {"BOOK004", "Dế Mèn Phiêu Lưu Ký", "Tô Hoài", "NXB Kim Đồng", 45000.0, 40, 0, "Thiếu nhi", "/images/demen.jpg"},
-                {"BOOK005", "Lão Hạc", "Nam Cao", "NXB Văn Học", 30000.0, 30, 0, "Văn học Việt Nam", "/images/laohac.jpg"},
-                {"BOOK006", "Đắc Nhân Tâm", "Dale Carnegie", "NXB Tổng Hợp", 90000.0, 50, 0, "Self-help", "/images/dacnhantam.jpg"},
-                {"BOOK007", "7 Thói Quen Hiệu Quả", "Stephen R. Covey", "NXB Trẻ", 120000.0, 25, 0, "Self-help", "/images/7habit.jpg"},
-                {"BOOK008", "Sherlock Holmes", "Arthur Conan Doyle", "Penguin", 150000.0, 20, 0, "Trinh thám", "/images/sherlock.jpg"},
-                {"BOOK009", "One Piece Tập 1", "Eiichiro Oda", "Shueisha", 25000.0, 100, 0, "Manga", "/images/onepiece1.jpg"},
-                {"BOOK010", "One Piece Tập 2", "Eiichiro Oda", "Shueisha", 25000.0, 100, 0, "Manga", "/images/onepiece2.jpg"},
-                {"BOOK011", "Naruto Tập 1", "Masashi Kishimoto", "Shueisha", 25000.0, 80, 0, "Manga", "/images/naruto1.jpg"},
-                {"BOOK012", "Attack on Titan Tập 1", "Hajime Isayama", "Kodansha", 28000.0, 70, 0, "Manga", "/images/aot1.jpg"},
-                {"BOOK013", "The Alchemist", "Paulo Coelho", "HarperCollins", 110000.0, 25, 0, "Tiểu thuyết", "/images/alchemist.jpg"},
-                {"BOOK014", "Tuổi Trẻ Đáng Giá Bao Nhiêu", "Rosie Nguyễn", "NXB Trẻ", 95000.0, 30, 0, "Self-help", "/images/tuoitre.jpg"},
-                {"BOOK015", "Totto-Chan", "Tetsuko Kuroyanagi", "Kodansha", 85000.0, 30, 0, "Thiếu nhi", "/images/tottochan.jpg"},
-                {"BOOK016", "Clean Code", "Robert C. Martin", "Prentice Hall", 350000.0, 15, 0, "Lập trình", "/images/cleancode.jpg"},
-                {"BOOK017", "Design Patterns", "Erich Gamma", "Addison-Wesley", 450000.0, 10, 0, "Lập trình", "/images/designpattern.jpg"},
-                {"BOOK018", "Machine Learning Cơ Bản", "Nhiều tác giả", "NXB KHKT", 180000.0, 18, 0, "CNTT", "/images/ml.jpg"},
-                {"BOOK019", "Tư Duy Nhanh Và Chậm", "Daniel Kahneman", "NXB Thế Giới", 170000.0, 22, 0, "Tâm lý học", "/images/fastslow.jpg"},
-                {"BOOK020", "Giết Con Chim Nhại", "Harper Lee", "J.B. Lippincott", 130000.0, 18, 0, "Tiểu thuyết", "/images/mockingbird.jpg"}
+                {"B00001", "Harry Potter và Hòn Đá Phù Thủy", "J.K. Rowling", "Bloomsbury", 200000.0, 20, 0, "Fantasy", "/images/harry1.jpg"},
+                {"B00002", "Harry Potter và Phòng Chứa Bí Mật", "J.K. Rowling", "Bloomsbury", 210000.0, 15, 0, "Fantasy", "/images/harry2.jpg"},
+                {"B00003", "The Lord of the Rings", "J.R.R. Tolkien", "Allen & Unwin", 300000.0, 10, 1, "Fantasy", "/images/lotr.jpg"},
+                {"B00004", "Dế Mèn Phiêu Lưu Ký", "Tô Hoài", "NXB Kim Đồng", 45000.0, 40, 0, "Thiếu nhi", "/images/demen.jpg"},
+                {"B00005", "Lão Hạc", "Nam Cao", "NXB Văn Học", 30000.0, 30, 0, "Văn học Việt Nam", "/images/laohac.jpg"},
+                {"B00006", "Đắc Nhân Tâm", "Dale Carnegie", "NXB Tổng Hợp", 90000.0, 50, 0, "Self-help", "/images/dacnhantam.jpg"},
+                {"B00007", "7 Thói Quen Hiệu Quả", "Stephen R. Covey", "NXB Trẻ", 120000.0, 25, 0, "Self-help", "/images/7habit.jpg"},
+                {"B00008", "Sherlock Holmes", "Arthur Conan Doyle", "Penguin", 150000.0, 20, 0, "Trinh thám", "/images/sherlock.jpg"},
+                {"B00009", "One Piece Tập 1", "Eiichiro Oda", "Shueisha", 25000.0, 100, 0, "Manga", "/images/onepiece1.jpg"},
+                {"B00010", "One Piece Tập 2", "Eiichiro Oda", "Shueisha", 25000.0, 100, 0, "Manga", "/images/onepiece2.jpg"},
+                {"B00011", "Naruto Tập 1", "Masashi Kishimoto", "Shueisha", 25000.0, 80, 0, "Manga", "/images/naruto1.jpg"},
+                {"B00012", "Attack on Titan Tập 1", "Hajime Isayama", "Kodansha", 28000.0, 70, 0, "Manga", "/images/aot1.jpg"},
+                {"B00013", "The Alchemist", "Paulo Coelho", "HarperCollins", 110000.0, 25, 0, "Tiểu thuyết", "/images/alchemist.jpg"},
+                {"B00014", "Tuổi Trẻ Đáng Giá Bao Nhiêu", "Rosie Nguyễn", "NXB Trẻ", 95000.0, 30, 0, "Self-help", "/images/tuoitre.jpg"},
+                {"B00015", "Totto-Chan", "Tetsuko Kuroyanagi", "Kodansha", 85000.0, 30, 0, "Thiếu nhi", "/images/tottochan.jpg"},
+                {"B00016", "Clean Code", "Robert C. Martin", "Prentice Hall", 350000.0, 15, 0, "Lập trình", "/images/cleancode.jpg"},
+                {"B00017", "Design Patterns", "Erich Gamma", "Addison-Wesley", 450000.0, 10, 0, "Lập trình", "/images/designpattern.jpg"},
+                {"B00018", "Machine Learning Cơ Bản", "Nhiều tác giả", "NXB KHKT", 180000.0, 18, 0, "CNTT", "/images/ml.jpg"},
+                {"B00019", "Tư Duy Nhanh Và Chậm", "Daniel Kahneman", "NXB Thế Giới", 170000.0, 22, 0, "Tâm lý học", "/images/fastslow.jpg"},
+                {"B00020", "Giết Con Chim Nhại", "Harper Lee", "J.B. Lippincott", 130000.0, 18, 0, "Tiểu thuyết", "/images/mockingbird.jpg"}
             };
 
             try (PreparedStatement ps = conn.prepareStatement(insertBook)) {
