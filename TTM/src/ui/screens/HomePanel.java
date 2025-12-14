@@ -17,6 +17,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import smartcard.CardConnectionManager;
+import smartcard.CardBalanceManager;
+import java.util.List;
 
 /**
  *
@@ -54,48 +57,100 @@ public class HomePanel extends javax.swing.JPanel {
      * Load statistics from database
      */
     private void loadStats() {
-        // Card 1: Sách đang mượn
-        List<BorrowService.BorrowRecord> borrowedBooks = borrowService.getBorrowedBooksByCard(currentCardId);
-        int currentlyBorrowed = borrowedBooks != null ? borrowedBooks.size() : 0;
-        card1Value.setText(String.valueOf(currentlyBorrowed));
+        // Lấy dữ liệu từ thẻ trước
+        int cardBalance = 0;
+        int cardPoints = 0;
+        int borrowedBooksCount = 0;
+        boolean cardDataLoaded = false;
         
-        // Card 2: Sách đã mượn (đã trả)
-        int totalReturned = 0;
         try {
-            Connection conn = DBConnect.getConnection();
-            if (conn != null) {
-                String sql = "SELECT COUNT(*) as count FROM BorrowHistory WHERE CardID = ? AND Status = ?";
-                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    pstmt.setString(1, currentCardId);
-                    pstmt.setString(2, "đã trả");
-                    try (ResultSet rs = pstmt.executeQuery()) {
-                        if (rs.next()) {
-                            totalReturned = rs.getInt("count");
+            CardConnectionManager connManager = new CardConnectionManager();
+            connManager.connectCard();
+            try {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                
+                // Lấy số dư và điểm từ thẻ
+                CardBalanceManager.BalanceInfo balanceInfo = balanceManager.getBalance();
+                if (balanceInfo.success) {
+                    cardBalance = balanceInfo.balance;
+                    cardPoints = balanceInfo.points;
+                    cardDataLoaded = true;
+                    System.out.println("[HOME] Card Balance: " + cardBalance + " VND");
+                    System.out.println("[HOME] Card Points: " + cardPoints);
+                }
+                
+                // Lấy danh sách sách đang mượn từ thẻ
+                List<CardBalanceManager.BorrowedBook> borrowedBooks = balanceManager.getBorrowedBooks();
+                borrowedBooksCount = borrowedBooks.size();
+                System.out.println("[HOME] Borrowed books on card: " + borrowedBooksCount);
+                
+            } finally {
+                connManager.disconnectCard();
+            }
+        } catch (Exception e) {
+            System.err.println("[HOME] Không thể lấy dữ liệu từ thẻ: " + e.getMessage());
+        }
+        
+        // Card 1: Sách đang mượn (từ thẻ)
+        if (cardDataLoaded) {
+            card1Value.setText(String.valueOf(borrowedBooksCount));
+        } else {
+            // Fallback: lấy từ database
+            List<BorrowService.BorrowRecord> borrowedBooks = borrowService.getBorrowedBooksByCard(currentCardId);
+            int currentlyBorrowed = borrowedBooks != null ? borrowedBooks.size() : 0;
+            card1Value.setText(String.valueOf(currentlyBorrowed));
+        }
+        
+        // Card 2: Điểm thưởng (từ thẻ)
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        if (cardDataLoaded) {
+            card2Label.setText("Điểm thưởng");
+            card2Value.setText(nf.format(cardPoints) + " điểm");
+        } else {
+            // Fallback: Sách đã mượn (từ DB)
+            int totalReturned = 0;
+            try {
+                Connection conn = DBConnect.getConnection();
+                if (conn != null) {
+                    String sql = "SELECT COUNT(*) as count FROM BorrowHistory WHERE CardID = ? AND Status = ?";
+                    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                        pstmt.setString(1, currentCardId);
+                        pstmt.setString(2, "đã trả");
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            if (rs.next()) {
+                                totalReturned = rs.getInt("count");
+                            }
                         }
                     }
                 }
+            } catch (SQLException e) {
+                System.err.println("Loi khi dem sach da muon: " + e.getMessage());
             }
-        } catch (SQLException e) {
-            System.err.println("Loi khi dem sach da muon: " + e.getMessage());
+            card2Label.setText("Sách đã mượn");
+            card2Value.setText(String.valueOf(totalReturned));
         }
-        card2Value.setText(String.valueOf(totalReturned));
         
-        // Card 3: Số dư tài khoản
-        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
-        double balance = 0;
-        if (transactions != null) {
-            for (TransactionService.Transaction t : transactions) {
-                if (t.type.equals("Deposit")) {
-                    balance += t.amount;
-                } else if (t.type.equals("Payment")) {
-                    balance += t.amount; // amount is negative for payment
+        // Card 3: Số dư tài khoản (từ thẻ)
+        if (cardDataLoaded) {
+            card3Value.setText(nf.format(cardBalance) + " đ");
+        } else {
+            // Fallback: tính từ transactions trong DB
+            List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+            double balance = 0;
+            if (transactions != null) {
+                for (TransactionService.Transaction t : transactions) {
+                    if (t.type.equals("Deposit")) {
+                        balance += t.amount;
+                    } else if (t.type.equals("Payment")) {
+                        balance += t.amount;
+                    }
                 }
             }
+            card3Value.setText(nf.format(balance) + " đ");
         }
-        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        card3Value.setText(nf.format(balance) + " đ");
         
-        // Card 4: Giao dịch tháng này
+        // Card 4: Giao dịch tháng này (luôn lấy từ DB)
+        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
         int transactionsThisMonth = 0;
         if (transactions != null) {
             LocalDate now = LocalDate.now();
@@ -103,10 +158,9 @@ public class HomePanel extends javax.swing.JPanel {
             int currentMonth = now.getMonthValue();
             for (TransactionService.Transaction t : transactions) {
                 try {
-                    // DateTime format: "2024-01-15T10:30:00"
                     String dateTime = t.dateTime;
                     if (dateTime != null && dateTime.length() >= 7) {
-                        String yearMonth = dateTime.substring(0, 7); // "2024-01"
+                        String yearMonth = dateTime.substring(0, 7);
                         String[] parts = yearMonth.split("-");
                         if (parts.length == 2) {
                             int year = Integer.parseInt(parts[0]);

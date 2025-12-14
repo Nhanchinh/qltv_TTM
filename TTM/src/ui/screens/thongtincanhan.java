@@ -14,6 +14,11 @@ import java.sql.SQLException;
 import smartcard.CardConnectionManager;
 import smartcard.CardKeyManager;
 import smartcard.CardInfoManager;
+import smartcard.CardImageManager;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.awt.Image;
 
 /**
  *
@@ -24,6 +29,8 @@ public class thongtincanhan extends javax.swing.JPanel {
     private CardService cardService;
     private String currentCardId = "CARD001";
     private boolean isEditing = false;
+    private javax.swing.JLabel cardImageLabel;
+    private javax.swing.JPanel imagePanel;
 
     /**
      * Creates new form PersonalInfoPanel
@@ -51,6 +58,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         // 1. Thử lấy thông tin trực tiếp từ thẻ (giống AdminPanel -> CardInfoManager)
         String cardIdFromCard = null;
         CardInfoManager.UserInfo userInfoFromCard = null;
+        byte[] cardImageData = null;
         
         try {
             CardConnectionManager connManager = new CardConnectionManager();
@@ -70,12 +78,24 @@ public class thongtincanhan extends javax.swing.JPanel {
                     cardIdFromCard = userInfoFromCard.cardId;
                     currentCardId = cardIdFromCard; // Đồng bộ CardID hiện tại với thẻ
                 }
+
+                // Lấy ảnh từ thẻ
+                System.out.println("[CARD_IMAGE] Đang lấy ảnh từ thẻ...");
+                CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+                cardImageData = imageManager.downloadImage();
+                if (cardImageData != null && cardImageData.length > 0) {
+                    System.out.println("[CARD_IMAGE] Đã nhận được " + cardImageData.length + " bytes");
+                } else {
+                    System.out.println("[CARD_IMAGE] Thẻ chưa có ảnh hoặc lỗi khi lấy ảnh");
+                }
             } finally {
                 connManager.disconnectCard();
             }
         } catch (Exception e) {
             System.err.println("Không thể lấy thông tin từ thẻ, sẽ dùng dữ liệu DB. Lỗi: " + e.getMessage());
         }
+
+        displayCardImage(cardImageData);
         
         // 2. Lấy thông tin từ DB theo CardID (ưu tiên CardID đọc từ thẻ nếu có)
         if (currentCardId != null && !currentCardId.isEmpty()) {
@@ -86,6 +106,15 @@ public class thongtincanhan extends javax.swing.JPanel {
         CardService.Card card = (currentCardId != null) ? cardService.getCardById(currentCardId) : null;
         
         if (userInfoFromCard != null) {
+                        // Log toàn bộ thông tin lấy từ thẻ
+                        System.out.println("[CARD_INFO] Thông tin lấy từ thẻ:");
+                        System.out.println("  CardID : " + userInfoFromCard.cardId);
+                        System.out.println("  Name   : " + userInfoFromCard.name);
+                        System.out.println("  Phone  : " + userInfoFromCard.phone);
+                        System.out.println("  Address: " + userInfoFromCard.address);
+                        System.out.println("  DOB    : " + userInfoFromCard.dob);
+                        System.out.println("  RegDate: " + userInfoFromCard.regDate);
+                        System.out.println("  Rank   : " + userInfoFromCard.rank);
             // Hiển thị THÔNG TIN CƠ BẢN theo đúng dữ liệu trên thẻ
             cardIdField.setText(userInfoFromCard.cardId);
             nameField.setText(userInfoFromCard.name);
@@ -149,8 +178,8 @@ public class thongtincanhan extends javax.swing.JPanel {
                 } catch (Exception e) {
                     registerDateField.setText(card.registerDate);
                 }
-            } else {
-                registerDateField.setText("");
+                // Hiển thị loại hội viên (hạng thẻ) lấy từ thẻ
+                memberTypeField.setText(userInfoFromCard.rank != null ? userInfoFromCard.rank : "");
             }
         } else {
             // Không có dữ liệu nào
@@ -186,6 +215,44 @@ public class thongtincanhan extends javax.swing.JPanel {
     }
     
     /**
+     * Hiển thị ảnh thẻ
+     */
+    private void displayCardImage(byte[] imageData) {
+        if (cardImageLabel == null) return;
+        
+        if (imageData != null && imageData.length > 2) {
+            // Kiểm tra JPEG header (FF D8)
+            boolean isValidJpeg = (imageData[0] & 0xFF) == 0xFF && (imageData[1] & 0xFF) == 0xD8;
+            
+            if (isValidJpeg) {
+                try {
+                    ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
+                    BufferedImage img = ImageIO.read(bais);
+                    if (img != null) {
+                        // Scale ảnh để fit vào label
+                        int labelWidth = 200;
+                        int labelHeight = 250;
+                        Image scaledImg = img.getScaledInstance(labelWidth, labelHeight, Image.SCALE_SMOOTH);
+                        cardImageLabel.setIcon(new javax.swing.ImageIcon(scaledImg));
+                        cardImageLabel.setText("");
+                        System.out.println("[CARD_IMAGE] Hiển thị ảnh thành công!");
+                        return;
+                    }
+                } catch (Exception e) {
+                    System.err.println("[CARD_IMAGE] Lỗi đọc ảnh: " + e.getMessage());
+                }
+            } else {
+                System.out.println("[CARD_IMAGE] Dữ liệu không phải JPEG (First bytes: " + 
+                    String.format("%02X %02X", imageData[0] & 0xFF, imageData[1] & 0xFF) + ")");
+            }
+        }
+        
+        // Không có ảnh hoặc ảnh không hợp lệ
+        cardImageLabel.setIcon(null);
+        cardImageLabel.setText("<html><center>Thẻ chưa<br>có ảnh</center></html>");
+    }
+    
+    /**
      * Reload card info (public method for external refresh)
      */
     public void reloadCardInfo() {
@@ -215,6 +282,10 @@ public class thongtincanhan extends javax.swing.JPanel {
         // Tạo các component (các thành phần giao diện)
         titleLabel = new javax.swing.JLabel();
         
+        // Panel ảnh thẻ
+        imagePanel = new javax.swing.JPanel();
+        cardImageLabel = new javax.swing.JLabel();
+        
         // Thông tin cơ bản
         cardIdLabel = new javax.swing.JLabel();
         cardIdField = new javax.swing.JTextField();
@@ -240,6 +311,8 @@ public class thongtincanhan extends javax.swing.JPanel {
         fineDebtField = new javax.swing.JTextField();
         isBlockedLabel = new javax.swing.JLabel();
         isBlockedField = new javax.swing.JTextField();
+        rankLabel = new javax.swing.JLabel();
+        rankField = new javax.swing.JTextField();
         
         saveButton = new javax.swing.JButton();
         basicInfoPanel = new javax.swing.JPanel();
@@ -303,6 +376,10 @@ public class thongtincanhan extends javax.swing.JPanel {
         isBlockedLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         isBlockedLabel.setForeground(new java.awt.Color(60, 60, 60));
         isBlockedLabel.setText("Trạng thái thẻ:");
+
+        rankLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        rankLabel.setForeground(new java.awt.Color(60, 60, 60));
+        rankLabel.setText("Hạng thẻ:");
 
         // Thiết lập các text field (ô nhập liệu) - Thông tin cơ bản
         cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
@@ -398,6 +475,41 @@ public class thongtincanhan extends javax.swing.JPanel {
         ));
         isBlockedField.setColumns(30);
         isBlockedField.setEditable(false);
+
+        rankField.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        rankField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        rankField.setColumns(30);
+        rankField.setEditable(false);
+
+        // Thiết lập panel ảnh thẻ
+        imagePanel.setBackground(new java.awt.Color(255, 255, 255));
+        imagePanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createTitledBorder(
+                null, "Ảnh thẻ",
+                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                new java.awt.Font("Segoe UI", 1, 16),
+                new java.awt.Color(60, 60, 60)
+            ),
+            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        imagePanel.setLayout(new java.awt.BorderLayout());
+        imagePanel.setPreferredSize(new java.awt.Dimension(250, 320));
+        imagePanel.setMaximumSize(new java.awt.Dimension(250, 320));
+        
+        cardImageLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        cardImageLabel.setVerticalAlignment(javax.swing.SwingConstants.CENTER);
+        cardImageLabel.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        cardImageLabel.setForeground(new java.awt.Color(128, 128, 128));
+        cardImageLabel.setText("<html><center>Đang tải<br>ảnh...</center></html>");
+        cardImageLabel.setPreferredSize(new java.awt.Dimension(200, 250));
+        cardImageLabel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)));
+        cardImageLabel.setOpaque(true);
+        cardImageLabel.setBackground(new java.awt.Color(245, 245, 250));
+        imagePanel.add(cardImageLabel, java.awt.BorderLayout.CENTER);
 
         // Thiết lập button
         editButton = new javax.swing.JButton();
@@ -528,14 +640,16 @@ public class thongtincanhan extends javax.swing.JPanel {
                     .addComponent(totalSpentLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(totalPointsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(fineDebtLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(isBlockedLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(isBlockedLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(rankLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(memberTypeField)
                     .addComponent(totalSpentField)
                     .addComponent(totalPointsField)
                     .addComponent(fineDebtField)
-                    .addComponent(isBlockedField))
+                    .addComponent(isBlockedField)
+                    .addComponent(rankField))
                 .addContainerGap(20, Short.MAX_VALUE))
         );
         
@@ -562,6 +676,10 @@ public class thongtincanhan extends javax.swing.JPanel {
                 .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(isBlockedLabel)
                     .addComponent(isBlockedField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(rankLabel)
+                    .addComponent(rankField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
@@ -575,6 +693,11 @@ public class thongtincanhan extends javax.swing.JPanel {
         javax.swing.JPanel infoPanelsContainer = new javax.swing.JPanel();
         infoPanelsContainer.setBackground(new java.awt.Color(245, 245, 250));
         infoPanelsContainer.setLayout(new javax.swing.BoxLayout(infoPanelsContainer, javax.swing.BoxLayout.X_AXIS));
+        
+        // Thêm panel ảnh vào đầu tiên
+        imagePanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
+        infoPanelsContainer.add(imagePanel);
+        infoPanelsContainer.add(javax.swing.Box.createHorizontalStrut(20));
         
         // Đặt kích thước cho các panel để hẹp lại nhưng tự động căn chỉnh
         basicInfoPanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
@@ -721,6 +844,8 @@ public class thongtincanhan extends javax.swing.JPanel {
     private javax.swing.JTextField fineDebtField;
     private javax.swing.JLabel isBlockedLabel;
     private javax.swing.JTextField isBlockedField;
+    private javax.swing.JLabel rankLabel;
+    private javax.swing.JTextField rankField;
     private javax.swing.JButton editButton;
     private javax.swing.JButton saveButton;
 }

@@ -6,10 +6,13 @@ package ui.screens;
 
 import services.TransactionService;
 import services.CardService;
+import smartcard.CardConnectionManager;
+import smartcard.CardBalanceManager;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import javax.smartcardio.CardChannel;
 
 /**
  *
@@ -399,23 +402,64 @@ public class naptien extends javax.swing.JPanel {
     }
 
     private void loadCardInfo() {
-        CardService.Card card = cardService.getCardById(currentCardId);
-        if (card != null) {
-            accountIdField.setText(card.cardId);
-            accountNameField.setText(card.fullName);
-            // Calculate balance from transactions
-            List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
-            double balance = 0;
-            for (TransactionService.Transaction t : transactions) {
-                if (t.type.equals("Deposit")) {
-                    balance += t.amount;
-                } else if (t.type.equals("Payment")) {
-                    balance += t.amount; // amount is negative for payment
+        // CardService.Card card = cardService.getCardById(currentCardId);
+        // if (card != null) {
+        //     accountIdField.setText(card.cardId);
+        //     accountNameField.setText(card.fullName);
+        //     
+        //     // Ưu tiên lấy số dư từ thẻ
+        //     int cardBalance = getBalanceFromCard();
+        //     if (cardBalance >= 0) {
+        //         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        //         currentBalanceField.setText(nf.format(cardBalance) + " đ");
+        //     } else {
+        //         // Fallback: tính từ database
+        //         List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
+        //         double balance = 0;
+        //         for (TransactionService.Transaction t : transactions) {
+        //             if (t.type.equals("Deposit")) {
+        //                 balance += t.amount;
+        //             } else if (t.type.equals("Payment")) {
+        //                 balance += t.amount;
+        //             }
+        //         }
+        //         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        //         currentBalanceField.setText(nf.format(balance) + " đ");
+        //     }
+        // }
+        // Only use smart card for info
+        accountIdField.setText(currentCardId);
+        accountNameField.setText(""); // Không lấy tên từ DB nữa
+        int cardBalance = getBalanceFromCard();
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        if (cardBalance >= 0) {
+            currentBalanceField.setText(nf.format(cardBalance) + " đ");
+        } else {
+            currentBalanceField.setText("Không xác định");
+        }
+    }
+    
+    /**
+     * Lấy số dư từ thẻ smart card
+     */
+    private int getBalanceFromCard() {
+        try {
+            CardConnectionManager manager = new CardConnectionManager();
+            if (manager.connectCard()) {
+                CardChannel channel = manager.getChannel();
+                if (channel != null) {
+                    CardBalanceManager balanceManager = new CardBalanceManager(channel);
+                    CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                    manager.disconnectCard();
+                    if (info.success) {
+                        return info.balance;
+                    }
                 }
             }
-            NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-            currentBalanceField.setText(nf.format(balance) + " đ");
+        } catch (Exception e) {
+            System.err.println("[NAPTIEN] Không thể lấy số dư từ thẻ: " + e.getMessage());
         }
+        return -1;
     }
     
     /**
@@ -439,28 +483,71 @@ public class naptien extends javax.swing.JPanel {
                     javax.swing.JOptionPane.WARNING_MESSAGE);
                 return;
             }
+            // Kiểm tra giới hạn (max ~2 tỷ vì dùng int trên thẻ)
+            if (amount > Integer.MAX_VALUE) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Số tiền nạp vượt quá giới hạn!", "Thông báo", 
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             String paymentMethod = (String) paymentMethodCombo.getSelectedItem();
             int option = javax.swing.JOptionPane.showConfirmDialog(this, 
                 "Xác nhận nạp " + String.format("%,d", amount) + " VNĐ\nPhương thức: " + paymentMethod + "\n\nBạn có muốn tiếp tục?",
                 "Xác nhận nạp tiền",
                 javax.swing.JOptionPane.YES_NO_OPTION);
             if (option == javax.swing.JOptionPane.YES_OPTION) {
-                // Save to database
-                String transId = UUID.randomUUID().toString();
-                if (transactionService.createTransaction(transId, currentCardId, "Deposit", amount, 0)) {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Nạp tiền thành công!\nSố tiền: " + String.format("%,d", amount) + " VNĐ", 
-                        "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                    amountField.setText("0");
-                    noteField.setText("");
-                    loadCardInfo(); // Refresh balance
-                } else {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi nạp tiền!", "Lỗi", 
-                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                // 1. Nạp tiền vào thẻ smart card
+                boolean cardSuccess = depositToCard((int) amount);
+                if (!cardSuccess) {
+                    javax.swing.JOptionPane.showMessageDialog(this, 
+                        "Không thể nạp tiền vào thẻ!\nVui lòng kiểm tra kết nối thẻ.", 
+                        "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
+                // 2. Không lưu transaction vào database nữa
+                // String transId = UUID.randomUUID().toString();
+                // if (transactionService.createTransaction(transId, currentCardId, "Deposit", amount, 0)) {
+                javax.swing.JOptionPane.showMessageDialog(this, 
+                    "Nạp tiền thành công!\nSố tiền: " + String.format("%,d", amount) + " VNĐ", 
+                    "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                amountField.setText("0");
+                noteField.setText("");
+                loadCardInfo(); // Refresh balance từ thẻ
+                // } else {
+                //     // Nếu lưu DB thất bại nhưng đã nạp vào thẻ rồi
+                //     javax.swing.JOptionPane.showMessageDialog(this, 
+                //         "Đã nạp tiền vào thẻ nhưng lưu giao dịch thất bại!\nVui lòng liên hệ admin.", 
+                //         "Cảnh báo", javax.swing.JOptionPane.WARNING_MESSAGE);
+                //     loadCardInfo();
+                // }
             }
         } catch (NumberFormatException e) {
             javax.swing.JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", 
                 javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Nạp tiền vào thẻ smart card
+     */
+    private boolean depositToCard(int amount) {
+        try {
+            CardConnectionManager manager = new CardConnectionManager();
+            if (!manager.connectCard()) {
+                System.err.println("[NAPTIEN] Không có kết nối thẻ!");
+                return false;
+            }
+            CardChannel channel = manager.getChannel();
+            CardBalanceManager balanceManager = new CardBalanceManager(channel);
+            boolean success = balanceManager.deposit(amount);
+            manager.disconnectCard();
+            if (success) {
+                System.out.println("[NAPTIEN] Đã nạp " + amount + " VNĐ vào thẻ thành công!");
+            }
+            return success;
+        } catch (Exception e) {
+            System.err.println("[NAPTIEN] Lỗi nạp tiền vào thẻ: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
     }
 

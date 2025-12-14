@@ -6,6 +6,8 @@ package ui.screens;
 
 import services.CardService;
 import services.TransactionService;
+import smartcard.CardConnectionManager;
+import smartcard.CardBalanceManager;
 import ui.DBConnect;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -23,7 +25,7 @@ import java.sql.SQLException;
  * @author admin
  */
 public class phihv extends javax.swing.JPanel {
-    
+
     private CardService cardService;
     private TransactionService transactionService;
     private String currentCardId = "CARD001";
@@ -31,6 +33,16 @@ public class phihv extends javax.swing.JPanel {
     private double selectedPackagePrice = 0;
     private int selectedDiscount = 0;
     private int selectedMonths = 0;
+
+    // Rank hiện tại và giá tương ứng
+    private String currentRank = "Normal"; // Normal/Silver/Gold/Diamond
+    private int currentRankPrice = 0; // Giá của rank hiện tại
+
+    // Bảng giá các rank (giá gốc)
+    private static final int PRICE_NORMAL = 0;
+    private static final int PRICE_SILVER = 100000;
+    private static final int PRICE_GOLD = 200000;
+    private static final int PRICE_DIAMOND = 300000;
 
     /**
      * Creates new form MembershipFeePanel
@@ -41,7 +53,7 @@ public class phihv extends javax.swing.JPanel {
         initComponents();
         loadCardInfo();
     }
-    
+
     /**
      * Set CardID từ thẻ đăng nhập
      */
@@ -51,57 +63,82 @@ public class phihv extends javax.swing.JPanel {
             loadCardInfo();
         }
     }
-    
+
     /**
-     * Load card information from database
+     * Load card information from database and smart card
      */
     private void loadCardInfo() {
         CardService.Card card = cardService.getCardById(currentCardId);
+
+        // Mặc định rank = Normal
+        currentRank = "Normal";
+        currentRankPrice = PRICE_NORMAL;
+        String displayRank = "Thành viên (Normal)";
+
+        // Đọc rank từ thẻ chip
+        try {
+            CardConnectionManager connManager = new CardConnectionManager();
+            if (connManager.connectCard()) {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                // Lấy memberType từ thẻ nếu có (cần thêm method getMemberType nếu có)
+                // Tạm thời fallback về DB
+                connManager.disconnectCard();
+            }
+        } catch (Exception e) {
+            System.err.println("[PHIHV] Error reading card: " + e.getMessage());
+        }
+
         if (card != null) {
             cardIdField.setText(card.cardId);
-            
-            // Set member status
-            if (card.memberType != null && !card.memberType.isEmpty() && !card.memberType.equals("ThanhVien")) {
-                // Hiển thị tên hạng thành viên bằng tiếng Việt
-                String displayName = card.memberType;
-                if (card.memberType.equals("ThanhVien")) displayName = "Thành viên";
-                else if (card.memberType.equals("Bac")) displayName = "Bạc";
-                else if (card.memberType.equals("Vang")) displayName = "Vàng";
-                else if (card.memberType.equals("KimCuong")) displayName = "Kim cương";
-                
-                memberStatusField.setText(displayName);
-                
-                // Calculate expiry date (if we have register date, add membership duration)
-                if (card.registerDate != null && !card.registerDate.isEmpty()) {
-                    try {
-                        LocalDate registerDate = LocalDate.parse(card.registerDate);
-                        // Tất cả các gói trả phí đều có thời hạn 3 tháng
-                        int months = 3;
-                        if (card.memberType.equals("ThanhVien")) {
-                            // Gói miễn phí không có thời hạn
-                            expiryDateField.setText("Không giới hạn");
-                        } else {
-                            LocalDate expiryDate = registerDate.plusMonths(months);
-                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                            expiryDateField.setText(expiryDate.format(formatter));
-                        }
-                    } catch (Exception e) {
-                        expiryDateField.setText("--");
-                    }
-                } else {
+
+            // Set member status và tính giá rank hiện tại
+            String memberType = card.memberType;
+            if (memberType != null && !memberType.isEmpty()) {
+                if (memberType.equalsIgnoreCase("Normal") || memberType.equals("ThanhVien")) {
+                    currentRank = "Normal";
+                    currentRankPrice = PRICE_NORMAL;
+                    displayRank = "Thành viên (Normal)";
+                } else if (memberType.equalsIgnoreCase("Silver") || memberType.equals("Bac")) {
+                    currentRank = "Silver";
+                    currentRankPrice = PRICE_SILVER;
+                    displayRank = "Bạc (Silver)";
+                } else if (memberType.equalsIgnoreCase("Gold") || memberType.equals("Vang")) {
+                    currentRank = "Gold";
+                    currentRankPrice = PRICE_GOLD;
+                    displayRank = "Vàng (Gold)";
+                } else if (memberType.equalsIgnoreCase("Diamond") || memberType.equals("KimCuong")) {
+                    currentRank = "Diamond";
+                    currentRankPrice = PRICE_DIAMOND;
+                    displayRank = "Kim cương (Diamond)";
+                }
+            }
+
+            memberStatusField.setText(displayRank);
+
+            // Calculate expiry date
+            if (card.registerDate != null && !card.registerDate.isEmpty() && !currentRank.equals("Normal")) {
+                try {
+                    LocalDate registerDate = LocalDate.parse(card.registerDate);
+                    int months = 3;
+                    LocalDate expiryDate = registerDate.plusMonths(months);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    expiryDateField.setText(expiryDate.format(formatter));
+                } catch (Exception e) {
                     expiryDateField.setText("--");
                 }
             } else {
-                memberStatusField.setText("Thành viên");
-                expiryDateField.setText("Không giới hạn");
+                expiryDateField.setText(currentRank.equals("Normal") ? "Không giới hạn" : "--");
             }
         } else {
             cardIdField.setText(currentCardId);
-            memberStatusField.setText("Chua co hoi vien");
-            expiryDateField.setText("--");
+            memberStatusField.setText("Thành viên (Normal)");
+            expiryDateField.setText("Không giới hạn");
         }
+
+        System.out.println("[PHIHV] Current Rank: " + currentRank + ", Price: " + currentRankPrice);
     }
-    
+
     /**
      * Reload card info (public method for external refresh)
      */
@@ -117,14 +154,14 @@ public class phihv extends javax.swing.JPanel {
     private void initComponents() {
 
         titleLabel = new javax.swing.JLabel();
-        
+
         // Main container
         mainContainer = new javax.swing.JPanel();
-        
+
         // Left panel - Gói hội viên
         packagesPanel = new javax.swing.JPanel();
         packagesTitle = new javax.swing.JLabel();
-        
+
         // Package cards - 4 gói mới
         freePackage = new javax.swing.JPanel();
         freeTitle = new javax.swing.JLabel();
@@ -132,14 +169,14 @@ public class phihv extends javax.swing.JPanel {
         freeDuration = new javax.swing.JLabel();
         freeFeatures = new javax.swing.JTextArea();
         freeButton = new javax.swing.JButton();
-        
+
         silverPackage = new javax.swing.JPanel();
         silverTitle = new javax.swing.JLabel();
         silverPrice = new javax.swing.JLabel();
         silverDuration = new javax.swing.JLabel();
         silverFeatures = new javax.swing.JTextArea();
         silverButton = new javax.swing.JButton();
-        
+
         goldPackage = new javax.swing.JPanel();
         goldTitle = new javax.swing.JLabel();
         goldPrice = new javax.swing.JLabel();
@@ -147,7 +184,7 @@ public class phihv extends javax.swing.JPanel {
         goldFeatures = new javax.swing.JTextArea();
         goldButton = new javax.swing.JButton();
         goldBadge = new javax.swing.JLabel();
-        
+
         diamondPackage = new javax.swing.JPanel();
         diamondTitle = new javax.swing.JLabel();
         diamondPrice = new javax.swing.JLabel();
@@ -155,7 +192,7 @@ public class phihv extends javax.swing.JPanel {
         diamondFeatures = new javax.swing.JTextArea();
         diamondButton = new javax.swing.JButton();
         diamondBadge = new javax.swing.JLabel();
-        
+
         // Right panel - Thông tin hội viên và thanh toán
         infoPanel = new javax.swing.JPanel();
         infoTitle = new javax.swing.JLabel();
@@ -204,8 +241,8 @@ public class phihv extends javax.swing.JPanel {
         // Gói Thành viên (Miễn phí)
         freePackage.setBackground(new java.awt.Color(255, 255, 255));
         freePackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 2),
-            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 2),
+                javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
         freePackage.setLayout(new java.awt.BorderLayout(15, 15));
 
         freeTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
@@ -242,13 +279,13 @@ public class phihv extends javax.swing.JPanel {
         // Center panel for price, duration and features
         javax.swing.JPanel freeCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
         freeCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
-        
+
         // Price panel
         javax.swing.JPanel freePricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
         freePricePanel.setBackground(new java.awt.Color(255, 255, 255));
         freePricePanel.add(freePrice, java.awt.BorderLayout.CENTER);
         freePricePanel.add(freeDuration, java.awt.BorderLayout.SOUTH);
-        
+
         freeCenterPanel.add(freePricePanel, java.awt.BorderLayout.NORTH);
         javax.swing.JScrollPane freeScroll = new javax.swing.JScrollPane(freeFeatures);
         freeScroll.setPreferredSize(new java.awt.Dimension(0, 150));
@@ -262,8 +299,8 @@ public class phihv extends javax.swing.JPanel {
         // Gói Bạc
         silverPackage.setBackground(new java.awt.Color(255, 255, 255));
         silverPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(192, 192, 192), 2),
-            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(192, 192, 192), 2),
+                javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
         silverPackage.setLayout(new java.awt.BorderLayout(15, 15));
 
         silverTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
@@ -285,7 +322,8 @@ public class phihv extends javax.swing.JPanel {
         silverFeatures.setEditable(false);
         silverFeatures.setLineWrap(true);
         silverFeatures.setWrapStyleWord(true);
-        silverFeatures.setText("• Thuê tối đa 5 quyển\n• 3 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 3% mỗi đơn\n• Cộng 3% điểm mỗi đơn");
+        silverFeatures.setText(
+                "• Thuê tối đa 5 quyển\n• 3 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 3% mỗi đơn\n• Cộng 3% điểm mỗi đơn");
         silverFeatures.setBackground(new java.awt.Color(250, 250, 250));
         silverFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -300,13 +338,13 @@ public class phihv extends javax.swing.JPanel {
         // Center panel for price, duration and features
         javax.swing.JPanel silverCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
         silverCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
-        
+
         // Price panel
         javax.swing.JPanel silverPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
         silverPricePanel.setBackground(new java.awt.Color(255, 255, 255));
         silverPricePanel.add(silverPrice, java.awt.BorderLayout.CENTER);
         silverPricePanel.add(silverDuration, java.awt.BorderLayout.SOUTH);
-        
+
         silverCenterPanel.add(silverPricePanel, java.awt.BorderLayout.NORTH);
         javax.swing.JScrollPane silverScroll = new javax.swing.JScrollPane(silverFeatures);
         silverScroll.setPreferredSize(new java.awt.Dimension(0, 150));
@@ -320,8 +358,8 @@ public class phihv extends javax.swing.JPanel {
         // Gói Vàng (Nổi bật)
         goldPackage.setBackground(new java.awt.Color(255, 248, 220));
         goldPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 200, 0), 3),
-            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 200, 0), 3),
+                javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
         goldPackage.setLayout(new java.awt.BorderLayout(10, 10));
 
         goldBadge.setFont(new java.awt.Font("Segoe UI", 1, 12));
@@ -351,7 +389,8 @@ public class phihv extends javax.swing.JPanel {
         goldFeatures.setEditable(false);
         goldFeatures.setLineWrap(true);
         goldFeatures.setWrapStyleWord(true);
-        goldFeatures.setText("• Thuê tối đa 10 quyển\n• 5 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 5% mỗi đơn\n• Cộng 5% điểm mỗi đơn");
+        goldFeatures.setText(
+                "• Thuê tối đa 10 quyển\n• 5 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 5% mỗi đơn\n• Cộng 5% điểm mỗi đơn");
         goldFeatures.setBackground(new java.awt.Color(255, 248, 220));
         goldFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -366,13 +405,13 @@ public class phihv extends javax.swing.JPanel {
         // Center panel for price, duration and features
         javax.swing.JPanel goldCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
         goldCenterPanel.setBackground(new java.awt.Color(255, 248, 220));
-        
+
         // Price panel
         javax.swing.JPanel goldPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
         goldPricePanel.setBackground(new java.awt.Color(255, 248, 220));
         goldPricePanel.add(goldPrice, java.awt.BorderLayout.CENTER);
         goldPricePanel.add(goldDuration, java.awt.BorderLayout.SOUTH);
-        
+
         goldCenterPanel.add(goldPricePanel, java.awt.BorderLayout.NORTH);
         javax.swing.JScrollPane goldScroll = new javax.swing.JScrollPane(goldFeatures);
         goldScroll.setPreferredSize(new java.awt.Dimension(0, 150));
@@ -385,8 +424,8 @@ public class phihv extends javax.swing.JPanel {
         // Gói Kim cương
         diamondPackage.setBackground(new java.awt.Color(255, 255, 255));
         diamondPackage.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 0, 180), 2),
-            javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 0, 180), 2),
+                javax.swing.BorderFactory.createEmptyBorder(18, 18, 18, 18)));
         diamondPackage.setLayout(new java.awt.BorderLayout(10, 10));
 
         diamondBadge.setFont(new java.awt.Font("Segoe UI", 1, 12));
@@ -416,7 +455,8 @@ public class phihv extends javax.swing.JPanel {
         diamondFeatures.setEditable(false);
         diamondFeatures.setLineWrap(true);
         diamondFeatures.setWrapStyleWord(true);
-        diamondFeatures.setText("• Thuê tối đa 15 quyển\n• 10 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 10% mỗi đơn\n• Cộng 10% điểm mỗi đơn");
+        diamondFeatures.setText(
+                "• Thuê tối đa 15 quyển\n• 10 lượt thuê miễn phí\n  14 ngày mỗi tháng\n• Giảm giá 10% mỗi đơn\n• Cộng 10% điểm mỗi đơn");
         diamondFeatures.setBackground(new java.awt.Color(250, 250, 250));
         diamondFeatures.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -431,13 +471,13 @@ public class phihv extends javax.swing.JPanel {
         // Center panel for price, duration and features
         javax.swing.JPanel diamondCenterPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
         diamondCenterPanel.setBackground(new java.awt.Color(255, 255, 255));
-        
+
         // Price panel
         javax.swing.JPanel diamondPricePanel = new javax.swing.JPanel(new java.awt.BorderLayout(5, 5));
         diamondPricePanel.setBackground(new java.awt.Color(255, 255, 255));
         diamondPricePanel.add(diamondPrice, java.awt.BorderLayout.CENTER);
         diamondPricePanel.add(diamondDuration, java.awt.BorderLayout.SOUTH);
-        
+
         diamondCenterPanel.add(diamondPricePanel, java.awt.BorderLayout.NORTH);
         javax.swing.JScrollPane diamondScroll = new javax.swing.JScrollPane(diamondFeatures);
         diamondScroll.setPreferredSize(new java.awt.Dimension(0, 150));
@@ -457,11 +497,11 @@ public class phihv extends javax.swing.JPanel {
         // ============ RIGHT PANEL - THÔNG TIN ============
         infoPanel.setBackground(new java.awt.Color(255, 255, 255));
         infoPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Thông tin hội viên",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
+                javax.swing.BorderFactory.createTitledBorder(null, "Thông tin hội viên",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
         infoPanel.setLayout(new java.awt.BorderLayout(0, 20));
         infoPanel.setPreferredSize(new java.awt.Dimension(380, 0));
         infoPanel.setMinimumSize(new java.awt.Dimension(350, 0));
@@ -477,56 +517,72 @@ public class phihv extends javax.swing.JPanel {
         infoFormPanel.setBackground(new java.awt.Color(255, 255, 255));
 
         formLayout.setHorizontalGroup(
-            formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(formLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(memberStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(expiryDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(selectedPackageLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(discountLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(totalLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(cardIdField)
-                    .addComponent(memberStatusField)
-                    .addComponent(expiryDateField)
-                    .addComponent(selectedPackageField)
-                    .addComponent(discountField)
-                    .addComponent(totalField))
-                .addContainerGap())
-        );
+                formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(formLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(memberStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(expiryDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(selectedPackageLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(discountLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(totalLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(cardIdField)
+                                        .addComponent(memberStatusField)
+                                        .addComponent(expiryDateField)
+                                        .addComponent(selectedPackageField)
+                                        .addComponent(discountField)
+                                        .addComponent(totalField))
+                                .addContainerGap()));
 
         formLayout.setVerticalGroup(
-            formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(formLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(cardIdLabel)
-                    .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(memberStatusLabel)
-                    .addComponent(memberStatusField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(expiryDateLabel)
-                    .addComponent(expiryDateField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(selectedPackageLabel)
-                    .addComponent(selectedPackageField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(discountLabel)
-                    .addComponent(discountField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(totalLabel)
-                    .addComponent(totalField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
-        );
+                formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(formLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(cardIdLabel)
+                                        .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(memberStatusLabel)
+                                        .addComponent(memberStatusField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(expiryDateLabel)
+                                        .addComponent(expiryDateField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(selectedPackageLabel)
+                                        .addComponent(selectedPackageField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(discountLabel)
+                                        .addComponent(discountField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(totalLabel)
+                                        .addComponent(totalField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addContainerGap()));
 
         // Labels
         cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -577,83 +633,226 @@ public class phihv extends javax.swing.JPanel {
         add(mainContainer, java.awt.BorderLayout.CENTER);
     }
 
-    private void selectPackage(String packageName, int price, int discount, int months) {
+    private void selectPackage(String packageName, int fullPrice, int discount, int months) {
+        // Tính giá gói mới
+        int newRankPrice = 0;
+        String newRank = "Normal";
+        if (packageName.equals("ThanhVien")) {
+            newRankPrice = PRICE_NORMAL;
+            newRank = "Normal";
+        } else if (packageName.equals("Bac")) {
+            newRankPrice = PRICE_SILVER;
+            newRank = "Silver";
+        } else if (packageName.equals("Vang")) {
+            newRankPrice = PRICE_GOLD;
+            newRank = "Gold";
+        } else if (packageName.equals("KimCuong")) {
+            newRankPrice = PRICE_DIAMOND;
+            newRank = "Diamond";
+        }
+
+        // Kiểm tra xem rank mới có cao hơn rank hiện tại không
+        int currentRankLevel = getRankLevel(currentRank);
+        int newRankLevel = getRankLevel(newRank);
+
+        if (newRankLevel < currentRankLevel) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Bạn đã là hạng " + currentRank + "!\nKhông thể hạ cấp xuống hạng thấp hơn.",
+                    "Thông báo", javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (newRankLevel == currentRankLevel && newRankLevel > 0) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Bạn đang ở hạng " + currentRank + ".\nVui lòng chọn gói cao hơn để nâng cấp.",
+                    "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Tính phí chênh lệch
+        int upgradeCost = newRankPrice - currentRankPrice;
+        if (upgradeCost < 0)
+            upgradeCost = 0;
+
         selectedPackageName = packageName;
-        selectedPackagePrice = price;
+        selectedPackagePrice = upgradeCost;
         selectedDiscount = discount;
         selectedMonths = months;
-        
+
         // Display package name in Vietnamese
         String displayName = packageName;
-        if (packageName.equals("ThanhVien")) displayName = "Thành viên";
-        else if (packageName.equals("Bac")) displayName = "Bạc";
-        else if (packageName.equals("Vang")) displayName = "Vàng";
-        else if (packageName.equals("KimCuong")) displayName = "Kim cương";
-        
+        if (packageName.equals("ThanhVien"))
+            displayName = "Thành viên";
+        else if (packageName.equals("Bac"))
+            displayName = "Bạc";
+        else if (packageName.equals("Vang"))
+            displayName = "Vàng";
+        else if (packageName.equals("KimCuong"))
+            displayName = "Kim cương";
+
         selectedPackageField.setText(displayName);
         discountField.setText(discount + "%");
-        
+
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        if (price == 0) {
+        if (upgradeCost == 0) {
             totalField.setText("Miễn phí");
         } else {
-            totalField.setText(nf.format(price) + " đ");
+            // Hiển thị phí chênh lệch
+            String priceDisplay = nf.format(upgradeCost) + " đ";
+            if (currentRankPrice > 0) {
+                priceDisplay += " (chênh lệch)";
+            }
+            totalField.setText(priceDisplay);
         }
+
+        System.out.println(
+                "[PHIHV] Selected: " + packageName + ", Full price: " + fullPrice + ", Upgrade cost: " + upgradeCost);
+    }
+
+    /**
+     * Trả về level của rank (dùng để so sánh)
+     */
+    private int getRankLevel(String rank) {
+        if (rank.equals("Normal"))
+            return 0;
+        if (rank.equals("Silver"))
+            return 1;
+        if (rank.equals("Gold"))
+            return 2;
+        if (rank.equals("Diamond"))
+            return 3;
+        return 0;
     }
 
     private void processPayment() {
         if (selectedPackageName.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn gói hội viên!", "Thông báo", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn gói hội viên!", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
-        // Kiểm tra số dư chỉ khi gói có phí
+
+        // Xác định rank mới từ package name
+        String newRank = "Normal";
+        if (selectedPackageName.equals("ThanhVien"))
+            newRank = "Normal";
+        else if (selectedPackageName.equals("Bac"))
+            newRank = "Silver";
+        else if (selectedPackageName.equals("Vang"))
+            newRank = "Gold";
+        else if (selectedPackageName.equals("KimCuong"))
+            newRank = "Diamond";
+
+        // Kiểm tra số dư từ thẻ chip (nếu gói có phí)
         if (selectedPackagePrice > 0) {
-            List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
-            double balance = 0;
-            if (transactions != null) {
-                for (TransactionService.Transaction t : transactions) {
-                    if (t.type.equals("Deposit")) {
-                        balance += t.amount;
-                    } else if (t.type.equals("Payment")) {
-                        balance += t.amount; // amount is negative for payment
+            int cardBalance = 0;
+            try {
+                CardConnectionManager connManager = new CardConnectionManager();
+                if (connManager.connectCard()) {
+                    CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                    CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                    if (info.success) {
+                        cardBalance = info.balance;
+                        System.out.println("[PHIHV] Card balance: " + cardBalance + " VND");
                     }
+                    connManager.disconnectCard();
+                } else {
+                    javax.swing.JOptionPane.showMessageDialog(this, "Không thể kết nối thẻ!", "Lỗi",
+                            javax.swing.JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
+            } catch (Exception e) {
+                System.err.println("[PHIHV] Error reading card: " + e.getMessage());
+                javax.swing.JOptionPane.showMessageDialog(this, "Lỗi đọc thẻ: " + e.getMessage(), "Lỗi",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
             }
-            
-            if (balance < selectedPackagePrice) {
-                javax.swing.JOptionPane.showMessageDialog(this, 
-                    "Số dư không đủ!\nSố dư hiện tại: " + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(balance) + " đ\nCần: " + 
-                    NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " đ",
-                    "Thông báo", 
-                    javax.swing.JOptionPane.WARNING_MESSAGE);
+
+            if (cardBalance < selectedPackagePrice) {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Số dư thẻ không đủ!\nSố dư hiện tại: "
+                                + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(cardBalance)
+                                + " đ\nCần: " +
+                                NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice)
+                                + " đ",
+                        "Thông báo",
+                        javax.swing.JOptionPane.WARNING_MESSAGE);
                 return;
             }
         }
-        
+
         String confirmMessage;
         if (selectedPackagePrice == 0) {
-            confirmMessage = "Xác nhận đăng ký gói hội viên?\nGói: " + selectedPackageField.getText() + "\nGiá: Miễn phí";
+            confirmMessage = "Xác nhận đăng ký gói hội viên?\nGói: " + selectedPackageField.getText()
+                    + "\nGiá: Miễn phí";
         } else {
-            confirmMessage = "Xác nhận thanh toán gói hội viên?\nGói: " + selectedPackageField.getText() + "\nGiá: " + 
-                NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " đ";
+            confirmMessage = "Xác nhận thanh toán gói hội viên?\nGói: " + selectedPackageField.getText() + "\nGiá: " +
+                    NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice) + " đ";
         }
-        
-        int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-            confirmMessage,
-            "Xác nhận",
-            javax.swing.JOptionPane.YES_NO_OPTION);
+
+        int option = javax.swing.JOptionPane.showConfirmDialog(this,
+                confirmMessage,
+                "Xác nhận",
+                javax.swing.JOptionPane.YES_NO_OPTION);
         if (option != javax.swing.JOptionPane.YES_OPTION) {
             return;
         }
-        
-        // Process payment
+
+        // Thực hiện thanh toán và upgrade trên thẻ chip
+        boolean cardTransactionSuccess = false;
+        CardConnectionManager connManager = null;
+        try {
+            connManager = new CardConnectionManager();
+            if (connManager.connectCard()) {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+
+                // Trừ tiền nếu có phí
+                if (selectedPackagePrice > 0) {
+                    boolean paymentOk = balanceManager.payment((int) selectedPackagePrice);
+                    if (!paymentOk) {
+                        javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán trên thẻ thất bại!", "Lỗi",
+                                javax.swing.JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    System.out.println("[PHIHV] Payment success: " + (int) selectedPackagePrice + " VND");
+                }
+
+                // Upgrade rank trên thẻ (nếu không phải Normal)
+                if (!newRank.equals("Normal")) {
+                    boolean upgradeOk = balanceManager.upgradeRank(newRank);
+                    if (!upgradeOk) {
+                        System.err.println("[PHIHV] Upgrade rank on card failed, but payment was done.");
+                        // Thanh toán đã thành công, chỉ warning về upgrade
+                    }
+                }
+
+                cardTransactionSuccess = true;
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this, "Không thể kết nối thẻ để thanh toán!", "Lỗi",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } catch (Exception e) {
+            System.err.println("[PHIHV] Card transaction error: " + e.getMessage());
+        } finally {
+            try {
+                if (connManager != null)
+                    connManager.disconnectCard();
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!cardTransactionSuccess) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Giao dịch thẻ thất bại!", "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Cập nhật database để đồng bộ
         try {
             Connection conn = DBConnect.getConnection();
             if (conn != null) {
                 conn.setAutoCommit(false);
-                
+
                 try {
                     // Update MemberType in Cards table
                     String updateCardSql = "UPDATE Cards SET MemberType = ?, RegisterDate = ? WHERE CardID = ?";
@@ -663,7 +862,7 @@ public class phihv extends javax.swing.JPanel {
                         updateCardStmt.setString(3, currentCardId);
                         updateCardStmt.executeUpdate();
                     }
-                    
+
                     // Create transaction record chỉ khi gói có phí
                     if (selectedPackagePrice > 0) {
                         String transSql = "INSERT INTO Transactions (TransID, CardID, Type, Amount, PointsChanged, DateTime, SignatureCard, SignatureStore) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -674,26 +873,29 @@ public class phihv extends javax.swing.JPanel {
                             transStmt.setDouble(4, -selectedPackagePrice);
                             transStmt.setInt(5, 0);
                             transStmt.setString(6, java.time.LocalDateTime.now().toString());
-                            transStmt.setBytes(7, new byte[]{});
-                            transStmt.setBytes(8, new byte[]{});
+                            transStmt.setBytes(7, new byte[] {});
+                            transStmt.setBytes(8, new byte[] {});
                             transStmt.executeUpdate();
                         }
                     }
-                    
+
                     conn.commit();
-                    
+
                     String successMessage;
                     if (selectedPackagePrice == 0) {
                         successMessage = "Đăng ký thành công!\nGói hội viên: " + selectedPackageField.getText();
                     } else {
-                        successMessage = "Thanh toán thành công!\nGói hội viên: " + selectedPackageField.getText();
+                        successMessage = "Thanh toán thành công!\nGói hội viên: " + selectedPackageField.getText() +
+                                "\nSố tiền: "
+                                + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(selectedPackagePrice)
+                                + " đ";
                     }
-                    
-                    javax.swing.JOptionPane.showMessageDialog(this, 
-                        successMessage,
-                        "Thông báo", 
-                        javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                    
+
+                    javax.swing.JOptionPane.showMessageDialog(this,
+                            successMessage,
+                            "Thông báo",
+                            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+
                     // Reset selection and reload info
                     selectedPackageName = "";
                     selectedPackagePrice = 0;
@@ -701,9 +903,9 @@ public class phihv extends javax.swing.JPanel {
                     selectedMonths = 0;
                     selectedPackageField.setText("");
                     discountField.setText("0%");
-                    totalField.setText("0 d");
+                    totalField.setText("0 đ");
                     loadCardInfo();
-                    
+
                 } catch (SQLException e) {
                     conn.rollback();
                     throw e;
@@ -711,12 +913,12 @@ public class phihv extends javax.swing.JPanel {
                     conn.setAutoCommit(true);
                 }
             } else {
-                javax.swing.JOptionPane.showMessageDialog(this, "Khong the ket noi database!", "Loi", 
-                    javax.swing.JOptionPane.ERROR_MESSAGE);
+                javax.swing.JOptionPane.showMessageDialog(this, "Không thể kết nối database!", "Lỗi",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
             }
         } catch (SQLException e) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Loi khi thanh toan: " + e.getMessage(), "Loi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật DB: " + e.getMessage(), "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }

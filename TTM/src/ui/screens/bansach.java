@@ -7,6 +7,10 @@ package ui.screens;
 import services.BookService;
 import services.PurchaseService;
 import services.CardService;
+import smartcard.CardConnectionManager;
+import smartcard.CardBalanceManager;
+import smartcard.CardKeyManager;
+import smartcard.CardInfoManager;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,12 +21,13 @@ import java.util.Locale;
  * @author admin
  */
 public class bansach extends javax.swing.JPanel {
-    
+
     private BookService bookService;
     private PurchaseService purchaseService;
     private CardService cardService;
     private String currentCardId = "CARD001";
-    
+    private int maxPointsAvailable = 0;
+
     /**
      * Set CardID từ thẻ đăng nhập
      */
@@ -36,15 +41,16 @@ public class bansach extends javax.swing.JPanel {
             updateCardInfo(); // Reload thông tin thẻ với CardID mới
         }
     }
+
     private List<CartItem> cartItems;
-    
+
     private static class CartItem {
         String bookId;
         String title;
         int quantity;
         double unitPrice;
         double discountPercent;
-        
+
         CartItem(String bookId, String title, int quantity, double unitPrice, double discountPercent) {
             this.bookId = bookId;
             this.title = title;
@@ -52,7 +58,7 @@ public class bansach extends javax.swing.JPanel {
             this.unitPrice = unitPrice;
             this.discountPercent = discountPercent;
         }
-        
+
         double getFinalPrice() {
             return unitPrice * quantity * (1 - discountPercent / 100.0);
         }
@@ -79,10 +85,10 @@ public class bansach extends javax.swing.JPanel {
     private void initComponents() {
 
         titleLabel = new javax.swing.JLabel();
-        
+
         // Main container
         mainContainer = new javax.swing.JPanel();
-        
+
         // Left panel - Danh sách sách
         leftPanel = new javax.swing.JPanel();
         searchLabel = new javax.swing.JLabel();
@@ -90,10 +96,10 @@ public class bansach extends javax.swing.JPanel {
         searchButton = new javax.swing.JButton();
         booksTable = new javax.swing.JScrollPane();
         booksTableScroll = new javax.swing.JTable();
-        
+
         // Right panel - Thông tin chi tiết và giỏ hàng
         rightPanel = new javax.swing.JPanel();
-        
+
         // Book details panel
         bookDetailsPanel = new javax.swing.JPanel();
         bookDetailsTitle = new javax.swing.JLabel();
@@ -110,7 +116,7 @@ public class bansach extends javax.swing.JPanel {
         quantityLabel = new javax.swing.JLabel();
         quantitySpinner = new javax.swing.JSpinner();
         addToCartButton = new javax.swing.JButton();
-        
+
         // Cart panel
         cartPanel = new javax.swing.JPanel();
         cartTitle = new javax.swing.JLabel();
@@ -146,9 +152,9 @@ public class bansach extends javax.swing.JPanel {
         // ============ LEFT PANEL - DANH SÁCH SÁCH ============
         leftPanel.setBackground(new java.awt.Color(255, 255, 255));
         leftPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Danh sách sách bán",
-            javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-            javax.swing.border.TitledBorder.DEFAULT_POSITION,
-            new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)));
+                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)));
         leftPanel.setLayout(new java.awt.BorderLayout(0, 10));
         leftPanel.setPreferredSize(new java.awt.Dimension(600, 0));
         leftPanel.setMinimumSize(new java.awt.Dimension(500, 0));
@@ -175,7 +181,7 @@ public class bansach extends javax.swing.JPanel {
         searchPanel.add(searchButton, java.awt.BorderLayout.EAST);
 
         // Books table - sẽ được load từ database
-        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng"};
+        String[] columns = { "Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng" };
         Object[][] data = {};
         booksTableScroll = new javax.swing.JTable(data, columns);
         booksTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -204,70 +210,88 @@ public class bansach extends javax.swing.JPanel {
         // Book details panel
         bookDetailsPanel.setBackground(new java.awt.Color(255, 255, 255));
         bookDetailsPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Thông tin sách",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        
+                javax.swing.BorderFactory.createTitledBorder(null, "Thông tin sách",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+
         javax.swing.GroupLayout detailsLayout = new javax.swing.GroupLayout(bookDetailsPanel);
         bookDetailsPanel.setLayout(detailsLayout);
-        
+
         detailsLayout.setHorizontalGroup(
-            detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(detailsLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(bookIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(bookNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(authorLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(publisherLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(priceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(quantityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(bookIdField)
-                    .addComponent(bookNameField)
-                    .addComponent(authorField)
-                    .addComponent(publisherField)
-                    .addComponent(priceField)
-                    .addGroup(detailsLayout.createSequentialGroup()
-                        .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(addToCartButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addContainerGap())
-        );
-        
+                detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(detailsLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(bookIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(bookNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(authorLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(publisherLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(priceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(quantityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(bookIdField)
+                                        .addComponent(bookNameField)
+                                        .addComponent(authorField)
+                                        .addComponent(publisherField)
+                                        .addComponent(priceField)
+                                        .addGroup(detailsLayout.createSequentialGroup()
+                                                .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(addToCartButton, javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                .addContainerGap()));
+
         detailsLayout.setVerticalGroup(
-            detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(detailsLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(bookIdLabel)
-                    .addComponent(bookIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(bookNameLabel)
-                    .addComponent(bookNameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(authorLabel)
-                    .addComponent(authorField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(publisherLabel)
-                    .addComponent(publisherField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(priceLabel)
-                    .addComponent(priceField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(quantityLabel)
-                    .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(addToCartButton))
-                .addContainerGap())
-        );
+                detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(detailsLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(bookIdLabel)
+                                        .addComponent(bookIdField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(bookNameLabel)
+                                        .addComponent(bookNameField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(authorLabel)
+                                        .addComponent(authorField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(publisherLabel)
+                                        .addComponent(publisherField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(priceLabel)
+                                        .addComponent(priceField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(quantityLabel)
+                                        .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(addToCartButton))
+                                .addContainerGap()));
 
         // Labels setup
         bookIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -305,14 +329,14 @@ public class bansach extends javax.swing.JPanel {
         // Cart panel
         cartPanel.setBackground(new java.awt.Color(255, 255, 255));
         cartPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Giỏ hàng",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+                javax.swing.BorderFactory.createTitledBorder(null, "Giỏ hàng",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         cartPanel.setLayout(new java.awt.BorderLayout(0, 10));
 
-        String[] cartColumns = {"Mã sách", "Tên sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Thành tiền"};
+        String[] cartColumns = { "Mã sách", "Tên sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Thành tiền" };
         Object[][] cartData = {};
         cartTableScroll = new javax.swing.JTable(cartData, cartColumns);
         cartTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -324,7 +348,7 @@ public class bansach extends javax.swing.JPanel {
         cartInfoPanel.setLayout(new java.awt.GridLayout(2, 2, 10, 10));
         cartInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
         cartInfoPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        
+
         // Cột 1 - Hàng 1: Mã thẻ
         javax.swing.JPanel cardIdPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         cardIdPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -335,7 +359,7 @@ public class bansach extends javax.swing.JPanel {
         cardIdField.setEditable(false);
         cardIdPanel.add(cardIdLabel, java.awt.BorderLayout.WEST);
         cardIdPanel.add(cardIdField, java.awt.BorderLayout.CENTER);
-        
+
         // Cột 2 - Hàng 1: Giảm giá
         javax.swing.JPanel discountPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         discountPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -346,7 +370,7 @@ public class bansach extends javax.swing.JPanel {
         discountField.setEditable(false);
         discountPanel.add(discountLabel, java.awt.BorderLayout.WEST);
         discountPanel.add(discountField, java.awt.BorderLayout.CENTER);
-        
+
         // Cột 1 - Hàng 2: Điểm sử dụng
         javax.swing.JPanel pointsUsedPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         pointsUsedPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -364,7 +388,8 @@ public class bansach extends javax.swing.JPanel {
                 updateCartTable();
             }
         });
-        // Cập nhật tổng tiền khi thay đổi nội dung (với delay để tránh cập nhật quá nhiều)
+        // Cập nhật tổng tiền khi thay đổi nội dung (với delay để tránh cập nhật quá
+        // nhiều)
         javax.swing.Timer updateTimer = new javax.swing.Timer(500, e -> updateCartTable());
         updateTimer.setRepeats(false); // Chỉ chạy một lần sau khi dừng gõ
         pointsUsedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -372,10 +397,12 @@ public class bansach extends javax.swing.JPanel {
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
                 updateTimer.restart();
             }
+
             @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
                 updateTimer.restart();
             }
+
             @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
                 updateTimer.restart();
@@ -383,7 +410,7 @@ public class bansach extends javax.swing.JPanel {
         });
         pointsUsedPanel.add(pointsUsedLabel, java.awt.BorderLayout.WEST);
         pointsUsedPanel.add(pointsUsedField, java.awt.BorderLayout.CENTER);
-        
+
         // Cột 2 - Hàng 2: Điểm tích lũy
         javax.swing.JPanel pointsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         pointsPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -394,7 +421,7 @@ public class bansach extends javax.swing.JPanel {
         pointsEarnedField.setEditable(false);
         pointsPanel.add(pointsEarnedLabel, java.awt.BorderLayout.WEST);
         pointsPanel.add(pointsEarnedField, java.awt.BorderLayout.CENTER);
-        
+
         // Thêm vào GridLayout theo thứ tự: hàng 1 (cột 1, cột 2), hàng 2 (cột 1, cột 2)
         cartInfoPanel.add(cardIdPanel);
         cartInfoPanel.add(discountPanel);
@@ -442,7 +469,7 @@ public class bansach extends javax.swing.JPanel {
 
         // Không cần scroll pane nữa vì đã dùng GridLayout 2x2 tiết kiệm diện tích
         // cartInfoPanel giờ chỉ cần chiều cao khoảng 100px cho 2 hàng
-        
+
         // Tạo container cho info và bottom panel
         javax.swing.JPanel cartBottomContainer = new javax.swing.JPanel();
         cartBottomContainer.setLayout(new java.awt.BorderLayout(0, 10));
@@ -452,7 +479,7 @@ public class bansach extends javax.swing.JPanel {
 
         // Giới hạn chiều cao của cartTable để có nhiều không gian cho phần dưới
         cartTable.setPreferredSize(new java.awt.Dimension(0, 150));
-        
+
         cartPanel.add(cartTable, java.awt.BorderLayout.CENTER);
         cartPanel.add(cartBottomContainer, java.awt.BorderLayout.SOUTH);
 
@@ -461,15 +488,15 @@ public class bansach extends javax.swing.JPanel {
         bookDetailsPanel.setPreferredSize(new java.awt.Dimension(0, 280));
         bookDetailsPanel.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 300));
         bookDetailsPanel.setMinimumSize(new java.awt.Dimension(0, 250));
-        
+
         // Giới hạn chiều cao của cartTable để phần thông tin giỏ hàng có thể hiển thị
         cartTable.setPreferredSize(new java.awt.Dimension(0, 150));
         cartTable.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 200));
-        
+
         // Đảm bảo cartPanel có thể mở rộng để chiếm không gian còn lại
         cartPanel.setPreferredSize(new java.awt.Dimension(0, 0));
         cartPanel.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        
+
         rightPanel.add(bookDetailsPanel);
         rightPanel.add(javax.swing.Box.createVerticalStrut(15));
         rightPanel.add(cartPanel);
@@ -482,7 +509,7 @@ public class bansach extends javax.swing.JPanel {
 
     private void loadBooks() {
         List<BookService.Book> books = bookService.getAllBooks();
-        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng"};
+        String[] columns = { "Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng" };
         Object[][] data = new Object[books.size()][6];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < books.size(); i++) {
@@ -496,32 +523,71 @@ public class bansach extends javax.swing.JPanel {
         }
         booksTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
-    
+
     private void updateCardInfo() {
         CardService.Card card = cardService.getCardById(currentCardId);
         if (card != null) {
             // Calculate discount based on member type
+            // New mapping: Normal=0, Silver=3, Gold=5, Diamond=10
+            // Hỗ trợ cả tên tiếng Việt và tiếng Anh
             double discount = 0;
-            if (card.memberType.equals("Basic")) discount = 5;
-            else if (card.memberType.equals("Premium")) discount = 10;
-            else if (card.memberType.equals("VIP")) discount = 15;
+            String memberType = card.memberType;
+            if (memberType != null) {
+                if (memberType.equalsIgnoreCase("Normal") || memberType.equalsIgnoreCase("ThanhVien")) {
+                    discount = 0;
+                } else if (memberType.equalsIgnoreCase("Silver") || memberType.equalsIgnoreCase("Bac")) {
+                    discount = 3;
+                } else if (memberType.equalsIgnoreCase("Gold") || memberType.equalsIgnoreCase("Vang")) {
+                    discount = 5;
+                } else if (memberType.equalsIgnoreCase("Diamond") || memberType.equalsIgnoreCase("KimCuong")) {
+                    discount = 10;
+                }
+            }
             discountField.setText(String.format("%.0f%%", discount));
             pointsEarnedField.setText("0");
-            
-            // Tự động set điểm sử dụng = điểm tích lũy hiện có
-            if (pointsUsedField != null) {
-                pointsUsedField.setText(String.valueOf(card.totalPoints));
-            }
         }
+
+        // Lấy điểm từ thẻ (Smart Card)
+        int currentPoints = 0;
+        try {
+            CardConnectionManager connManager = new CardConnectionManager();
+            if (connManager.connectCard()) {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                if (info.success) {
+                    currentPoints = info.points;
+                    System.out.println("[UPDATE_INFO] Points from card: " + currentPoints);
+                }
+                connManager.disconnectCard();
+            } else {
+                // Fallback nếu không kết nối được thẻ
+                System.out.println("[UPDATE_INFO] Cannot connect card, fallback to DB if available.");
+                if (card != null)
+                    currentPoints = card.totalPoints;
+            }
+        } catch (Exception e) {
+            System.err.println("[UPDATE_INFO] Error reading card: " + e.getMessage());
+            if (card != null)
+                currentPoints = card.totalPoints;
+        }
+
+        this.maxPointsAvailable = currentPoints;
+
+        // Tự động set điểm sử dụng = điểm tích lũy hiện có
+        if (pointsUsedField != null) {
+            pointsUsedField.setText(String.valueOf(currentPoints));
+        }
+
+        updateCartTable();
     }
-    
+
     private void updateCartTable() {
-        String[] columns = {"Mã sách", "Tên sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Thành tiền"};
+        String[] columns = { "Mã sách", "Tên sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Thành tiền" };
         Object[][] data = new Object[cartItems.size()][6];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         double total = 0;
         int totalPoints = 0;
-        
+
         for (int i = 0; i < cartItems.size(); i++) {
             CartItem item = cartItems.get(i);
             data[i][0] = item.bookId;
@@ -533,9 +599,9 @@ public class bansach extends javax.swing.JPanel {
             data[i][5] = nf.format(finalPrice) + " đ";
             total += finalPrice;
             // Tính điểm tích lũy: 3% số tiền giao dịch
-            totalPoints += (int)(finalPrice * 0.03);
+            totalPoints += (int) (finalPrice * 0.03);
         }
-        
+
         // Lấy số điểm sử dụng từ field (nếu có)
         int pointsUsed = 0;
         if (pointsUsedField != null) {
@@ -543,12 +609,12 @@ public class bansach extends javax.swing.JPanel {
                 String pointsText = pointsUsedField.getText().trim();
                 if (!pointsText.isEmpty()) {
                     pointsUsed = Integer.parseInt(pointsText);
-                    if (pointsUsed < 0) pointsUsed = 0;
-                    
-                    // Kiểm tra không được vượt quá điểm tích lũy hiện có
-                    CardService.Card card = cardService.getCardById(currentCardId);
-                    if (card != null && pointsUsed > card.totalPoints) {
-                        pointsUsed = card.totalPoints; // Giới hạn bằng điểm tích lũy
+                    if (pointsUsed < 0)
+                        pointsUsed = 0;
+
+                    // Kiểm tra không được vượt quá điểm tích lũy hiện có (cache từ thẻ)
+                    if (pointsUsed > maxPointsAvailable) {
+                        pointsUsed = maxPointsAvailable; // Giới hạn bằng điểm tích lũy
                         pointsUsedField.setText(String.valueOf(pointsUsed));
                     }
                 }
@@ -556,11 +622,12 @@ public class bansach extends javax.swing.JPanel {
                 pointsUsed = 0;
             }
         }
-        
+
         // Trừ điểm vào tổng tiền (1 điểm = 1 VND)
         double finalTotal = total - pointsUsed;
-        if (finalTotal < 0) finalTotal = 0;
-        
+        if (finalTotal < 0)
+            finalTotal = 0;
+
         cartTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
         NumberFormat nf2 = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         totalField.setText(nf2.format(finalTotal) + " đ");
@@ -577,12 +644,12 @@ public class bansach extends javax.swing.JPanel {
         List<BookService.Book> filtered = new ArrayList<>();
         for (BookService.Book book : allBooks) {
             if (book.bookId.toLowerCase().contains(keyword) ||
-                book.title.toLowerCase().contains(keyword) ||
-                book.author.toLowerCase().contains(keyword)) {
+                    book.title.toLowerCase().contains(keyword) ||
+                    book.author.toLowerCase().contains(keyword)) {
                 filtered.add(book);
             }
         }
-        String[] columns = {"Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng"};
+        String[] columns = { "Mã sách", "Tên sách", "Tác giả", "Nhà xuất bản", "Giá", "Số lượng" };
         Object[][] data = new Object[filtered.size()][6];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < filtered.size(); i++) {
@@ -600,122 +667,243 @@ public class bansach extends javax.swing.JPanel {
     private void addToCart() {
         String bookId = bookIdField.getText().trim();
         if (bookId.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn sách!", "Thông báo", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng chọn sách!", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         BookService.Book book = bookService.getBookById(bookId);
         if (book == null) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Không tìm thấy sách!", "Lỗi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Không tìm thấy sách!", "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         int quantity = (Integer) quantitySpinner.getValue();
         if (book.stock < quantity) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Không đủ số lượng sách!", "Thông báo", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Không đủ số lượng sách!", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
-        // Get discount from member type
+
+        // Get discount from member type (use new mapping)
+        // Hỗ trợ cả tên tiếng Việt và tiếng Anh
         CardService.Card card = cardService.getCardById(currentCardId);
         double discount = 0;
-        if (card != null) {
-            if (card.memberType.equals("Basic")) discount = 5;
-            else if (card.memberType.equals("Premium")) discount = 10;
-            else if (card.memberType.equals("VIP")) discount = 15;
+        if (card != null && card.memberType != null) {
+            String memberType = card.memberType;
+            if (memberType.equalsIgnoreCase("Normal") || memberType.equalsIgnoreCase("ThanhVien")) {
+                discount = 0;
+            } else if (memberType.equalsIgnoreCase("Silver") || memberType.equalsIgnoreCase("Bac")) {
+                discount = 3;
+            } else if (memberType.equalsIgnoreCase("Gold") || memberType.equalsIgnoreCase("Vang")) {
+                discount = 5;
+            } else if (memberType.equalsIgnoreCase("Diamond") || memberType.equalsIgnoreCase("KimCuong")) {
+                discount = 10;
+            }
         }
-        
+
         cartItems.add(new CartItem(bookId, book.title, quantity, book.price, discount));
-        
-        // Nếu đây là sách đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm tích lũy
+
+        // Nếu đây là sách đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm tích
+        // lũy
         if (cartItems.size() == 1 && card != null && pointsUsedField != null) {
             pointsUsedField.setText(String.valueOf(card.totalPoints));
         }
-        
+
         updateCartTable();
-        javax.swing.JOptionPane.showMessageDialog(this, "Đã thêm " + quantity + " sách vào giỏ hàng!", "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        javax.swing.JOptionPane.showMessageDialog(this, "Đã thêm " + quantity + " sách vào giỏ hàng!", "Thông báo",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void checkout() {
         if (cartItems.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Giỏ hàng trống!", "Thông báo", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Giỏ hàng trống!", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         // Lấy số điểm sử dụng
         int pointsUsed = 0;
         try {
             String pointsText = pointsUsedField.getText().trim();
             if (!pointsText.isEmpty()) {
                 pointsUsed = Integer.parseInt(pointsText);
-                if (pointsUsed < 0) pointsUsed = 0;
+                if (pointsUsed < 0)
+                    pointsUsed = 0;
             }
         } catch (NumberFormatException e) {
             pointsUsed = 0;
         }
-        
-        // Kiểm tra đủ điểm không
-        if (pointsUsed > 0) {
-            CardService.Card card = cardService.getCardById(currentCardId);
-            if (card == null || pointsUsed > card.totalPoints) {
-                javax.swing.JOptionPane.showMessageDialog(this, 
-                    "Không đủ điểm! Bạn có " + (card != null ? card.totalPoints : 0) + " điểm.", 
-                    "Thông báo", 
+
+        // Kiểm tra đủ điểm không (dựa trên maxPointsAvailable đã lấy từ thẻ)
+        if (pointsUsed > maxPointsAvailable) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Không đủ điểm! Bạn có " + maxPointsAvailable + " điểm (trong thẻ).",
+                    "Thông báo",
                     javax.swing.JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+            return;
         }
-        
-        int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-            "Xác nhận thanh toán?", "Xác nhận",
-            javax.swing.JOptionPane.YES_NO_OPTION);
+
+        int option = javax.swing.JOptionPane.showConfirmDialog(this,
+                "Xác nhận thanh toán?", "Xác nhận",
+                javax.swing.JOptionPane.YES_NO_OPTION);
         if (option != javax.swing.JOptionPane.YES_OPTION) {
             return;
         }
-        
-        boolean success = true;
+
+        // Recompute final total and points to award
+        double grandTotal = 0;
         for (CartItem item : cartItems) {
-            CardService.Card card = cardService.getCardById(currentCardId);
-            double discount = 0;
-            if (card != null) {
-                if (card.memberType.equals("Basic")) discount = 5;
-                else if (card.memberType.equals("Premium")) discount = 10;
-                else if (card.memberType.equals("VIP")) discount = 15;
+            grandTotal += item.getFinalPrice();
+        }
+
+        // Determine rankPercent from DB memberType (dùng cho giảm giá, không phải điểm
+        // thưởng)
+        CardService.Card dbCard = cardService.getCardById(currentCardId);
+
+        // Điểm thưởng = 3% của số tiền thanh toán thực tế (sau khi trừ điểm đã dùng)
+        // Áp dụng cho TẤT CẢ hạng thành viên
+        double amountAfterPoints = grandTotal - pointsUsed;
+        if (amountAfterPoints < 0)
+            amountAfterPoints = 0;
+        int pointsToAward = (int) Math.round(amountAfterPoints * 0.03);
+
+        // Số tiền thực cần thanh toán qua thẻ
+        double amountToPay = grandTotal - pointsUsed;
+        if (amountToPay < 0)
+            amountToPay = 0;
+
+        // Check card balance and points via smart card
+        boolean cardHasEnough = false;
+        CardConnectionManager connManager = null;
+        try {
+            connManager = new CardConnectionManager();
+            if (connManager.connectCard()) {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                if (info.success) {
+                    System.out.println("[CHECKOUT] Card balance: " + info.balance + " VND, Points: " + info.points);
+
+                    // Validate lại điểm trên thẻ lần cuối
+                    if (pointsUsed > 0 && info.points < pointsUsed) {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Thẻ không đủ điểm để thanh toán! (Có: " + info.points + ", Cần dùng: " + pointsUsed
+                                        + ")",
+                                "Lỗi thẻ", javax.swing.JOptionPane.WARNING_MESSAGE);
+                        connManager.disconnectCard();
+                        return;
+                    }
+
+                    if (info.balance >= (int) amountToPay) {
+                        cardHasEnough = true;
+                    }
+                }
             }
-            if (!purchaseService.purchaseBook(currentCardId, item.bookId, item.quantity, discount)) {
-                success = false;
+        } catch (Exception ex) {
+            System.err.println("[CHECKOUT] Error checking card balance: " + ex.getMessage());
+        } finally {
+            try {
+                if (connManager != null)
+                    connManager.disconnectCard();
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!cardHasEnough) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Số dư thẻ không đủ để thanh toán " + (int) amountToPay + " VND.", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 1) Decrement DB and record purchases
+        boolean dbSuccess = true;
+        for (CartItem item : cartItems) {
+            if (!purchaseService.purchaseBook(currentCardId, item.bookId, item.quantity, item.discountPercent)) {
+                dbSuccess = false;
                 break;
             }
         }
-        
-        // Trừ điểm sau khi mua sách thành công
-        if (success && pointsUsed > 0) {
+
+        if (!dbSuccess) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật cơ sở dữ liệu (stock/history).", "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 2) Charge the card & Use Points
+        boolean transactionSuccess = false;
+        try {
+            connManager = new CardConnectionManager(); // New connection
+            if (!connManager.connectCard()) {
+                throw new Exception("Không thể kết nối lại thẻ để thanh toán.");
+            }
+            CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+
+            // Xử lý trừ điểm trước (nếu có)
+            boolean pointsDeducted = true;
+            if (pointsUsed > 0) {
+                pointsDeducted = balanceManager.usePoints(pointsUsed);
+                if (!pointsDeducted) {
+                    System.err.println("[CHECKOUT] Failed to deduct points from card.");
+                } else {
+                    System.out.println("[CHECKOUT] Deducted " + pointsUsed + " points from card.");
+                }
+            }
+
+            // Nếu trừ điểm thành công (hoặc không dùng điểm), mới trừ tiền
+            if (pointsDeducted) {
+                boolean paymentOk = balanceManager.payment((int) amountToPay);
+                if (paymentOk) {
+                    System.out.println("[CHECKOUT] Card charged: " + (int) amountToPay + " VND");
+                    transactionSuccess = true;
+                    // 3) Add points to card
+                    if (pointsToAward > 0) {
+                        boolean ptsOk = balanceManager.addPoints(pointsToAward);
+                        System.out.println("[CHECKOUT] Added points to card: " + pointsToAward + " => " + ptsOk);
+                    }
+                } else {
+                    System.err.println("[CHECKOUT] Card payment failed.");
+                    // Nếu đã trừ điểm mà thanh toán fail, có thể cần hoàn lại điểm.
+                    // Trong phạm vi bài này, ta ghi log lỗi.
+                }
+            }
+        } catch (Exception ex) {
+            System.err.println("[CHECKOUT] Exception during payment: " + ex.getMessage());
+        } finally {
+            try {
+                if (connManager != null)
+                    connManager.disconnectCard();
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!transactionSuccess) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Giao dịch thẻ thất bại (trừ tiền/điểm) nhưng dữ liệu DB đã được cập nhật. Vui lòng liên hệ admin.",
+                    "Lỗi nghiêm trọng", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Deduct used points in DB for sync
+        if (pointsUsed > 0) {
             cardService.usePoints(currentCardId, pointsUsed);
         }
-        
-        if (success) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán thành công!", "Thông báo", 
+
+        javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán thành công!", "Thông báo",
                 javax.swing.JOptionPane.INFORMATION_MESSAGE);
-            cartItems.clear();
-            pointsUsedField.setText("0");
-            updateCartTable();
-            loadBooks();
-            updateCardInfo();
-        } else {
-            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi thanh toán!", "Lỗi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
-        }
+        cartItems.clear();
+        pointsUsedField.setText("0");
+        updateCartTable();
+        loadBooks();
+        updateCardInfo();
     }
 
     private void clearCart() {
-        int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-            "Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?", "Xác nhận",
-            javax.swing.JOptionPane.YES_NO_OPTION);
+        int option = javax.swing.JOptionPane.showConfirmDialog(this,
+                "Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?", "Xác nhận",
+                javax.swing.JOptionPane.YES_NO_OPTION);
         if (option == javax.swing.JOptionPane.YES_OPTION) {
             cartItems.clear();
             updateCartTable();

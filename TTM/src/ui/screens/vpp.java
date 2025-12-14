@@ -6,6 +6,8 @@ package ui.screens;
 
 import services.StationeryService;
 import services.CardService;
+import smartcard.CardConnectionManager;
+import smartcard.CardBalanceManager;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,11 +18,12 @@ import java.util.Locale;
  * @author admin
  */
 public class vpp extends javax.swing.JPanel {
-    
+
     private StationeryService stationeryService;
     private CardService cardService;
     private String currentCardId = "CARD001";
-    
+    private int maxPointsAvailable = 0;
+
     /**
      * Set CardID từ thẻ đăng nhập
      */
@@ -30,21 +33,22 @@ public class vpp extends javax.swing.JPanel {
             updateCardInfo();
         }
     }
+
     private List<CartItem> cartItems;
-    
+
     private static class CartItem {
         String itemId;
         String name;
         int quantity;
         double unitPrice;
-        
+
         CartItem(String itemId, String name, int quantity, double unitPrice) {
             this.itemId = itemId;
             this.name = name;
             this.quantity = quantity;
             this.unitPrice = unitPrice;
         }
-        
+
         double getTotalPrice() {
             return unitPrice * quantity;
         }
@@ -61,10 +65,10 @@ public class vpp extends javax.swing.JPanel {
         loadStationeryItems();
         updateCardInfo();
     }
-    
+
     private void loadStationeryItems() {
         List<StationeryService.StationeryItem> items = stationeryService.getAllItems();
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Giá", "Tồn kho"};
+        String[] columns = { "Mã SP", "Tên sản phẩm", "Giá", "Tồn kho" };
         Object[][] data = new Object[items.size()][4];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < items.size(); i++) {
@@ -76,26 +80,55 @@ public class vpp extends javax.swing.JPanel {
         }
         productsTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
-    
+
     private void updateCardInfo() {
         CardService.Card card = cardService.getCardById(currentCardId);
         if (card != null) {
             cardIdField.setText(card.cardId);
-            // Tự động set điểm sử dụng = điểm tích lũy hiện có
-            if (pointsUsedField != null) {
-                pointsUsedField.setText(String.valueOf(card.totalPoints));
-            }
         }
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
         saleDateField.setText(dateFormat.format(new java.util.Date()));
+
+        // Lấy điểm từ thẻ (Smart Card)
+        int currentPoints = 0;
+        try {
+            CardConnectionManager connManager = new CardConnectionManager();
+            if (connManager.connectCard()) {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                if (info.success) {
+                    currentPoints = info.points;
+                    System.out.println("[VPP_UPDATE_INFO] Points from card: " + currentPoints);
+                }
+                connManager.disconnectCard();
+            } else {
+                // Fallback nếu không kết nối được thẻ
+                System.out.println("[VPP_UPDATE_INFO] Cannot connect card, fallback to DB.");
+                if (card != null)
+                    currentPoints = card.totalPoints;
+            }
+        } catch (Exception e) {
+            System.err.println("[VPP_UPDATE_INFO] Error reading card: " + e.getMessage());
+            if (card != null)
+                currentPoints = card.totalPoints;
+        }
+
+        this.maxPointsAvailable = currentPoints;
+
+        // Tự động set điểm sử dụng = điểm tích lũy hiện có
+        if (pointsUsedField != null) {
+            pointsUsedField.setText(String.valueOf(currentPoints));
+        }
+
+        updateCartTable();
     }
-    
+
     private void updateCartTable() {
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền"};
+        String[] columns = { "Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền" };
         Object[][] data = new Object[cartItems.size()][5];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         double total = 0;
-        
+
         for (int i = 0; i < cartItems.size(); i++) {
             CartItem item = cartItems.get(i);
             data[i][0] = item.itemId;
@@ -106,7 +139,7 @@ public class vpp extends javax.swing.JPanel {
             data[i][4] = nf.format(itemTotal) + " đ";
             total += itemTotal;
         }
-        
+
         // Lấy số điểm sử dụng từ field (nếu có)
         int pointsUsed = 0;
         if (pointsUsedField != null) {
@@ -114,12 +147,12 @@ public class vpp extends javax.swing.JPanel {
                 String pointsText = pointsUsedField.getText().trim();
                 if (!pointsText.isEmpty()) {
                     pointsUsed = Integer.parseInt(pointsText);
-                    if (pointsUsed < 0) pointsUsed = 0;
-                    
-                    // Kiểm tra không được vượt quá điểm tích lũy hiện có
-                    CardService.Card card = cardService.getCardById(currentCardId);
-                    if (card != null && pointsUsed > card.totalPoints) {
-                        pointsUsed = card.totalPoints; // Giới hạn bằng điểm tích lũy
+                    if (pointsUsed < 0)
+                        pointsUsed = 0;
+
+                    // Kiểm tra không được vượt quá điểm tích lũy hiện có (cache từ thẻ)
+                    if (pointsUsed > maxPointsAvailable) {
+                        pointsUsed = maxPointsAvailable;
                         pointsUsedField.setText(String.valueOf(pointsUsed));
                     }
                 }
@@ -127,11 +160,12 @@ public class vpp extends javax.swing.JPanel {
                 pointsUsed = 0;
             }
         }
-        
+
         // Trừ điểm vào tổng tiền (1 điểm = 1 VND)
         double finalTotal = total - pointsUsed;
-        if (finalTotal < 0) finalTotal = 0;
-        
+        if (finalTotal < 0)
+            finalTotal = 0;
+
         cartTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
         NumberFormat nf2 = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         totalField.setText(nf2.format(finalTotal) + " đ");
@@ -145,10 +179,10 @@ public class vpp extends javax.swing.JPanel {
     private void initComponents() {
 
         titleLabel = new javax.swing.JLabel();
-        
+
         // Main container
         mainContainer = new javax.swing.JPanel();
-        
+
         // Left panel - Danh sách văn phòng phẩm
         productsPanel = new javax.swing.JPanel();
         categoryLabel = new javax.swing.JLabel();
@@ -158,10 +192,10 @@ public class vpp extends javax.swing.JPanel {
         searchButton = new javax.swing.JButton();
         productsTable = new javax.swing.JScrollPane();
         productsTableScroll = new javax.swing.JTable();
-        
+
         // Right panel - Chi tiết và giỏ hàng
         detailsPanel = new javax.swing.JPanel();
-        
+
         // Product details
         productDetailsPanel = new javax.swing.JPanel();
         productDetailsTitle = new javax.swing.JLabel();
@@ -176,7 +210,7 @@ public class vpp extends javax.swing.JPanel {
         quantityLabel = new javax.swing.JLabel();
         quantitySpinner = new javax.swing.JSpinner();
         addToCartButton = new javax.swing.JButton();
-        
+
         // Cart panel
         cartPanel = new javax.swing.JPanel();
         cartTitle = new javax.swing.JLabel();
@@ -210,9 +244,9 @@ public class vpp extends javax.swing.JPanel {
         // ============ LEFT PANEL - DANH SÁCH VPP ============
         productsPanel.setBackground(new java.awt.Color(255, 255, 255));
         productsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Danh sách văn phòng phẩm",
-            javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-            javax.swing.border.TitledBorder.DEFAULT_POSITION,
-            new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)));
+                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)));
         productsPanel.setLayout(new java.awt.BorderLayout(0, 10));
         productsPanel.setPreferredSize(new java.awt.Dimension(600, 0));
         productsPanel.setMinimumSize(new java.awt.Dimension(500, 0));
@@ -227,7 +261,7 @@ public class vpp extends javax.swing.JPanel {
         categoryLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
         categoryLabel.setText("Danh mục:");
         categoryCombo.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        categoryCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Tất cả"}));
+        categoryCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Tất cả" }));
         categoryCombo.addActionListener(e -> filterByCategory());
 
         searchLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -259,7 +293,7 @@ public class vpp extends javax.swing.JPanel {
         filterPanel.add(filterTopPanel, java.awt.BorderLayout.CENTER);
 
         // Products table - se duoc load tu database
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Giá", "Tồn kho"};
+        String[] columns = { "Mã SP", "Tên sản phẩm", "Giá", "Tồn kho" };
         Object[][] data = {};
         productsTableScroll = new javax.swing.JTable(data, columns);
         productsTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -291,65 +325,80 @@ public class vpp extends javax.swing.JPanel {
         // Product details panel
         productDetailsPanel.setBackground(new java.awt.Color(255, 255, 255));
         productDetailsPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Thông tin sản phẩm",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        
+                javax.swing.BorderFactory.createTitledBorder(null, "Thông tin sản phẩm",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+
         javax.swing.GroupLayout detailsLayout = new javax.swing.GroupLayout(productDetailsPanel);
         productDetailsPanel.setLayout(detailsLayout);
-        
+
         detailsLayout.setHorizontalGroup(
-            detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(detailsLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(productIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(productNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(priceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(stockLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(quantityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(productIdField)
-                    .addComponent(productNameField)
-                    .addComponent(priceField)
-                    .addComponent(stockField)
-                    .addGroup(detailsLayout.createSequentialGroup()
-                        .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(addToCartButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addContainerGap())
-        );
-        
+                detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(detailsLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(productIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(productNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(priceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(stockLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(quantityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(productIdField)
+                                        .addComponent(productNameField)
+                                        .addComponent(priceField)
+                                        .addComponent(stockField)
+                                        .addGroup(detailsLayout.createSequentialGroup()
+                                                .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(addToCartButton, javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                .addContainerGap()));
+
         detailsLayout.setVerticalGroup(
-            detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(detailsLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(productIdLabel)
-                    .addComponent(productIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(productNameLabel)
-                    .addComponent(productNameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(priceLabel)
-                    .addComponent(priceField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(stockLabel)
-                    .addComponent(stockField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(quantityLabel)
-                    .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(addToCartButton))
-                .addContainerGap())
-        );
+                detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(detailsLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(productIdLabel)
+                                        .addComponent(productIdField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(productNameLabel)
+                                        .addComponent(productNameField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(priceLabel)
+                                        .addComponent(priceField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(stockLabel)
+                                        .addComponent(stockField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(quantityLabel)
+                                        .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(addToCartButton))
+                                .addContainerGap()));
 
         // Labels
         productIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -383,14 +432,14 @@ public class vpp extends javax.swing.JPanel {
         // Cart panel
         cartPanel.setBackground(new java.awt.Color(255, 255, 255));
         cartPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Giỏ hàng",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+                javax.swing.BorderFactory.createTitledBorder(null, "Giỏ hàng",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         cartPanel.setLayout(new java.awt.BorderLayout(0, 10));
 
-        String[] cartColumns = {"Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền"};
+        String[] cartColumns = { "Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền" };
         Object[][] cartData = {};
         cartTableScroll = new javax.swing.JTable(cartData, cartColumns);
         cartTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
@@ -401,7 +450,7 @@ public class vpp extends javax.swing.JPanel {
         cartInfoPanel.setLayout(new javax.swing.BoxLayout(cartInfoPanel, javax.swing.BoxLayout.Y_AXIS));
         cartInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
         cartInfoPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        
+
         javax.swing.JPanel cardIdPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         cardIdPanel.setBackground(new java.awt.Color(255, 255, 255));
         cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -411,7 +460,7 @@ public class vpp extends javax.swing.JPanel {
         cardIdField.setEditable(false);
         cardIdPanel.add(cardIdLabel, java.awt.BorderLayout.WEST);
         cardIdPanel.add(cardIdField, java.awt.BorderLayout.CENTER);
-        
+
         javax.swing.JPanel pointsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         pointsPanel.setBackground(new java.awt.Color(255, 255, 255));
         pointsUsedLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -428,7 +477,8 @@ public class vpp extends javax.swing.JPanel {
                 updateCartTable();
             }
         });
-        // Cập nhật tổng tiền khi thay đổi nội dung (với delay để tránh cập nhật quá nhiều)
+        // Cập nhật tổng tiền khi thay đổi nội dung (với delay để tránh cập nhật quá
+        // nhiều)
         javax.swing.Timer updateTimer = new javax.swing.Timer(500, e -> updateCartTable());
         updateTimer.setRepeats(false); // Chỉ chạy một lần sau khi dừng gõ
         pointsUsedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -436,10 +486,12 @@ public class vpp extends javax.swing.JPanel {
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
                 updateTimer.restart();
             }
+
             @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
                 updateTimer.restart();
             }
+
             @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
                 updateTimer.restart();
@@ -447,7 +499,7 @@ public class vpp extends javax.swing.JPanel {
         });
         pointsPanel.add(pointsUsedLabel, java.awt.BorderLayout.WEST);
         pointsPanel.add(pointsUsedField, java.awt.BorderLayout.CENTER);
-        
+
         javax.swing.JPanel saleDatePanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
         saleDatePanel.setBackground(new java.awt.Color(255, 255, 255));
         saleDateLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
@@ -458,7 +510,7 @@ public class vpp extends javax.swing.JPanel {
         saleDateField.setEditable(false);
         saleDatePanel.add(saleDateLabel, java.awt.BorderLayout.WEST);
         saleDatePanel.add(saleDateField, java.awt.BorderLayout.CENTER);
-        
+
         cartInfoPanel.add(cardIdPanel);
         cartInfoPanel.add(javax.swing.Box.createVerticalStrut(5));
         cartInfoPanel.add(pointsPanel);
@@ -538,11 +590,11 @@ public class vpp extends javax.swing.JPanel {
         List<StationeryService.StationeryItem> filtered = new ArrayList<>();
         for (StationeryService.StationeryItem item : allItems) {
             if (item.itemId.toLowerCase().contains(keyword) ||
-                item.name.toLowerCase().contains(keyword)) {
+                    item.name.toLowerCase().contains(keyword)) {
                 filtered.add(item);
             }
         }
-        String[] columns = {"Mã SP", "Tên sản phẩm", "Giá", "Tồn kho"};
+        String[] columns = { "Mã SP", "Tên sản phẩm", "Giá", "Tồn kho" };
         Object[][] data = new Object[filtered.size()][4];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         for (int i = 0; i < filtered.size(); i++) {
@@ -558,25 +610,25 @@ public class vpp extends javax.swing.JPanel {
     private void addToCart() {
         String productId = productIdField.getText().trim();
         if (productId.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Vui long chon san pham!", "Thong bao", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Vui long chon san pham!", "Thong bao",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         StationeryService.StationeryItem item = stationeryService.getItemById(productId);
         if (item == null) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Khong tim thay san pham!", "Loi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Khong tim thay san pham!", "Loi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         int quantity = (Integer) quantitySpinner.getValue();
         if (item.stock < quantity) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Khong du so luong!", "Thong bao", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Khong du so luong!", "Thong bao",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         // Check if item already in cart
         boolean found = false;
         for (CartItem cartItem : cartItems) {
@@ -586,108 +638,215 @@ public class vpp extends javax.swing.JPanel {
                 break;
             }
         }
-        
+
         if (!found) {
             cartItems.add(new CartItem(productId, item.name, quantity, item.price));
         }
-        
-        // Nếu đây là sản phẩm đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm tích lũy
+
+        // Nếu đây là sản phẩm đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm
+        // tích lũy
         CardService.Card card = cardService.getCardById(currentCardId);
         if (cartItems.size() == 1 && card != null && pointsUsedField != null) {
             pointsUsedField.setText(String.valueOf(card.totalPoints));
         }
-        
+
         updateCartTable();
-        javax.swing.JOptionPane.showMessageDialog(this, "Da them " + quantity + " san pham vao gio hang!", "Thong bao", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        javax.swing.JOptionPane.showMessageDialog(this, "Da them " + quantity + " san pham vao gio hang!", "Thong bao",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void checkout() {
         if (cartItems.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Gio hang trong!", "Thong bao", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Giỏ hàng trống!", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
-        int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-            "Xac nhan thanh toan?", "Xac nhan",
-            javax.swing.JOptionPane.YES_NO_OPTION);
-        if (option != javax.swing.JOptionPane.YES_OPTION) {
-            return;
-        }
-        
+
+        // Lấy số điểm sử dụng
+        int pointsUsed = 0;
         try {
-            int pointsUsed = 0;
             String pointsText = pointsUsedField.getText().trim();
             if (!pointsText.isEmpty()) {
                 pointsUsed = Integer.parseInt(pointsText);
-                if (pointsUsed < 0) {
+                if (pointsUsed < 0)
                     pointsUsed = 0;
-                }
-            }
-            
-            // Check if points used is valid
-            CardService.Card card = cardService.getCardById(currentCardId);
-            if (card != null && pointsUsed > card.totalPoints) {
-                javax.swing.JOptionPane.showMessageDialog(this, 
-                    "Khong du diem! Ban co " + card.totalPoints + " diem.", 
-                    "Thong bao", 
-                    javax.swing.JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            
-            // Calculate total amount (chưa trừ điểm - để phân phối điểm theo tỷ lệ)
-            double totalAmount = 0;
-            for (CartItem item : cartItems) {
-                totalAmount += item.getTotalPrice();
-            }
-            
-            // Calculate points to use per item (distribute proportionally by price)
-            boolean success = true;
-            int distributedPoints = 0;
-            for (int i = 0; i < cartItems.size(); i++) {
-                CartItem item = cartItems.get(i);
-                int itemPoints = 0;
-                
-                if (pointsUsed > 0 && totalAmount > 0) {
-                    if (i == cartItems.size() - 1) {
-                        // Last item gets remaining points
-                        itemPoints = pointsUsed - distributedPoints;
-                    } else {
-                        double itemRatio = item.getTotalPrice() / totalAmount;
-                        itemPoints = (int) Math.round(pointsUsed * itemRatio);
-                        distributedPoints += itemPoints;
-                    }
-                }
-                
-                if (!stationeryService.sellItem(currentCardId, item.itemId, item.quantity, itemPoints)) {
-                    success = false;
-                    break;
-                }
-            }
-            
-            if (success) {
-                javax.swing.JOptionPane.showMessageDialog(this, "Thanh toan thanh cong!", "Thong bao", 
-                    javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                cartItems.clear();
-                updateCartTable();
-                loadStationeryItems();
-                updateCardInfo();
-                pointsUsedField.setText("0");
-            } else {
-                javax.swing.JOptionPane.showMessageDialog(this, "Loi khi thanh toan!", "Loi", 
-                    javax.swing.JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            javax.swing.JOptionPane.showMessageDialog(this, "So diem khong hop le!", "Loi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            pointsUsed = 0;
         }
+
+        // Kiểm tra đủ điểm không (dựa trên maxPointsAvailable đã lấy từ thẻ)
+        if (pointsUsed > maxPointsAvailable) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Không đủ điểm! Bạn có " + maxPointsAvailable + " điểm (trong thẻ).",
+                    "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int option = javax.swing.JOptionPane.showConfirmDialog(this,
+                "Xác nhận thanh toán?", "Xác nhận",
+                javax.swing.JOptionPane.YES_NO_OPTION);
+        if (option != javax.swing.JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Tính tổng tiền
+        double grandTotal = 0;
+        for (CartItem item : cartItems) {
+            grandTotal += item.getTotalPrice();
+        }
+
+        // Số tiền thực cần thanh toán qua thẻ
+        double amountToPay = grandTotal - pointsUsed;
+        if (amountToPay < 0)
+            amountToPay = 0;
+
+        // Điểm thưởng = 3% của số tiền thanh toán thực tế
+        int pointsToAward = (int) Math.round(amountToPay * 0.03);
+
+        // Check card balance and points via smart card
+        boolean cardHasEnough = false;
+        CardConnectionManager connManager = null;
+        try {
+            connManager = new CardConnectionManager();
+            if (connManager.connectCard()) {
+                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+                CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
+                if (info.success) {
+                    System.out.println("[VPP_CHECKOUT] Card balance: " + info.balance + " VND, Points: " + info.points);
+
+                    // Validate lại điểm trên thẻ lần cuối
+                    if (pointsUsed > 0 && info.points < pointsUsed) {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Thẻ không đủ điểm để thanh toán! (Có: " + info.points + ", Cần dùng: " + pointsUsed
+                                        + ")",
+                                "Lỗi thẻ", javax.swing.JOptionPane.WARNING_MESSAGE);
+                        connManager.disconnectCard();
+                        return;
+                    }
+
+                    if (info.balance >= (int) amountToPay) {
+                        cardHasEnough = true;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            System.err.println("[VPP_CHECKOUT] Error checking card balance: " + ex.getMessage());
+        } finally {
+            try {
+                if (connManager != null)
+                    connManager.disconnectCard();
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!cardHasEnough) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Số dư thẻ không đủ để thanh toán " + (int) amountToPay + " VND.", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 1) Cập nhật DB
+        boolean dbSuccess = true;
+        int distributedPoints = 0;
+        for (int i = 0; i < cartItems.size(); i++) {
+            CartItem item = cartItems.get(i);
+            int itemPoints = 0;
+
+            if (pointsUsed > 0 && grandTotal > 0) {
+                if (i == cartItems.size() - 1) {
+                    itemPoints = pointsUsed - distributedPoints;
+                } else {
+                    double itemRatio = item.getTotalPrice() / grandTotal;
+                    itemPoints = (int) Math.round(pointsUsed * itemRatio);
+                    distributedPoints += itemPoints;
+                }
+            }
+
+            if (!stationeryService.sellItem(currentCardId, item.itemId, item.quantity, itemPoints)) {
+                dbSuccess = false;
+                break;
+            }
+        }
+
+        if (!dbSuccess) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật cơ sở dữ liệu.", "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 2) Charge the card & Use Points
+        boolean transactionSuccess = false;
+        try {
+            connManager = new CardConnectionManager();
+            if (!connManager.connectCard()) {
+                throw new Exception("Không thể kết nối lại thẻ để thanh toán.");
+            }
+            CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+
+            // Xử lý trừ điểm trước (nếu có)
+            boolean pointsDeducted = true;
+            if (pointsUsed > 0) {
+                pointsDeducted = balanceManager.usePoints(pointsUsed);
+                if (!pointsDeducted) {
+                    System.err.println("[VPP_CHECKOUT] Failed to deduct points from card.");
+                } else {
+                    System.out.println("[VPP_CHECKOUT] Deducted " + pointsUsed + " points from card.");
+                }
+            }
+
+            // Nếu trừ điểm thành công (hoặc không dùng điểm), mới trừ tiền
+            if (pointsDeducted) {
+                boolean paymentOk = balanceManager.payment((int) amountToPay);
+                if (paymentOk) {
+                    System.out.println("[VPP_CHECKOUT] Card charged: " + (int) amountToPay + " VND");
+                    transactionSuccess = true;
+                    // Cộng điểm thưởng vào thẻ
+                    if (pointsToAward > 0) {
+                        boolean ptsOk = balanceManager.addPoints(pointsToAward);
+                        System.out.println("[VPP_CHECKOUT] Added points to card: " + pointsToAward + " => " + ptsOk);
+                    }
+                } else {
+                    System.err.println("[VPP_CHECKOUT] Card payment failed.");
+                }
+            }
+        } catch (Exception ex) {
+            System.err.println("[VPP_CHECKOUT] Exception during payment: " + ex.getMessage());
+        } finally {
+            try {
+                if (connManager != null)
+                    connManager.disconnectCard();
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!transactionSuccess) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Giao dịch thẻ thất bại nhưng dữ liệu DB đã được cập nhật. Vui lòng liên hệ admin.",
+                    "Lỗi nghiêm trọng", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Đồng bộ điểm đã dùng vào DB
+        if (pointsUsed > 0) {
+            cardService.usePoints(currentCardId, pointsUsed);
+        }
+
+        javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán thành công!", "Thông báo",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        cartItems.clear();
+        pointsUsedField.setText("0");
+        updateCartTable();
+        loadStationeryItems();
+        updateCardInfo();
     }
 
     private void clearCart() {
-        int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-            "Ban co chac chan muon xoa toan bo gio hang?", "Xac nhan",
-            javax.swing.JOptionPane.YES_NO_OPTION);
+        int option = javax.swing.JOptionPane.showConfirmDialog(this,
+                "Ban co chac chan muon xoa toan bo gio hang?", "Xac nhan",
+                javax.swing.JOptionPane.YES_NO_OPTION);
         if (option == javax.swing.JOptionPane.YES_OPTION) {
             cartItems.clear();
             updateCartTable();
@@ -734,4 +893,3 @@ public class vpp extends javax.swing.JPanel {
     private javax.swing.JButton checkoutButton;
     private javax.swing.JButton clearCartButton;
 }
-
