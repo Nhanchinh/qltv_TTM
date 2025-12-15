@@ -2171,6 +2171,7 @@ public class AdminPanel extends JPanel {
                         infoArea.setForeground(TEXT_SECONDARY);
                         imageLabel.setIcon(null);
                         imageLabel.setText("Đang tải...");
+                        iconLabel.setVisible(true);
                     });
 
                     connManager = new CardConnectionManager();
@@ -2210,7 +2211,7 @@ public class AdminPanel extends JPanel {
                     connManager.disconnectCard();
 
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText("✓ Hoàn tất lấy thông tin\n\n" + userInfo.toString());
+                        infoArea.setText(" Hoàn tất lấy thông tin\n\n" + userInfo.toString());
                         infoArea.setForeground(TEXT_PRIMARY);
 
                         if (imageData != null && imageManager.isValidJpeg(imageData)) {
@@ -2228,9 +2229,11 @@ public class AdminPanel extends JPanel {
                                     Image scaled = img.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
                                     imageLabel.setIcon(new ImageIcon(scaled));
                                     imageLabel.setText("");
+                                    iconLabel.setVisible(false);
                                 } else {
                                     imageLabel.setIcon(null);
                                     imageLabel.setText("Không thể đọc ảnh");
+                                    iconLabel.setVisible(true);
                                 }
                             } catch (Exception imgEx) {
                                 imageLabel.setIcon(null);
@@ -2239,6 +2242,7 @@ public class AdminPanel extends JPanel {
                         } else {
                             imageLabel.setIcon(null);
                             imageLabel.setText("Thẻ chưa có ảnh");
+                            iconLabel.setVisible(true);
                         }
                     });
 
@@ -2248,6 +2252,7 @@ public class AdminPanel extends JPanel {
                         infoArea.setForeground(ADMIN_COLOR);
                         imageLabel.setIcon(null);
                         imageLabel.setText("Lỗi");
+                        iconLabel.setVisible(true);
                         JOptionPane.showMessageDialog(
                                 SwingUtilities.getWindowAncestor(panel),
                                 "Lỗi khi lấy thông tin: " + ex.getMessage(),
@@ -2332,17 +2337,17 @@ public class AdminPanel extends JPanel {
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(6, 10, 6, 10);
+        gbc.insets = new Insets(6, 5, 6, 5);
 
         // Book ID - with icon
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 0.3;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Mã Sách:"), gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 0.7;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         JTextField bookIdField = createDarkTextField("Mã sách tự động");
         bookIdField.setText(generateBookId());
@@ -2353,10 +2358,12 @@ public class AdminPanel extends JPanel {
         // Title
         gbc.gridx = 0;
         gbc.gridy = 1;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Tên Sách:"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         JTextField titleField = createDarkTextField("Nhập tên sách...");
         formCard.add(titleField, gbc);
@@ -2364,10 +2371,12 @@ public class AdminPanel extends JPanel {
         // Author
         gbc.gridx = 0;
         gbc.gridy = 2;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Tác Giả:"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         JTextField authorField = createDarkTextField("Nhập tên tác giả...");
         formCard.add(authorField, gbc);
@@ -2375,10 +2384,12 @@ public class AdminPanel extends JPanel {
         // Publisher
         gbc.gridx = 0;
         gbc.gridy = 3;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Nhà Xuất Bản:"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         JTextField publisherField = createDarkTextField("Nhập nhà xuất bản...");
         formCard.add(publisherField, gbc);
@@ -2386,10 +2397,12 @@ public class AdminPanel extends JPanel {
         // Price
         gbc.gridx = 0;
         gbc.gridy = 4;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Giá (VNĐ):"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         JTextField priceField = createDarkTextField("0");
         priceField.setText("0");
@@ -2398,10 +2411,12 @@ public class AdminPanel extends JPanel {
         // Stock
         gbc.gridx = 0;
         gbc.gridy = 5;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Số Lượng:"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         JTextField stockField = createDarkTextField("1");
         stockField.setText("1");
@@ -2410,10 +2425,12 @@ public class AdminPanel extends JPanel {
         // Category - styled combo box
         gbc.gridx = 0;
         gbc.gridy = 6;
+        gbc.weightx = 0.0;
         gbc.anchor = GridBagConstraints.EAST;
         formCard.add(createDarkLabel("Thể Loại:"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         String[] categories = { "Văn học", "Khoa học", "Thiếu nhi", "Manga", "Self-help", "Lập trình", "Kinh tế",
                 "Tâm lý", "Lịch sử", "Khác" };
@@ -2988,87 +3005,127 @@ public class AdminPanel extends JPanel {
      */
     private String[] showPinInputDialog() {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Nhập Mã PIN", true);
-        dialog.setSize(500, 350);
+        dialog.setSize(420, 400);
         dialog.setLocationRelativeTo(null);
         dialog.setResizable(false);
 
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBorder(new EmptyBorder(30, 40, 30, 40));
-        contentPanel.setBackground(Color.WHITE);
+        contentPanel.setBorder(new EmptyBorder(20, 40, 10, 40));
+        contentPanel.setBackground(new Color(15, 23, 42)); // Dark background
 
         // Title
-        JLabel titleLabel = new JLabel("Nhập Mã PIN");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setForeground(ADMIN_COLOR);
+        JLabel titleLabel = new JLabel("THIẾT LẬP MÃ PIN");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(TEXT_PRIMARY);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(titleLabel);
-        contentPanel.add(Box.createVerticalStrut(20));
+
+        contentPanel.add(Box.createVerticalStrut(5));
+
+        JLabel subtitleLabel = new JLabel("Nhập PIN để bảo vệ thẻ thông minh");
+        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitleLabel.setForeground(TEXT_SECONDARY);
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        contentPanel.add(subtitleLabel);
+
+        contentPanel.add(Box.createVerticalStrut(15));
 
         // User PIN
         JLabel userPinLabel = new JLabel("PIN Người Dùng (6 số):");
         userPinLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        userPinLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        userPinLabel.setForeground(TEXT_SECONDARY);
+        userPinLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(userPinLabel);
+        contentPanel.add(Box.createVerticalStrut(5));
 
         JPasswordField userPinField = new JPasswordField();
-        userPinField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        userPinField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        userPinField.setPreferredSize(new Dimension(300, 35));
-        userPinField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        userPinField.setHorizontalAlignment(JPasswordField.CENTER);
+        userPinField.setFont(new Font("Consolas", Font.BOLD, 16));
+        userPinField.setBackground(new Color(30, 41, 59));
+        userPinField.setForeground(Color.WHITE);
+        userPinField.setCaretColor(SUCCESS_COLOR);
+        userPinField.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR, 1),
+                new EmptyBorder(5, 10, 5, 10)));
+        userPinField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        userPinField.setPreferredSize(new Dimension(300, 40));
+        userPinField.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(userPinField);
+
         contentPanel.add(Box.createVerticalStrut(15));
 
         // Admin PIN
         JLabel adminPinLabel = new JLabel("PIN Admin (6 số):");
         adminPinLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        adminPinLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        adminPinLabel.setForeground(TEXT_SECONDARY);
+        adminPinLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(adminPinLabel);
+        contentPanel.add(Box.createVerticalStrut(5));
 
         JPasswordField adminPinField = new JPasswordField();
-        adminPinField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        adminPinField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        adminPinField.setPreferredSize(new Dimension(300, 35));
-        adminPinField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
+        adminPinField.setHorizontalAlignment(JPasswordField.CENTER);
+        adminPinField.setFont(new Font("Consolas", Font.BOLD, 16));
+        adminPinField.setBackground(new Color(30, 41, 59));
+        adminPinField.setForeground(Color.WHITE);
+        adminPinField.setCaretColor(SUCCESS_COLOR);
+        adminPinField.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR, 1),
+                new EmptyBorder(5, 10, 5, 10)));
+        adminPinField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        adminPinField.setPreferredSize(new Dimension(300, 40));
+        adminPinField.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(adminPinField);
-        contentPanel.add(Box.createVerticalStrut(20));
+
+        contentPanel.add(Box.createVerticalStrut(15));
 
         // Error label
         JLabel errorLabel = new JLabel(" ");
-        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        errorLabel.setForeground(new Color(220, 53, 69));
-        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        errorLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        errorLabel.setForeground(ADMIN_COLOR);
+        errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(errorLabel);
-        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(Box.createVerticalStrut(15));
 
         // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 15, 0));
         buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         final String[][] result = { { null, null } };
 
-        JButton okButton = new JButton("OK") {
+        JButton okButton = new JButton("XÁC NHẬN") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
                 if (getModel().isPressed()) {
-                    g2d.setColor(SUCCESS_COLOR.darker());
+                    gradient = new GradientPaint(0, 0, new Color(16, 150, 100), getWidth(), 0, SUCCESS_COLOR);
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(SUCCESS_COLOR.brighter());
+                    gradient = new GradientPaint(0, 0, new Color(52, 211, 153), getWidth(), 0, SUCCESS_COLOR);
                 } else {
-                    g2d.setColor(SUCCESS_COLOR);
+                    gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2 - 1;
+                g2d.drawString(getText(), textX, textY);
+
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
         okButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
         okButton.setForeground(Color.WHITE);
-        okButton.setPreferredSize(new Dimension(100, 35));
+        okButton.setPreferredSize(new Dimension(120, 38));
         okButton.setBorderPainted(false);
         okButton.setContentAreaFilled(false);
         okButton.setFocusPainted(false);
@@ -3100,21 +3157,30 @@ public class AdminPanel extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
                 if (getModel().isPressed()) {
-                    g2d.setColor(new Color(190, 190, 190));
+                    g2d.setColor(new Color(55, 65, 81));
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(new Color(220, 220, 220));
+                    g2d.setColor(new Color(75, 85, 99));
                 } else {
-                    g2d.setColor(new Color(200, 200, 200));
+                    g2d.setColor(new Color(55, 65, 81));
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                g2d.setColor(TEXT_SECONDARY); // Text color matches theme
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2 - 1;
+                g2d.drawString(getText(), textX, textY);
+
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
         cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        cancelButton.setForeground(new Color(60, 60, 60));
-        cancelButton.setPreferredSize(new Dimension(100, 35));
+        cancelButton.setForeground(TEXT_SECONDARY);
+        cancelButton.setPreferredSize(new Dimension(100, 38));
         cancelButton.setBorderPainted(false);
         cancelButton.setContentAreaFilled(false);
         cancelButton.setFocusPainted(false);
