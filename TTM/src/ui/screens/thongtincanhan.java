@@ -10,22 +10,25 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import smartcard.CardConnectionManager;
 import smartcard.CardKeyManager;
 import smartcard.CardInfoManager;
 import smartcard.CardImageManager;
+import smartcard.CardUpdateManager;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.awt.Image;
+import java.io.File;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  *
  * @author admin
  */
 public class thongtincanhan extends javax.swing.JPanel {
-    
+
     private CardService cardService;
     private String currentCardId = "CARD001";
     private boolean isEditing = false;
@@ -40,7 +43,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         initComponents();
         loadCardInfo();
     }
-    
+
     /**
      * Set CardID từ thẻ đăng nhập
      */
@@ -50,7 +53,7 @@ public class thongtincanhan extends javax.swing.JPanel {
             loadCardInfo(); // Reload info với CardID mới
         }
     }
-    
+
     /**
      * Load card information from database
      */
@@ -59,19 +62,19 @@ public class thongtincanhan extends javax.swing.JPanel {
         String cardIdFromCard = null;
         CardInfoManager.UserInfo userInfoFromCard = null;
         byte[] cardImageData = null;
-        
+
         try {
             CardConnectionManager connManager = new CardConnectionManager();
             connManager.connectCard();
             try {
                 CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
                 keyManager.getPublicKey();
-                
+
                 // Load app keypair từ file (đã tạo khi admin thêm thẻ)
                 if (!keyManager.loadAppKeyPair()) {
                     throw new Exception("Không tìm thấy App KeyPair. Vui lòng thêm thẻ mới trước.");
                 }
-                
+
                 CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
                 userInfoFromCard = infoManager.getInfo();
                 if (userInfoFromCard != null && userInfoFromCard.cardId != null && !userInfoFromCard.cardId.isEmpty()) {
@@ -96,31 +99,31 @@ public class thongtincanhan extends javax.swing.JPanel {
         }
 
         displayCardImage(cardImageData);
-        
+
         // 2. Lấy thông tin từ DB theo CardID (ưu tiên CardID đọc từ thẻ nếu có)
         if (currentCardId != null && !currentCardId.isEmpty()) {
             // Recalculate TotalSpent from history to ensure accuracy
             cardService.recalculateTotalSpent(currentCardId);
         }
-        
+
         CardService.Card card = (currentCardId != null) ? cardService.getCardById(currentCardId) : null;
-        
+
         if (userInfoFromCard != null) {
-                        // Log toàn bộ thông tin lấy từ thẻ
-                        System.out.println("[CARD_INFO] Thông tin lấy từ thẻ:");
-                        System.out.println("  CardID : " + userInfoFromCard.cardId);
-                        System.out.println("  Name   : " + userInfoFromCard.name);
-                        System.out.println("  Phone  : " + userInfoFromCard.phone);
-                        System.out.println("  Address: " + userInfoFromCard.address);
-                        System.out.println("  DOB    : " + userInfoFromCard.dob);
-                        System.out.println("  RegDate: " + userInfoFromCard.regDate);
-                        System.out.println("  Rank   : " + userInfoFromCard.rank);
+            // Log toàn bộ thông tin lấy từ thẻ
+            System.out.println("[CARD_INFO] Thông tin lấy từ thẻ:");
+            System.out.println("  CardID : " + userInfoFromCard.cardId);
+            System.out.println("  Name   : " + userInfoFromCard.name);
+            System.out.println("  Phone  : " + userInfoFromCard.phone);
+            System.out.println("  Address: " + userInfoFromCard.address);
+            System.out.println("  DOB    : " + userInfoFromCard.dob);
+            System.out.println("  RegDate: " + userInfoFromCard.regDate);
+            System.out.println("  Rank   : " + userInfoFromCard.rank);
             // Hiển thị THÔNG TIN CƠ BẢN theo đúng dữ liệu trên thẻ
             cardIdField.setText(userInfoFromCard.cardId);
             nameField.setText(userInfoFromCard.name);
             phoneField.setText(userInfoFromCard.phone);
             addressField.setText(userInfoFromCard.address != null ? userInfoFromCard.address : "");
-            
+
             // DOB trên thẻ dạng DDMMYYYY -> hiển thị DD/MM/YYYY
             if (userInfoFromCard.dob != null && userInfoFromCard.dob.length() == 8) {
                 String dob = userInfoFromCard.dob;
@@ -128,7 +131,7 @@ public class thongtincanhan extends javax.swing.JPanel {
             } else {
                 dobField.setText(userInfoFromCard.dob != null ? userInfoFromCard.dob : "");
             }
-            
+
             // Ngày đăng ký trên thẻ dạng DDMMYYYY
             if (userInfoFromCard.regDate != null && userInfoFromCard.regDate.length() == 8) {
                 String reg = userInfoFromCard.regDate;
@@ -142,7 +145,7 @@ public class thongtincanhan extends javax.swing.JPanel {
             nameField.setText(card.fullName);
             phoneField.setText(card.phone);
             addressField.setText(card.address != null ? card.address : "");
-            
+
             // DOB từ DB (YYYY-MM-DD -> DD/MM/YYYY)
             if (card.dob != null && !card.dob.isEmpty()) {
                 try {
@@ -162,7 +165,7 @@ public class thongtincanhan extends javax.swing.JPanel {
             } else {
                 dobField.setText("");
             }
-            
+
             if (card.registerDate != null && !card.registerDate.isEmpty()) {
                 try {
                     if (card.registerDate.contains("-")) {
@@ -178,7 +181,10 @@ public class thongtincanhan extends javax.swing.JPanel {
                 } catch (Exception e) {
                     registerDateField.setText(card.registerDate);
                 }
-                // Hiển thị loại hội viên (hạng thẻ) lấy từ thẻ
+            }
+
+            // Hiển thị loại hội viên (hạng thẻ) lấy từ thẻ nếu có
+            if (userInfoFromCard != null) {
                 memberTypeField.setText(userInfoFromCard.rank != null ? userInfoFromCard.rank : "");
             }
         } else {
@@ -190,13 +196,14 @@ public class thongtincanhan extends javax.swing.JPanel {
             dobField.setText("");
             registerDateField.setText("");
         }
-        
+
         // Sau khi load xong, luôn về trạng thái chỉ xem
         setFieldsEditable(false);
         isEditing = false;
         saveButton.setEnabled(false);
-        
-        // 3. Thông tin hội viên (luôn lấy từ DB, vì chỉ DB có tổng chi, điểm, nợ phạt,...)
+
+        // 3. Thông tin hội viên (luôn lấy từ DB, vì chỉ DB có tổng chi, điểm, nợ
+        // phạt,...)
         if (card != null) {
             double actualTotalSpent = cardService.calculateTotalSpentFromHistory(card.cardId);
             memberTypeField.setText(card.memberType != null ? card.memberType : "Basic");
@@ -213,17 +220,18 @@ public class thongtincanhan extends javax.swing.JPanel {
             isBlockedField.setText("Hoạt động");
         }
     }
-    
+
     /**
      * Hiển thị ảnh thẻ
      */
     private void displayCardImage(byte[] imageData) {
-        if (cardImageLabel == null) return;
-        
+        if (cardImageLabel == null)
+            return;
+
         if (imageData != null && imageData.length > 2) {
             // Kiểm tra JPEG header (FF D8)
             boolean isValidJpeg = (imageData[0] & 0xFF) == 0xFF && (imageData[1] & 0xFF) == 0xD8;
-            
+
             if (isValidJpeg) {
                 try {
                     ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
@@ -242,30 +250,31 @@ public class thongtincanhan extends javax.swing.JPanel {
                     System.err.println("[CARD_IMAGE] Lỗi đọc ảnh: " + e.getMessage());
                 }
             } else {
-                System.out.println("[CARD_IMAGE] Dữ liệu không phải JPEG (First bytes: " + 
-                    String.format("%02X %02X", imageData[0] & 0xFF, imageData[1] & 0xFF) + ")");
+                System.out.println("[CARD_IMAGE] Dữ liệu không phải JPEG (First bytes: " +
+                        String.format("%02X %02X", imageData[0] & 0xFF, imageData[1] & 0xFF) + ")");
             }
         }
-        
+
         // Không có ảnh hoặc ảnh không hợp lệ
         cardImageLabel.setIcon(null);
         cardImageLabel.setText("<html><center>Thẻ chưa<br>có ảnh</center></html>");
     }
-    
+
     /**
      * Reload card info (public method for external refresh)
      */
     public void reloadCardInfo() {
         loadCardInfo();
     }
-    
+
     private void setFieldsEditable(boolean editable) {
         nameField.setEditable(editable);
         phoneField.setEditable(editable);
         addressField.setEditable(editable);
         dobField.setEditable(editable);
-        
-        // Khi không ở chế độ chỉnh sửa thì cũng không cho focus để tránh hiện con trỏ nháy
+
+        // Khi không ở chế độ chỉnh sửa thì cũng không cho focus để tránh hiện con trỏ
+        // nháy
         nameField.setFocusable(editable);
         phoneField.setFocusable(editable);
         addressField.setFocusable(editable);
@@ -276,16 +285,15 @@ public class thongtincanhan extends javax.swing.JPanel {
      * Khởi tạo các component của giao diện
      * Code này được viết thủ công
      */
-    @SuppressWarnings("unchecked")
     private void initComponents() {
 
         // Tạo các component (các thành phần giao diện)
         titleLabel = new javax.swing.JLabel();
-        
+
         // Panel ảnh thẻ
         imagePanel = new javax.swing.JPanel();
         cardImageLabel = new javax.swing.JLabel();
-        
+
         // Thông tin cơ bản
         cardIdLabel = new javax.swing.JLabel();
         cardIdField = new javax.swing.JTextField();
@@ -299,7 +307,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         dobField = new javax.swing.JTextField();
         registerDateLabel = new javax.swing.JLabel();
         registerDateField = new javax.swing.JTextField();
-        
+
         // Thông tin hội viên
         memberTypeLabel = new javax.swing.JLabel();
         memberTypeField = new javax.swing.JTextField();
@@ -313,7 +321,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         isBlockedField = new javax.swing.JTextField();
         rankLabel = new javax.swing.JLabel();
         rankField = new javax.swing.JTextField();
-        
+
         saveButton = new javax.swing.JButton();
         basicInfoPanel = new javax.swing.JPanel();
         memberInfoPanel = new javax.swing.JPanel();
@@ -384,122 +392,108 @@ public class thongtincanhan extends javax.swing.JPanel {
         // Thiết lập các text field (ô nhập liệu) - Thông tin cơ bản
         cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         cardIdField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         cardIdField.setColumns(30);
         cardIdField.setEditable(false);
         cardIdField.setFocusable(false);
 
         nameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         nameField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         nameField.setColumns(30);
         nameField.setEditable(false);
         nameField.setFocusable(false);
 
         phoneField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         phoneField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-        javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-        javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         phoneField.setColumns(30);
         phoneField.setEditable(false);
         phoneField.setFocusable(false);
 
         addressField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         addressField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-        javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-        javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         addressField.setColumns(30);
         addressField.setEditable(false);
         addressField.setFocusable(false);
 
         dobField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         dobField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         dobField.setColumns(30);
         dobField.setEditable(false);
         dobField.setFocusable(false);
 
         registerDateField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         registerDateField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         registerDateField.setColumns(30);
         registerDateField.setEditable(false);
 
         // Thông tin hội viên
         memberTypeField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         memberTypeField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         memberTypeField.setColumns(30);
         memberTypeField.setEditable(false);
 
         totalSpentField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         totalSpentField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         totalSpentField.setColumns(30);
         totalSpentField.setEditable(false);
 
         totalPointsField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         totalPointsField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         totalPointsField.setColumns(30);
         totalPointsField.setEditable(false);
 
         fineDebtField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         fineDebtField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         fineDebtField.setColumns(30);
         fineDebtField.setEditable(false);
 
         isBlockedField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         isBlockedField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         isBlockedField.setColumns(30);
         isBlockedField.setEditable(false);
 
         rankField.setFont(new java.awt.Font("Segoe UI", 0, 13));
         rankField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         rankField.setColumns(30);
         rankField.setEditable(false);
 
         // Thiết lập panel ảnh thẻ
         imagePanel.setBackground(new java.awt.Color(255, 255, 255));
         imagePanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(
-                null, "Ảnh thẻ",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16),
-                new java.awt.Color(60, 60, 60)
-            ),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
+                javax.swing.BorderFactory.createTitledBorder(
+                        null, "Ảnh thẻ",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16),
+                        new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         imagePanel.setLayout(new java.awt.BorderLayout());
         imagePanel.setPreferredSize(new java.awt.Dimension(250, 320));
         imagePanel.setMaximumSize(new java.awt.Dimension(250, 320));
-        
+
         cardImageLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         cardImageLabel.setVerticalAlignment(javax.swing.SwingConstants.CENTER);
         cardImageLabel.setFont(new java.awt.Font("Segoe UI", 0, 14));
@@ -510,6 +504,33 @@ public class thongtincanhan extends javax.swing.JPanel {
         cardImageLabel.setOpaque(true);
         cardImageLabel.setBackground(new java.awt.Color(245, 245, 250));
         imagePanel.add(cardImageLabel, java.awt.BorderLayout.CENTER);
+
+        // Nút upload ảnh
+        uploadImageButton = new javax.swing.JButton();
+        uploadImageButton.setBackground(new java.awt.Color(40, 167, 69));
+        uploadImageButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        uploadImageButton.setForeground(new java.awt.Color(255, 255, 255));
+        uploadImageButton.setText("📷 Đổi ảnh");
+        uploadImageButton.setBorderPainted(false);
+        uploadImageButton.setFocusPainted(false);
+        uploadImageButton.setPreferredSize(new java.awt.Dimension(120, 35));
+        uploadImageButton.addActionListener(this::uploadImageButtonActionPerformed);
+        uploadImageButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                uploadImageButton.setBackground(new java.awt.Color(33, 136, 56));
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                uploadImageButton.setBackground(new java.awt.Color(40, 167, 69));
+            }
+        });
+
+        // Panel chứa nút upload ảnh
+        javax.swing.JPanel uploadButtonPanel = new javax.swing.JPanel();
+        uploadButtonPanel.setBackground(new java.awt.Color(255, 255, 255));
+        uploadButtonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 10));
+        uploadButtonPanel.add(uploadImageButton);
+        imagePanel.add(uploadButtonPanel, java.awt.BorderLayout.SOUTH);
 
         // Thiết lập button
         editButton = new javax.swing.JButton();
@@ -541,6 +562,7 @@ public class thongtincanhan extends javax.swing.JPanel {
                     saveButton.setBackground(new java.awt.Color(0, 100, 180));
                 }
             }
+
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 saveButton.setBackground(new java.awt.Color(0, 120, 215));
             }
@@ -549,156 +571,198 @@ public class thongtincanhan extends javax.swing.JPanel {
         // Tạo panel chứa thông tin cơ bản
         basicInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
         basicInfoPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(
-                null, "Thông tin cơ bản",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16),
-                new java.awt.Color(60, 60, 60)
-            ),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
+                javax.swing.BorderFactory.createTitledBorder(
+                        null, "Thông tin cơ bản",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16),
+                        new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
 
         // Sử dụng GroupLayout để sắp xếp các component - Thông tin cơ bản
         javax.swing.GroupLayout basicInfoLayout = new javax.swing.GroupLayout(basicInfoPanel);
         basicInfoPanel.setLayout(basicInfoLayout);
-        
+
         basicInfoLayout.setHorizontalGroup(
-            basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(basicInfoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(nameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(phoneLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(addressLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(dobLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(registerDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, 10)
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(cardIdField)
-                    .addComponent(nameField)
-                    .addComponent(phoneField)
-                    .addComponent(addressField)
-                    .addComponent(dobField)
-                    .addComponent(registerDateField))
-                .addContainerGap())
-        );
-        
+                basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(basicInfoLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(nameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(phoneLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(addressLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(dobLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(registerDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
+                                                javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, 10)
+                                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(cardIdField)
+                                        .addComponent(nameField)
+                                        .addComponent(phoneField)
+                                        .addComponent(addressField)
+                                        .addComponent(dobField)
+                                        .addComponent(registerDateField))
+                                .addContainerGap()));
+
         basicInfoLayout.setVerticalGroup(
-            basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(basicInfoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(cardIdLabel)
-                    .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(nameLabel)
-                    .addComponent(nameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(phoneLabel)
-                    .addComponent(phoneField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(addressLabel)
-                    .addComponent(addressField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(dobLabel)
-                    .addComponent(dobField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(registerDateLabel)
-                    .addComponent(registerDateField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
-        );
+                basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(basicInfoLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(
+                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(cardIdLabel)
+                                                .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(nameLabel)
+                                                .addComponent(nameField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(phoneLabel)
+                                                .addComponent(phoneField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(addressLabel)
+                                                .addComponent(addressField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(dobLabel)
+                                                .addComponent(dobField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(registerDateLabel)
+                                                .addComponent(registerDateField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addContainerGap()));
 
         // Tạo panel chứa thông tin hội viên
         memberInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
         memberInfoPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(
-                null, "Thông tin hội viên",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16),
-                new java.awt.Color(60, 60, 60)
-            ),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
+                javax.swing.BorderFactory.createTitledBorder(
+                        null, "Thông tin hội viên",
+                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                        new java.awt.Font("Segoe UI", 1, 16),
+                        new java.awt.Color(60, 60, 60)),
+                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
 
         javax.swing.GroupLayout memberInfoLayout = new javax.swing.GroupLayout(memberInfoPanel);
         memberInfoPanel.setLayout(memberInfoLayout);
-        
+
         memberInfoLayout.setHorizontalGroup(
-            memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(memberInfoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(memberTypeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(totalSpentLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(totalPointsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(fineDebtLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(isBlockedLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(rankLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(memberTypeField)
-                    .addComponent(totalSpentField)
-                    .addComponent(totalPointsField)
-                    .addComponent(fineDebtField)
-                    .addComponent(isBlockedField)
-                    .addComponent(rankField))
-                .addContainerGap(20, Short.MAX_VALUE))
-        );
-        
+                memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(memberInfoLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                .addComponent(memberTypeLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(totalSpentLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(totalPointsLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(fineDebtLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(isBlockedLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(rankLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                .addComponent(memberTypeField)
+                                                .addComponent(totalSpentField)
+                                                .addComponent(totalPointsField)
+                                                .addComponent(fineDebtField)
+                                                .addComponent(isBlockedField)
+                                                .addComponent(rankField))
+                                .addContainerGap(20, Short.MAX_VALUE)));
+
         memberInfoLayout.setVerticalGroup(
-            memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(memberInfoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(memberTypeLabel)
-                    .addComponent(memberTypeField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(totalSpentLabel)
-                    .addComponent(totalSpentField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(totalPointsLabel)
-                    .addComponent(totalPointsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(fineDebtLabel)
-                    .addComponent(fineDebtField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(isBlockedLabel)
-                    .addComponent(isBlockedField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(rankLabel)
-                    .addComponent(rankField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
-        );
+                memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(memberInfoLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(memberTypeLabel)
+                                                .addComponent(memberTypeField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(totalSpentLabel)
+                                                .addComponent(totalSpentField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(totalPointsLabel)
+                                                .addComponent(totalPointsField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(fineDebtLabel)
+                                                .addComponent(fineDebtField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(isBlockedLabel)
+                                                .addComponent(isBlockedField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(
+                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(rankLabel)
+                                                .addComponent(rankField, javax.swing.GroupLayout.PREFERRED_SIZE,
+                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
+                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addContainerGap()));
 
         // Layout chính của panel này - dùng BorderLayout với content panel
         javax.swing.JPanel contentPanel = new javax.swing.JPanel();
         contentPanel.setBackground(new java.awt.Color(245, 245, 250));
         contentPanel.setLayout(new java.awt.BorderLayout(0, 0));
         contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 40, 20, 40));
-        
+
         // Panel chứa 2 info panel nằm ngang
         javax.swing.JPanel infoPanelsContainer = new javax.swing.JPanel();
         infoPanelsContainer.setBackground(new java.awt.Color(245, 245, 250));
         infoPanelsContainer.setLayout(new javax.swing.BoxLayout(infoPanelsContainer, javax.swing.BoxLayout.X_AXIS));
-        
+
         // Thêm panel ảnh vào đầu tiên
         imagePanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
         infoPanelsContainer.add(imagePanel);
         infoPanelsContainer.add(javax.swing.Box.createHorizontalStrut(20));
-        
+
         // Đặt kích thước cho các panel để hẹp lại nhưng tự động căn chỉnh
         basicInfoPanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
         basicInfoPanel.setPreferredSize(new java.awt.Dimension(400, basicInfoPanel.getPreferredSize().height));
@@ -706,13 +770,13 @@ public class thongtincanhan extends javax.swing.JPanel {
         memberInfoPanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
         memberInfoPanel.setPreferredSize(new java.awt.Dimension(400, memberInfoPanel.getPreferredSize().height));
         memberInfoPanel.setMaximumSize(new java.awt.Dimension(450, Integer.MAX_VALUE));
-        
+
         infoPanelsContainer.add(basicInfoPanel);
         infoPanelsContainer.add(javax.swing.Box.createHorizontalStrut(20));
         infoPanelsContainer.add(memberInfoPanel);
-        
+
         contentPanel.add(infoPanelsContainer, java.awt.BorderLayout.CENTER);
-        
+
         // Button panel ở dưới
         javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
         buttonPanel.setBackground(new java.awt.Color(245, 245, 250));
@@ -723,7 +787,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         buttonPanel.add(editButton);
         buttonPanel.add(saveButton);
         contentPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
-        
+
         add(contentPanel, java.awt.BorderLayout.CENTER);
     }
 
@@ -737,38 +801,39 @@ public class thongtincanhan extends javax.swing.JPanel {
         }
     }
 
-    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_saveButtonActionPerformed
         String name = nameField.getText().trim();
         String phone = phoneField.getText().trim();
         String dob = dobField.getText().trim();
         String address = addressField.getText().trim();
-        
+
         // Validate
         if (name.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, 
-                "Vui long nhap ho va ten!",
-                "Loi",
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Vui long nhap ho va ten!",
+                    "Loi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         if (phone.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, 
-                "Vui long nhap so dien thoai!",
-                "Loi",
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Vui long nhap so dien thoai!",
+                    "Loi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         if (address.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, 
-                "Vui long nhap dia chi!",
-                "Loi",
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Vui long nhap dia chi!",
+                    "Loi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         // Update to database
+        boolean dbUpdateSuccess = false;
         try {
             Connection dbConn = DBConnect.getConnection();
             if (dbConn != null) {
@@ -780,7 +845,7 @@ public class thongtincanhan extends javax.swing.JPanel {
                         dobFormatted = parts[2] + "-" + parts[1] + "-" + parts[0];
                     }
                 }
-                
+
                 String sql = "UPDATE Cards SET FullName = ?, Phone = ?, Address = ?, DOB = ? WHERE CardID = ?";
                 try (PreparedStatement pstmt = dbConn.prepareStatement(sql)) {
                     pstmt.setString(1, name);
@@ -788,35 +853,144 @@ public class thongtincanhan extends javax.swing.JPanel {
                     pstmt.setString(3, address);
                     pstmt.setString(4, dobFormatted.isEmpty() ? null : dobFormatted);
                     pstmt.setString(5, currentCardId);
-                    
+
                     if (pstmt.executeUpdate() > 0) {
-                        javax.swing.JOptionPane.showMessageDialog(this, 
-                            "Da luu thong tin thanh cong!",
-                            "Thong bao",
-                            javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                        loadCardInfo(); // Reload to show updated data
+                        dbUpdateSuccess = true;
+                        System.out.println("[DB] Đã lưu thông tin vào database");
                     } else {
-                        javax.swing.JOptionPane.showMessageDialog(this, 
-                            "Loi khi luu thong tin!",
-                            "Loi",
-                            javax.swing.JOptionPane.ERROR_MESSAGE);
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Loi khi luu thong tin vao database!",
+                                "Loi",
+                                javax.swing.JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 }
             } else {
-                javax.swing.JOptionPane.showMessageDialog(this, 
-                    "Khong the ket noi database!",
-                    "Loi",
-                    javax.swing.JOptionPane.ERROR_MESSAGE);
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Khong the ket noi database!",
+                        "Loi",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
             }
         } catch (Exception e) {
-            javax.swing.JOptionPane.showMessageDialog(this, 
-                "Loi khi luu thong tin: " + e.getMessage(),
-                "Loi",
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Loi khi luu thong tin vao database: " + e.getMessage(),
+                    "Loi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+            return;
         }
-    }//GEN-LAST:event_saveButtonActionPerformed
 
+        // Update to card if database update was successful
+        if (dbUpdateSuccess) {
+            try {
+                System.out.println("[CARD] Đang cập nhật thông tin lên thẻ...");
+                CardConnectionManager connManager = new CardConnectionManager();
+                connManager.connectCard();
+                try {
+                    CardUpdateManager updateManager = new CardUpdateManager(connManager.getChannel());
+
+                    // Update card with new information
+                    boolean cardUpdateSuccess = updateManager.updateInfo(name, dob, phone, address);
+
+                    if (cardUpdateSuccess) {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Da luu thong tin thanh cong!\n(Database + The)",
+                                "Thong bao",
+                                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                        loadCardInfo(); // Reload to show updated data
+                    } else {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Da luu vao database nhung cap nhat the that bai!\nVui long thu lai sau.",
+                                "Canh bao",
+                                javax.swing.JOptionPane.WARNING_MESSAGE);
+                    }
+                } finally {
+                    connManager.disconnectCard();
+                }
+            } catch (Exception e) {
+                System.err.println("[CARD] Lỗi khi cập nhật thẻ: " + e.getMessage());
+                e.printStackTrace();
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Da luu vao database nhung cap nhat the that bai:\n" + e.getMessage() +
+                                "\n\nVui long kiem tra ket noi the va thu lai.",
+                        "Canh bao",
+                        javax.swing.JOptionPane.WARNING_MESSAGE);
+            }
+        }
+    }// GEN-LAST:event_saveButtonActionPerformed
+
+    /**
+     * Handle upload image button click
+     */
+    private void uploadImageButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        // Create file chooser
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Chọn ảnh để upload lên thẻ");
+
+        // Set file filter for images only
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                "Ảnh (JPG, JPEG, PNG)", "jpg", "jpeg", "png");
+        fileChooser.setFileFilter(filter);
+        fileChooser.setAcceptAllFileFilterUsed(false);
+
+        // Show open dialog
+        int result = fileChooser.showOpenDialog(this);
+
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            System.out.println("[UPLOAD_IMAGE] Selected file: " + selectedFile.getAbsolutePath());
+
+            // Show confirmation dialog
+            int confirm = javax.swing.JOptionPane.showConfirmDialog(this,
+                    "Bạn có chắc muốn thay đổi ảnh thẻ?\nẢnh: " + selectedFile.getName() +
+                            "\nKích thước: " + (selectedFile.length() / 1024) + " KB",
+                    "Xác nhận",
+                    javax.swing.JOptionPane.YES_NO_OPTION);
+
+            if (confirm != javax.swing.JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            // Upload image to card
+            try {
+                System.out.println("[UPLOAD_IMAGE] Connecting to card...");
+                CardConnectionManager connManager = new CardConnectionManager();
+                connManager.connectCard();
+
+                try {
+                    CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+
+                    System.out.println("[UPLOAD_IMAGE] Uploading image...");
+                    boolean success = imageManager.uploadImage(selectedFile);
+
+                    if (success) {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Upload ảnh thành công!",
+                                "Thông báo",
+                                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+
+                        // Reload card info to display new image
+                        loadCardInfo();
+                    } else {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                                "Upload ảnh thất bại!",
+                                "Lỗi",
+                                javax.swing.JOptionPane.ERROR_MESSAGE);
+                    }
+                } finally {
+                    connManager.disconnectCard();
+                }
+            } catch (Exception e) {
+                System.err.println("[UPLOAD_IMAGE] Error: " + e.getMessage());
+                e.printStackTrace();
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Lỗi khi upload ảnh:\n" + e.getMessage(),
+                        "Lỗi",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
 
     // Variables declaration
     private javax.swing.JLabel titleLabel;
@@ -848,5 +1022,5 @@ public class thongtincanhan extends javax.swing.JPanel {
     private javax.swing.JTextField rankField;
     private javax.swing.JButton editButton;
     private javax.swing.JButton saveButton;
+    private javax.swing.JButton uploadImageButton;
 }
-

@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BorrowService {
-    
+
     public static class BorrowRecord {
         public int id;
         public String cardId;
@@ -18,9 +18,9 @@ public class BorrowService {
         public String returnDate;
         public double fine;
         public String status;
-        
-        public BorrowRecord(int id, String cardId, String bookId, String borrowDate, 
-                          String dueDate, String returnDate, double fine, String status) {
+
+        public BorrowRecord(int id, String cardId, String bookId, String borrowDate,
+                String dueDate, String returnDate, double fine, String status) {
             this.id = id;
             this.cardId = cardId;
             this.bookId = bookId;
@@ -31,23 +31,23 @@ public class BorrowService {
             this.status = status;
         }
     }
-    
+
     public boolean borrowBook(String cardId, String bookId, int days) {
         // Su dung cung mot connection cho toan bo transaction
         try (Connection conn = DBConnect.getConnection()) {
             if (conn == null) {
                 return false;
             }
-            
+
             conn.setAutoCommit(false); // Bat dau transaction
-            
+
             try {
                 // Insert BorrowHistory
                 String sql = "INSERT INTO BorrowHistory (CardID, BookID, BorrowDate, DueDate, ReturnDate, Fine, Status) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     LocalDate borrowDate = LocalDate.now();
                     LocalDate dueDate = borrowDate.plusDays(days);
-                    
+
                     pstmt.setString(1, cardId);
                     pstmt.setString(2, bookId);
                     pstmt.setString(3, borrowDate.toString());
@@ -57,7 +57,7 @@ public class BorrowService {
                     pstmt.setString(7, "mượn");
                     pstmt.executeUpdate();
                 }
-                
+
                 // Update BorrowStock - su dung cung connection
                 String getStockSql = "SELECT BorrowStock FROM Books WHERE BookID = ?";
                 try (PreparedStatement getStockStmt = conn.prepareStatement(getStockSql)) {
@@ -74,10 +74,10 @@ public class BorrowService {
                         }
                     }
                 }
-                
+
                 conn.commit(); // Commit transaction
                 return true;
-                
+
             } catch (SQLException e) {
                 conn.rollback(); // Rollback neu co loi
                 throw e;
@@ -90,19 +90,19 @@ public class BorrowService {
         }
         return false;
     }
-    
+
     public boolean returnBook(int borrowId, String cardId) {
         // Su dung cung mot connection cho toan bo transaction
         try (Connection conn = DBConnect.getConnection()) {
             if (conn == null) {
                 return false;
             }
-            
+
             conn.setAutoCommit(false); // Bat dau transaction
-            
+
             try {
                 // Get DueDate before updating ReturnDate - su dung cung connection
-                String getDueDateSql = "SELECT DueDate FROM BorrowHistory WHERE ID = ? AND CardID = ?";
+                String getDueDateSql = "SELECT DueDate FROM BorrowHistory WHERE HistoryID = ? AND CardID = ?";
                 LocalDate dueDate = null;
                 try (PreparedStatement getDueDateStmt = conn.prepareStatement(getDueDateSql)) {
                     getDueDateStmt.setInt(1, borrowId);
@@ -116,7 +116,7 @@ public class BorrowService {
                         }
                     }
                 }
-                
+
                 // Update BorrowHistory with ReturnDate and calculate fine
                 LocalDate returnDate = LocalDate.now();
                 double fine = 0.0;
@@ -124,8 +124,8 @@ public class BorrowService {
                     long daysLate = java.time.temporal.ChronoUnit.DAYS.between(dueDate, returnDate);
                     fine = daysLate * 1000.0; // 1000 VND per day
                 }
-                
-                String sql = "UPDATE BorrowHistory SET ReturnDate = ?, Status = ?, Fine = ? WHERE ID = ? AND CardID = ?";
+
+                String sql = "UPDATE BorrowHistory SET ReturnDate = ?, Status = ?, Fine = ? WHERE HistoryID = ? AND CardID = ?";
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     pstmt.setString(1, returnDate.toString());
                     pstmt.setString(2, "đã trả");
@@ -134,7 +134,7 @@ public class BorrowService {
                     pstmt.setString(5, cardId);
                     pstmt.executeUpdate();
                 }
-                
+
                 // Update FineDebt in Cards table if there's a fine - su dung cung connection
                 if (fine > 0) {
                     String updateFineDebtSql = "UPDATE Cards SET FineDebt = FineDebt + ? WHERE CardID = ?";
@@ -144,15 +144,15 @@ public class BorrowService {
                         updateFineStmt.executeUpdate();
                     }
                 }
-                
+
                 // Get book ID and update BorrowStock - su dung cung connection
-                String getBookSql = "SELECT BookID FROM BorrowHistory WHERE ID = ?";
+                String getBookSql = "SELECT BookID FROM BorrowHistory WHERE HistoryID = ?";
                 try (PreparedStatement getBookStmt = conn.prepareStatement(getBookSql)) {
                     getBookStmt.setInt(1, borrowId);
                     try (ResultSet rs = getBookStmt.executeQuery()) {
                         if (rs.next()) {
                             String bookId = rs.getString("BookID");
-                            
+
                             // Get current borrow stock
                             String getStockSql = "SELECT BorrowStock FROM Books WHERE BookID = ?";
                             try (PreparedStatement getStockStmt = conn.prepareStatement(getStockSql)) {
@@ -175,10 +175,10 @@ public class BorrowService {
                         }
                     }
                 }
-                
+
                 conn.commit(); // Commit transaction
                 return true;
-                
+
             } catch (SQLException e) {
                 conn.rollback(); // Rollback neu co loi
                 throw e;
@@ -191,25 +191,24 @@ public class BorrowService {
         }
         return false;
     }
-    
+
     public List<BorrowRecord> getBorrowedBooksByCard(String cardId) {
         List<BorrowRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM BorrowHistory WHERE CardID = ? AND Status = 'mượn'";
         try (Connection conn = DBConnect.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, cardId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     records.add(new BorrowRecord(
-                        rs.getInt("ID"),
-                        rs.getString("CardID"),
-                        rs.getString("BookID"),
-                        rs.getString("BorrowDate"),
-                        rs.getString("DueDate"),
-                        rs.getString("ReturnDate"),
-                        rs.getDouble("Fine"),
-                        rs.getString("Status")
-                    ));
+                            rs.getInt("HistoryID"),
+                            rs.getString("CardID"),
+                            rs.getString("BookID"),
+                            rs.getString("BorrowDate"),
+                            rs.getString("DueDate"),
+                            rs.getString("ReturnDate"),
+                            rs.getDouble("Fine"),
+                            rs.getString("Status")));
                 }
             }
         } catch (SQLException e) {
@@ -217,25 +216,24 @@ public class BorrowService {
         }
         return records;
     }
-    
+
     public List<BorrowRecord> getAllBorrowHistory(String cardId) {
         List<BorrowRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM BorrowHistory WHERE CardID = ? ORDER BY BorrowDate DESC";
         try (Connection conn = DBConnect.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, cardId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     records.add(new BorrowRecord(
-                        rs.getInt("ID"),
-                        rs.getString("CardID"),
-                        rs.getString("BookID"),
-                        rs.getString("BorrowDate"),
-                        rs.getString("DueDate"),
-                        rs.getString("ReturnDate"),
-                        rs.getDouble("Fine"),
-                        rs.getString("Status")
-                    ));
+                            rs.getInt("HistoryID"),
+                            rs.getString("CardID"),
+                            rs.getString("BookID"),
+                            rs.getString("BorrowDate"),
+                            rs.getString("DueDate"),
+                            rs.getString("ReturnDate"),
+                            rs.getDouble("Fine"),
+                            rs.getString("Status")));
                 }
             }
         } catch (SQLException e) {
@@ -243,11 +241,11 @@ public class BorrowService {
         }
         return records;
     }
-    
+
     public double calculateFine(int borrowId) {
-        String sql = "SELECT DueDate, ReturnDate FROM BorrowHistory WHERE ID = ?";
+        String sql = "SELECT DueDate, ReturnDate FROM BorrowHistory WHERE HistoryID = ?";
         try (Connection conn = DBConnect.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, borrowId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -270,4 +268,3 @@ public class BorrowService {
         return 0.0;
     }
 }
-
