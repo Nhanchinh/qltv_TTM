@@ -33,10 +33,20 @@ public class AdminPanel extends JPanel {
     private JLabel cardStatusLabel;
     private JButton unlockButton;
 
-    // Colors
-    private static final Color ADMIN_COLOR = new Color(220, 53, 69);
-    private static final Color ADMIN_DARK = new Color(200, 40, 60);
-    private static final Color SUCCESS_COLOR = new Color(50, 150, 50);
+    // Modern Dark Theme Colors
+    private static final Color PRIMARY_GRADIENT_START = new Color(99, 102, 241);
+    private static final Color PRIMARY_GRADIENT_END = new Color(168, 85, 247);
+    private static final Color ADMIN_COLOR = new Color(239, 68, 68);
+    private static final Color ADMIN_DARK = new Color(185, 28, 28);
+    private static final Color SUCCESS_COLOR = new Color(16, 185, 129);
+    private static final Color BACKGROUND_DARK = new Color(15, 23, 42);
+    private static final Color BACKGROUND_CARD = new Color(30, 41, 59);
+    private static final Color BACKGROUND_CARD_LIGHT = new Color(51, 65, 85);
+    private static final Color TEXT_PRIMARY = new Color(248, 250, 252);
+    private static final Color TEXT_SECONDARY = new Color(148, 163, 184);
+    private static final Color TEXT_MUTED = new Color(100, 116, 139);
+    private static final Color BORDER_COLOR = new Color(71, 85, 105);
+    private static final Color INPUT_BG = new Color(51, 65, 85);
 
     public AdminPanel() {
         settingsService = new SettingsService();
@@ -46,29 +56,113 @@ public class AdminPanel extends JPanel {
 
     private void initComponents() {
         setLayout(new BorderLayout());
-        setBackground(new Color(245, 245, 250));
 
-        // Header
-        JPanel headerPanel = new JPanel();
-        headerPanel.setBackground(ADMIN_COLOR);
+        // Main panel with gradient background
+        JPanel mainPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int w = getWidth();
+                int h = getHeight();
+
+                // Dark gradient background
+                GradientPaint bgGradient = new GradientPaint(
+                        0, 0, BACKGROUND_DARK,
+                        w, h, new Color(30, 27, 75));
+                g2d.setPaint(bgGradient);
+                g2d.fillRect(0, 0, w, h);
+
+                // Floating orbs effect
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.08f));
+                GradientPaint orb1 = new GradientPaint(
+                        w - 200, -100, ADMIN_COLOR,
+                        w, 200, new Color(239, 68, 68, 0));
+                g2d.setPaint(orb1);
+                g2d.fillOval(w - 400, -200, 600, 600);
+
+                GradientPaint orb2 = new GradientPaint(
+                        -100, h - 200, PRIMARY_GRADIENT_END,
+                        200, h, new Color(168, 85, 247, 0));
+                g2d.setPaint(orb2);
+                g2d.fillOval(-200, h - 400, 600, 600);
+
+                g2d.dispose();
+            }
+        };
+
+        // Header with glassmorphism
+        JPanel headerPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(new Color(30, 41, 59, 200));
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.setColor(new Color(71, 85, 105, 100));
+                g2d.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1);
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
         headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBorder(new EmptyBorder(25, 40, 25, 40));
+        headerPanel.setBorder(new EmptyBorder(15, 30, 15, 30));
+
+        // Left side with icon and title
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        leftPanel.setOpaque(false);
+
+        // Admin shield icon
+        JLabel iconLabel = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int cx = getWidth() / 2;
+                int cy = getHeight() / 2;
+
+                // Glow
+                g2d.setColor(new Color(239, 68, 68, 40));
+                g2d.fillOval(cx - 22, cy - 22, 44, 44);
+
+                // Shield
+                GradientPaint gradient = new GradientPaint(cx - 14, cy - 16, ADMIN_COLOR, cx + 14, cy + 18, ADMIN_DARK);
+                g2d.setPaint(gradient);
+                int[] xPoints = { cx - 14, cx, cx + 14, cx + 14, cx, cx - 14 };
+                int[] yPoints = { cy - 10, cy - 16, cy - 10, cy + 8, cy + 18, cy + 8 };
+                g2d.fillPolygon(xPoints, yPoints, 6);
+
+                // Star
+                g2d.setColor(Color.WHITE);
+                g2d.fillOval(cx - 4, cy - 4, 8, 8);
+
+                g2d.dispose();
+            }
+        };
+        iconLabel.setPreferredSize(new Dimension(44, 44));
+        leftPanel.add(iconLabel);
 
         JLabel headerLabel = new JLabel("ADMIN PANEL");
-        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
-        headerLabel.setForeground(Color.WHITE);
-        headerPanel.add(headerLabel, BorderLayout.WEST);
+        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        headerLabel.setForeground(TEXT_PRIMARY);
+        leftPanel.add(headerLabel);
+
+        headerPanel.add(leftPanel, BorderLayout.WEST);
 
         // Right side panel: Card status + buttons
         JPanel rightPanel = new JPanel();
-        rightPanel.setBackground(ADMIN_COLOR);
+        rightPanel.setOpaque(false);
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.X_AXIS));
         rightPanel.add(Box.createHorizontalStrut(20));
 
         // Card status label
         cardStatusLabel = new JLabel("Trạng thái thẻ: Đang kiểm tra...");
         cardStatusLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        cardStatusLabel.setForeground(Color.WHITE);
+        cardStatusLabel.setForeground(TEXT_SECONDARY);
         rightPanel.add(cardStatusLabel);
 
         rightPanel.add(Box.createHorizontalStrut(15));
@@ -137,19 +231,115 @@ public class AdminPanel extends JPanel {
 
         headerPanel.add(rightPanel, BorderLayout.EAST);
 
-        add(headerPanel, BorderLayout.NORTH);
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Tabbed pane
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tabbedPane.setBackground(new Color(245, 245, 250));
+        // Custom UI settings for dark tabs
+        UIManager.put("TabbedPane.selected", BACKGROUND_CARD);
+        UIManager.put("TabbedPane.background", BACKGROUND_DARK);
+        UIManager.put("TabbedPane.foreground", TEXT_PRIMARY);
+        UIManager.put("TabbedPane.contentAreaColor", BACKGROUND_DARK);
+        UIManager.put("TabbedPane.focus", BACKGROUND_CARD);
+        UIManager.put("TabbedPane.selectHighlight", ADMIN_COLOR);
+        UIManager.put("TabbedPane.darkShadow", BORDER_COLOR);
+        UIManager.put("TabbedPane.shadow", BORDER_COLOR);
+        UIManager.put("TabbedPane.light", BACKGROUND_CARD);
+        UIManager.put("TabbedPane.highlight", BACKGROUND_CARD);
 
-        tabbedPane.addTab("Đổi Mã PIN", createResetPINPanel());
-        tabbedPane.addTab("Nạp Dữ Liệu Thẻ", createImportCardDataPanel());
-        tabbedPane.addTab("Lấy Thông Tin", createGetInfoPanel());
-        tabbedPane.addTab("Thêm Sách", createAddBookPanel());
+        // Tabbed pane with custom dark styling
+        tabbedPane = new JTabbedPane() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // Transparent - let mainPanel gradient show through
+            }
+        };
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setOpaque(false);
+        tabbedPane.setBorder(new EmptyBorder(0, 0, 0, 0));
+        tabbedPane.setTabPlacement(JTabbedPane.TOP);
 
-        add(tabbedPane, BorderLayout.CENTER);
+        // Tab content panels
+        tabbedPane.addTab("", createResetPINPanel());
+        tabbedPane.addTab("", createImportCardDataPanel());
+        tabbedPane.addTab("", createGetInfoPanel());
+        tabbedPane.addTab("", createAddBookPanel());
+        tabbedPane.addTab("", createAddStationeryPanel());
+
+        // Tab icons and labels - custom styled buttons as tab components
+        String[] tabNames = { "Đổi Mã PIN", "Nạp Dữ Liệu", "Lấy Thông Tin", "Thêm Sách", "Thêm VPP" };
+        String[] tabIcons = { "🔐", "💳", "📋", "📚", "✏️" };
+
+        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+            final int tabIndex = i;
+            JPanel tabComponent = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 5)) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    boolean isSelected = tabbedPane.getSelectedIndex() == tabIndex;
+
+                    if (isSelected) {
+                        // Selected tab - gradient background
+                        GradientPaint gradient = new GradientPaint(
+                                0, 0, ADMIN_COLOR,
+                                getWidth(), 0, ADMIN_DARK);
+                        g2d.setPaint(gradient);
+                        g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+                    } else {
+                        // Unselected - subtle dark background
+                        g2d.setColor(new Color(51, 65, 85, 150));
+                        g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+                    }
+
+                    g2d.dispose();
+                }
+            };
+            tabComponent.setOpaque(false);
+            tabComponent.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            tabComponent.setBorder(new EmptyBorder(6, 15, 6, 15));
+
+            // Icon
+            JLabel tabIconLabel = new JLabel(tabIcons[i]);
+            tabIconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+            tabComponent.add(tabIconLabel);
+
+            // Text
+            JLabel textLabel = new JLabel(tabNames[i]);
+            textLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            textLabel.setForeground(TEXT_PRIMARY);
+            tabComponent.add(textLabel);
+
+            // Mouse listener for repaint on selection change
+            tabComponent.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    tabbedPane.setSelectedIndex(tabIndex);
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    tabComponent.repaint();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    tabComponent.repaint();
+                }
+            });
+
+            tabbedPane.setTabComponentAt(i, tabComponent);
+        }
+
+        // Add tab change listener to repaint tabs
+        tabbedPane.addChangeListener(e -> {
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                tabbedPane.getTabComponentAt(i).repaint();
+            }
+        });
+
+        mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
+        add(mainPanel, BorderLayout.CENTER);
 
         // Check card status after UI initialized
         checkCardStatusOnStartup();
@@ -334,101 +524,224 @@ public class AdminPanel extends JPanel {
      * Create Reset PIN tab
      */
     private JPanel createResetPINPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 250));
-        panel.setBorder(new EmptyBorder(40, 40, 40, 40));
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // Transparent to show mainPanel gradient
+            }
+        };
+        panel.setLayout(new GridBagLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 40, 15, 40));
 
-        // Center panel
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        centerPanel.setOpaque(false);
-        centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+
+        // Glassmorphism card
+        JPanel cardPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Glass background
+                g2d.setColor(new Color(30, 41, 59, 220));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 24, 24);
+
+                // Border glow
+                g2d.setColor(new Color(239, 68, 68, 50));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 24, 24);
+
+                g2d.dispose();
+            }
+        };
+        cardPanel.setLayout(new BoxLayout(cardPanel, BoxLayout.Y_AXIS));
+        cardPanel.setOpaque(false);
+        cardPanel.setBorder(new EmptyBorder(25, 40, 25, 40));
+
+        // Lock icon
+        JLabel lockIcon = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int cx = getWidth() / 2;
+                int cy = getHeight() / 2;
+
+                // Glow
+                g2d.setColor(new Color(239, 68, 68, 40));
+                g2d.fillOval(cx - 35, cy - 35, 70, 70);
+
+                // Lock body
+                GradientPaint gradient = new GradientPaint(cx - 18, cy - 10, ADMIN_COLOR, cx + 18, cy + 22, ADMIN_DARK);
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(cx - 18, cy - 5, 36, 28, 6, 6);
+
+                // Lock shackle
+                g2d.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2d.drawArc(cx - 12, cy - 22, 24, 24, 0, 180);
+
+                // Keyhole
+                g2d.setColor(new Color(30, 41, 59));
+                g2d.fillOval(cx - 4, cy + 2, 8, 8);
+                g2d.fillRect(cx - 2, cy + 7, 4, 8);
+
+                g2d.dispose();
+            }
+        };
+        lockIcon.setPreferredSize(new Dimension(70, 70));
+        lockIcon.setMaximumSize(new Dimension(70, 70));
+        lockIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cardPanel.add(lockIcon);
+
+        cardPanel.add(Box.createVerticalStrut(15));
 
         // Title
-        JLabel titleLabel = new JLabel("ĐỔI MÃ PIN THẺ");
+        JLabel titleLabel = new JLabel("Đổi Mã PIN Thẻ");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(ADMIN_COLOR);
+        titleLabel.setForeground(TEXT_PRIMARY);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(titleLabel);
-        centerPanel.add(Box.createVerticalStrut(30));
+        cardPanel.add(titleLabel);
+
+        cardPanel.add(Box.createVerticalStrut(8));
+
+        JLabel subtitleLabel = new JLabel("Nhập thông tin để đổi mã PIN");
+        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        subtitleLabel.setForeground(TEXT_MUTED);
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cardPanel.add(subtitleLabel);
+
+        cardPanel.add(Box.createVerticalStrut(25));
 
         // Admin PIN input
-        JLabel adminPINLabel = new JLabel("MÃ PIN ADMIN:");
-        adminPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JLabel adminPINLabel = new JLabel("Mã PIN Admin");
+        adminPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        adminPINLabel.setForeground(TEXT_SECONDARY);
         adminPINLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(adminPINLabel);
+        cardPanel.add(adminPINLabel);
+        cardPanel.add(Box.createVerticalStrut(6));
 
         JPasswordField adminPINField = new JPasswordField();
         adminPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        adminPINField.setMaximumSize(new Dimension(360, 45));
-        adminPINField.setPreferredSize(new Dimension(360, 45));
-        adminPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
+        adminPINField.setMaximumSize(new Dimension(320, 45));
+        adminPINField.setPreferredSize(new Dimension(320, 45));
+        adminPINField.setBackground(INPUT_BG);
+        adminPINField.setForeground(TEXT_PRIMARY);
+        adminPINField.setCaretColor(TEXT_PRIMARY);
+        adminPINField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 2),
+                new EmptyBorder(8, 15, 8, 15)));
         adminPINField.setHorizontalAlignment(JTextField.CENTER);
-        centerPanel.add(adminPINField);
-        centerPanel.add(Box.createVerticalStrut(15));
+        adminPINField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cardPanel.add(adminPINField);
+        cardPanel.add(Box.createVerticalStrut(15));
 
         // New PIN input
-        JLabel newPINLabel = new JLabel("MÃ PIN MỚI:");
-        newPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JLabel newPINLabel = new JLabel("Mã PIN Mới");
+        newPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        newPINLabel.setForeground(TEXT_SECONDARY);
         newPINLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(newPINLabel);
+        cardPanel.add(newPINLabel);
+        cardPanel.add(Box.createVerticalStrut(6));
 
         JPasswordField newPINField = new JPasswordField();
         newPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        newPINField.setMaximumSize(new Dimension(360, 45));
-        newPINField.setPreferredSize(new Dimension(360, 45));
-        newPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
+        newPINField.setMaximumSize(new Dimension(320, 45));
+        newPINField.setPreferredSize(new Dimension(320, 45));
+        newPINField.setBackground(INPUT_BG);
+        newPINField.setForeground(TEXT_PRIMARY);
+        newPINField.setCaretColor(TEXT_PRIMARY);
+        newPINField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 2),
+                new EmptyBorder(8, 15, 8, 15)));
         newPINField.setHorizontalAlignment(JTextField.CENTER);
-        centerPanel.add(newPINField);
-        centerPanel.add(Box.createVerticalStrut(15));
+        newPINField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cardPanel.add(newPINField);
+        cardPanel.add(Box.createVerticalStrut(15));
 
         // Confirm PIN input
-        JLabel confirmPINLabel = new JLabel("XÁC NHẬN MÃ PIN:");
-        confirmPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JLabel confirmPINLabel = new JLabel("Xác Nhận Mã PIN");
+        confirmPINLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        confirmPINLabel.setForeground(TEXT_SECONDARY);
         confirmPINLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(confirmPINLabel);
+        cardPanel.add(confirmPINLabel);
+        cardPanel.add(Box.createVerticalStrut(6));
 
         JPasswordField confirmPINField = new JPasswordField();
         confirmPINField.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        confirmPINField.setMaximumSize(new Dimension(360, 45));
-        confirmPINField.setPreferredSize(new Dimension(360, 45));
-        confirmPINField.setBorder(new LineBorder(new Color(180, 180, 180), 2));
+        confirmPINField.setMaximumSize(new Dimension(320, 45));
+        confirmPINField.setPreferredSize(new Dimension(320, 45));
+        confirmPINField.setBackground(INPUT_BG);
+        confirmPINField.setForeground(TEXT_PRIMARY);
+        confirmPINField.setCaretColor(TEXT_PRIMARY);
+        confirmPINField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 2),
+                new EmptyBorder(8, 15, 8, 15)));
         confirmPINField.setHorizontalAlignment(JTextField.CENTER);
-        centerPanel.add(confirmPINField);
-        centerPanel.add(Box.createVerticalStrut(30));
+        confirmPINField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cardPanel.add(confirmPINField);
+        cardPanel.add(Box.createVerticalStrut(10));
 
         // Message label
         JLabel messageLabel = new JLabel(" ");
-        messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        messageLabel.setForeground(ADMIN_COLOR);
         messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(messageLabel);
+        cardPanel.add(messageLabel);
+        cardPanel.add(Box.createVerticalStrut(20));
 
-        // Button panel
+        // Button panel - use BoxLayout to prevent wrapping
         JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.X_AXIS));
         buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Reset button with gradient
         JButton resetButton = new JButton("ĐỔI MÃ PIN") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
                 if (getModel().isPressed()) {
-                    g2d.setColor(ADMIN_DARK);
+                    gradient = new GradientPaint(0, 0, ADMIN_DARK, getWidth(), 0, ADMIN_COLOR);
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(ADMIN_COLOR.brighter());
+                    gradient = new GradientPaint(0, 0, new Color(248, 113, 113), getWidth(), 0, ADMIN_COLOR);
                 } else {
-                    g2d.setColor(ADMIN_COLOR);
+                    gradient = new GradientPaint(0, 0, ADMIN_COLOR, getWidth(), 0, ADMIN_DARK);
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                // Shadow
+                if (!getModel().isPressed()) {
+                    g2d.setColor(new Color(239, 68, 68, 40));
+                    g2d.fillRoundRect(2, 4, getWidth() - 4, getHeight() - 2, 10, 10);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 3, 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() - 3 + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
-        resetButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        resetButton.setForeground(Color.WHITE);
-        resetButton.setPreferredSize(new Dimension(150, 50));
+        resetButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        resetButton.setPreferredSize(new Dimension(130, 42));
+        resetButton.setMinimumSize(new Dimension(130, 42));
+        resetButton.setMaximumSize(new Dimension(130, 42));
         resetButton.setBorderPainted(false);
         resetButton.setContentAreaFilled(false);
         resetButton.setFocusPainted(false);
@@ -439,66 +752,66 @@ public class AdminPanel extends JPanel {
             String confirmPIN = new String(confirmPINField.getPassword()).trim();
 
             if (adminPIN.isEmpty()) {
-                messageLabel.setForeground(new Color(220, 53, 69));
                 messageLabel.setText("Vui lòng nhập mã PIN admin!");
                 return;
             }
-
             if (adminPIN.length() != 6) {
-                messageLabel.setForeground(new Color(220, 53, 69));
                 messageLabel.setText("Mã PIN admin phải đúng 6 ký tự!");
                 return;
             }
-
             if (newPIN.isEmpty()) {
-                messageLabel.setForeground(new Color(220, 53, 69));
                 messageLabel.setText("Vui lòng nhập mã PIN mới!");
                 return;
             }
-
             if (newPIN.length() != 6) {
-                messageLabel.setForeground(new Color(220, 53, 69));
                 messageLabel.setText("Mã PIN mới phải đúng 6 ký tự!");
                 return;
             }
-
-            if (confirmPIN.isEmpty()) {
-                messageLabel.setForeground(new Color(220, 53, 69));
-                messageLabel.setText("Vui lòng xác nhận mã PIN!");
-                return;
-            }
-
             if (!newPIN.equals(confirmPIN)) {
-                messageLabel.setForeground(new Color(220, 53, 69));
                 messageLabel.setText("Mã PIN xác nhận không khớp!");
                 return;
             }
 
-            // Reset PIN on card
             resetPINOnCard(adminPIN, newPIN, adminPINField, newPINField, confirmPINField, messageLabel);
         });
         buttonPanel.add(resetButton);
 
-        JButton cancelButton = new JButton("CLEAR") {
+        buttonPanel.add(Box.createHorizontalStrut(20));
+
+        // Clear button
+        JButton cancelButton = new JButton("XÓA") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
                 if (getModel().isPressed()) {
-                    g2d.setColor(new Color(190, 190, 190));
+                    g2d.setColor(BORDER_COLOR);
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(new Color(240, 240, 240));
+                    g2d.setColor(new Color(71, 85, 105, 200));
                 } else {
-                    g2d.setColor(new Color(220, 220, 220));
+                    g2d.setColor(BACKGROUND_CARD_LIGHT);
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2d.setColor(BORDER_COLOR);
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+
+                g2d.setColor(TEXT_SECONDARY);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
-        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        cancelButton.setForeground(new Color(60, 60, 60));
-        cancelButton.setPreferredSize(new Dimension(150, 50));
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        cancelButton.setPreferredSize(new Dimension(130, 42));
+        cancelButton.setMinimumSize(new Dimension(130, 42));
+        cancelButton.setMaximumSize(new Dimension(130, 42));
         cancelButton.setBorderPainted(false);
         cancelButton.setContentAreaFilled(false);
         cancelButton.setFocusPainted(false);
@@ -511,10 +824,9 @@ public class AdminPanel extends JPanel {
         });
         buttonPanel.add(cancelButton);
 
-        centerPanel.add(buttonPanel);
+        cardPanel.add(buttonPanel);
 
-        panel.add(centerPanel, BorderLayout.CENTER);
-
+        panel.add(cardPanel, gbc);
         return panel;
     }
 
@@ -522,93 +834,204 @@ public class AdminPanel extends JPanel {
      * Create Import Card Data tab
      */
     private JPanel createImportCardDataPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 250));
-        panel.setBorder(new EmptyBorder(40, 40, 40, 40));
-
-        // Top panel with controls
-        JPanel topPanel = new JPanel();
-        topPanel.setOpaque(false);
-        topPanel.setLayout(new BorderLayout());
-        topPanel.setBorder(new EmptyBorder(0, 0, 20, 0));
-
-        JLabel titleLabel = new JLabel("NẠP DỮ LIỆU THẺ");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(ADMIN_COLOR);
-        topPanel.add(titleLabel, BorderLayout.WEST);
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-
-        // Create table model and table as instance variables for later access
-        String[] columns = { "CardID", "Ten Day Du", "Phone", "DOB", "Loai The", "Tong Chi", "Tong Diem", "Blocked",
-                "Hành Động" };
-        DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+        JPanel panel = new JPanel() {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                // Only allow editing the Action column (index 8)
-                return column == 8;
+            protected void paintComponent(Graphics g) {
+                // Transparent to show mainPanel gradient
             }
         };
+        panel.setLayout(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 25, 15, 25));
 
-        JTable table = new JTable(tableModel);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        table.setRowHeight(25);
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        table.getTableHeader().setBackground(ADMIN_COLOR);
-        table.getTableHeader().setForeground(Color.WHITE);
-        table.setSelectionBackground(new Color(200, 220, 255));
-
-        // Add Button Renderer and Editor for the "Hành Động" column
-        table.getColumn("Hành Động").setCellRenderer(new ButtonRenderer());
-        table.getColumn("Hành Động").setCellEditor(new ButtonEditor(new JCheckBox(), tableModel));
-
-        JButton addButton = new JButton("THÊM THẺ MỚI") {
+        // Glassmorphism card wrapper
+        JPanel cardWrapper = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isPressed()) {
-                    g2d.setColor(SUCCESS_COLOR.darker());
-                } else if (getModel().isRollover()) {
-                    g2d.setColor(SUCCESS_COLOR.brighter());
-                } else {
-                    g2d.setColor(SUCCESS_COLOR);
-                }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                // Glass background
+                g2d.setColor(new Color(30, 41, 59, 200));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+
+                // Border
+                g2d.setColor(new Color(71, 85, 105, 100));
+                g2d.setStroke(new BasicStroke(1));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+
                 g2d.dispose();
-                super.paintComponent(g);
+            }
+        };
+        cardWrapper.setLayout(new BorderLayout());
+        cardWrapper.setOpaque(false);
+        cardWrapper.setBorder(new EmptyBorder(20, 25, 20, 25));
+
+        // Header with title and button
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
+
+        // Title with icon
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        titlePanel.setOpaque(false);
+
+        JLabel cardIcon = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int w = getWidth();
+                int h = getHeight();
+
+                // Card shape
+                g2d.setColor(new Color(34, 197, 94));
+                g2d.fillRoundRect(4, 6, w - 8, h - 12, 4, 4);
+
+                // Chip
+                g2d.setColor(new Color(250, 204, 21));
+                g2d.fillRoundRect(8, 10, 10, 8, 2, 2);
+
+                // Lines
+                g2d.setColor(new Color(255, 255, 255, 100));
+                g2d.fillRect(22, 14, 12, 2);
+                g2d.fillRect(8, 22, 26, 2);
+
+                g2d.dispose();
+            }
+        };
+        cardIcon.setPreferredSize(new Dimension(40, 32));
+        titlePanel.add(cardIcon);
+
+        JLabel titleLabel = new JLabel("Quản Lý Thẻ");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titlePanel.add(titleLabel);
+
+        headerPanel.add(titlePanel, BorderLayout.WEST);
+
+        // Add button with gradient
+        JButton addButton = new JButton("+ THÊM THẺ MỚI") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
+                if (getModel().isPressed()) {
+                    gradient = new GradientPaint(0, 0, new Color(16, 150, 100), getWidth(), 0, SUCCESS_COLOR);
+                } else if (getModel().isRollover()) {
+                    gradient = new GradientPaint(0, 0, new Color(52, 211, 153), getWidth(), 0, SUCCESS_COLOR);
+                } else {
+                    gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
+                }
+
+                // Shadow
+                if (!getModel().isPressed()) {
+                    g2d.setColor(new Color(16, 185, 129, 40));
+                    g2d.fillRoundRect(2, 3, getWidth() - 4, getHeight() - 1, 10, 10);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+
+                g2d.dispose();
             }
         };
         addButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        addButton.setForeground(Color.WHITE);
-        addButton.setPreferredSize(new Dimension(130, 40));
+        addButton.setPreferredSize(new Dimension(150, 38));
+        addButton.setMinimumSize(new Dimension(150, 38));
+        addButton.setMaximumSize(new Dimension(150, 38));
         addButton.setBorderPainted(false);
         addButton.setContentAreaFilled(false);
         addButton.setFocusPainted(false);
         addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Create table model - no action column
+        String[] columns = { "CardID", "Họ Tên", "SĐT", "Ngày Sinh", "Loại Thẻ", "Tổng Chi", "Điểm", "Khóa" };
+        DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
         addButton.addActionListener(e -> showAddCardDialog(tableModel));
-        buttonPanel.add(addButton);
 
-        topPanel.add(buttonPanel, BorderLayout.EAST);
-        panel.add(topPanel, BorderLayout.NORTH);
+        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonWrapper.setOpaque(false);
+        buttonWrapper.add(addButton);
+        headerPanel.add(buttonWrapper, BorderLayout.EAST);
 
-        // Center panel with table
-        JPanel centerPanel = new JPanel();
-        centerPanel.setOpaque(false);
-        centerPanel.setLayout(new BorderLayout());
+        cardWrapper.add(headerPanel, BorderLayout.NORTH);
 
+        // Table with modern styling - better contrast
+        JTable table = new JTable(tableModel);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setRowHeight(42);
+        table.setBackground(new Color(24, 24, 27));
+        table.setForeground(new Color(250, 250, 250));
+        table.setGridColor(new Color(63, 63, 70));
+        table.setShowGrid(true);
+        table.setIntercellSpacing(new Dimension(0, 1));
+        table.setSelectionBackground(new Color(99, 102, 241, 100));
+        table.setSelectionForeground(Color.WHITE);
+        table.setFillsViewportHeight(true);
+
+        // Header styling - Green scheme matching Add Button
+        table.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
+                label.setOpaque(true);
+                label.setBackground(new Color(16, 150, 100)); // Darker green from button gradient end
+                label.setForeground(Color.WHITE);
+                label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                label.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(6, 78, 59)),
+                        BorderFactory.createEmptyBorder(0, 5, 0, 5) // Adjust padding
+                ));
+                return label;
+            }
+        });
+        table.getTableHeader().setPreferredSize(new Dimension(0, 45));
+
+        // Column widths - no action column
+        table.getColumnModel().getColumn(0).setPreferredWidth(130);
+        table.getColumnModel().getColumn(1).setPreferredWidth(170);
+        table.getColumnModel().getColumn(2).setPreferredWidth(110);
+        table.getColumnModel().getColumn(3).setPreferredWidth(110);
+        table.getColumnModel().getColumn(4).setPreferredWidth(90);
+        table.getColumnModel().getColumn(5).setPreferredWidth(110);
+        table.getColumnModel().getColumn(6).setPreferredWidth(80);
+        table.getColumnModel().getColumn(7).setPreferredWidth(70);
+
+        // Scroll pane with dark styling
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(new LineBorder(new Color(200, 200, 200), 1));
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(new Color(24, 24, 27));
+        scrollPane.setBackground(new Color(24, 24, 27));
 
-        // Load all cards
+        // Custom scrollbar
+        scrollPane.getVerticalScrollBar().setBackground(new Color(39, 39, 42));
+        scrollPane.getHorizontalScrollBar().setBackground(new Color(39, 39, 42));
+
+        cardWrapper.add(scrollPane, BorderLayout.CENTER);
+
+        // Load cards
         loadCardsToTable(tableModel);
 
-        panel.add(centerPanel, BorderLayout.CENTER);
-
+        panel.add(cardWrapper, BorderLayout.CENTER);
         return panel;
     }
 
@@ -646,97 +1069,210 @@ public class AdminPanel extends JPanel {
      */
     private void showAddCardDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Thêm Thẻ Mới", true);
-        dialog.setSize(760, 520);
+        dialog.setSize(550, 560);
         dialog.setLocationRelativeTo(null);
-        dialog.setResizable(true);
+        dialog.setResizable(false);
+        dialog.setUndecorated(true);
+        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(new Color(71, 85, 105), 1));
 
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new GridBagLayout());
-        // Giảm padding dưới để không che nút, giữ top/left/right đẹp
-        contentPanel.setBorder(new EmptyBorder(20, 20, 10, 20));
-        contentPanel.setBackground(Color.WHITE);
+        // Main content panel with dark background
+        JPanel contentPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(0, 0, 15, 15);
+                // Dark gradient background
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, new Color(15, 23, 42),
+                        getWidth(), getHeight(), new Color(30, 27, 75));
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
 
-        // Full Name
-        JLabel fullNameLabel = new JLabel("Họ và Tên:");
-        fullNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField fullNameField = new JTextField();
-        fullNameField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        fullNameField.setPreferredSize(new Dimension(360, 40));
+                g2d.dispose();
+            }
+        };
+        contentPanel.setLayout(new BorderLayout());
+        contentPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 0.3;
-        contentPanel.add(fullNameLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(fullNameField, gbc);
+        // Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(20, 25, 15, 25));
 
-        // Phone
-        JLabel phoneLabel = new JLabel("Số điện thoại:");
-        phoneLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField phoneField = new JTextField();
-        phoneField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        phoneField.setPreferredSize(new Dimension(240, 40));
+        JLabel titleLabel = new JLabel("Thêm Thẻ Mới");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(phoneLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(phoneField, gbc);
+        JButton closeButton = new JButton("X") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isRollover()) {
+                    g2d.setColor(ADMIN_COLOR);
+                } else {
+                    g2d.setColor(TEXT_SECONDARY);
+                }
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth("X")) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString("X", textX, textY);
+                g2d.dispose();
+            }
+        };
+        closeButton.setPreferredSize(new Dimension(30, 30));
+        closeButton.setBorderPainted(false);
+        closeButton.setContentAreaFilled(false);
+        closeButton.setFocusPainted(false);
+        closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        closeButton.addActionListener(e -> dialog.dispose());
+        headerPanel.add(closeButton, BorderLayout.EAST);
 
-        // DOB
-        JLabel dobLabel = new JLabel("Ngày Sinh (YYYY-MM-DD):");
-        dobLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField dobField = new JTextField();
-        dobField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        dobField.setPreferredSize(new Dimension(200, 40));
+        contentPanel.add(headerPanel, BorderLayout.NORTH);
 
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(dobLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(dobField, gbc);
+        // Form panel
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setOpaque(false);
+        formPanel.setBorder(new EmptyBorder(0, 30, 20, 30));
 
-        // Address
-        JLabel addressLabel = new JLabel("Địa chỉ:");
-        addressLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField addressField = new JTextField();
-        addressField.setBorder(new LineBorder(new Color(180, 180, 180), 1));
-        addressField.setPreferredSize(new Dimension(360, 40));
+        // Helper method style - create styled input fields
+        JTextField fullNameField = createStyledTextField("Họ và Tên");
+        JTextField phoneField = createStyledTextField("Số điện thoại");
+        // Date of Birth DatePicker
+        JPanel dobPanel = new JPanel();
+        dobPanel.setLayout(new BoxLayout(dobPanel, BoxLayout.X_AXIS));
+        dobPanel.setOpaque(false);
 
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(addressLabel, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(addressField, gbc);
+        String[] days = new String[31];
+        for (int i = 0; i < 31; i++)
+            days[i] = String.format("%02d", i + 1);
+        JComboBox<String> dayCombo = new JComboBox<>(days);
 
-        // Image chooser (optional)
-        JLabel imageLabelTitle = new JLabel("Ảnh đại diện:");
-        imageLabelTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        String[] months = new String[12];
+        for (int i = 0; i < 12; i++)
+            months[i] = String.format("%02d", i + 1);
+        JComboBox<String> monthCombo = new JComboBox<>(months);
+
+        int currentYear = java.time.Year.now().getValue();
+        String[] years = new String[100];
+        for (int i = 0; i < 100; i++)
+            years[i] = String.valueOf(currentYear - i);
+        JComboBox<String> yearCombo = new JComboBox<>(years);
+
+        // Style helper
+        java.util.function.Consumer<JComboBox<String>> styleCombo = combo -> {
+            combo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            combo.setBackground(INPUT_BG);
+            combo.setForeground(TEXT_PRIMARY);
+            combo.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                    BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+            combo.setFocusable(false);
+        };
+        // Update days based on month/year
+        java.awt.event.ActionListener updateDays = new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                String selectedDay = (String) dayCombo.getSelectedItem();
+                int month = Integer.parseInt((String) monthCombo.getSelectedItem());
+                int year = Integer.parseInt((String) yearCombo.getSelectedItem());
+
+                int daysInMonth;
+                if (month == 2) {
+                    daysInMonth = (java.time.Year.of(year).isLeap()) ? 29 : 28;
+                } else if (month == 4 || month == 6 || month == 9 || month == 11) {
+                    daysInMonth = 30;
+                } else {
+                    daysInMonth = 31;
+                }
+
+                String[] newDays = new String[daysInMonth];
+                for (int i = 0; i < daysInMonth; i++) {
+                    newDays[i] = String.format("%02d", i + 1);
+                }
+
+                dayCombo.setModel(new DefaultComboBoxModel<>(newDays));
+
+                // Restore selection if possible, otherwise select last day
+                if (selectedDay != null && Integer.parseInt(selectedDay) <= daysInMonth) {
+                    dayCombo.setSelectedItem(selectedDay);
+                } else {
+                    dayCombo.setSelectedItem(newDays[daysInMonth - 1]);
+                }
+            }
+        };
+
+        monthCombo.addActionListener(updateDays);
+        yearCombo.addActionListener(updateDays);
+
+        styleCombo.accept(dayCombo);
+        styleCombo.accept(monthCombo);
+        styleCombo.accept(yearCombo);
+
+        dobPanel.add(dayCombo);
+        dobPanel.add(Box.createHorizontalStrut(5));
+        dobPanel.add(monthCombo);
+        dobPanel.add(Box.createHorizontalStrut(5));
+        dobPanel.add(yearCombo);
+
+        JTextField addressField = createStyledTextField("Địa chỉ");
+
+        // Add fields with labels
+        formPanel.add(createFormRow("Họ và Tên", fullNameField));
+        formPanel.add(Box.createVerticalStrut(12));
+        formPanel.add(createFormRow("Số điện thoại", phoneField));
+        formPanel.add(Box.createVerticalStrut(12));
+        formPanel.add(createFormRow("Ngày sinh", dobPanel));
+        formPanel.add(Box.createVerticalStrut(12));
+        formPanel.add(createFormRow("Địa chỉ", addressField));
+        formPanel.add(Box.createVerticalStrut(15));
+
+        // Image chooser
         JLabel imagePreview = new JLabel();
-        imagePreview.setPreferredSize(new Dimension(200, 140));
-        imagePreview.setBorder(new LineBorder(new Color(200, 200, 200), 1));
-        JButton chooseImageButton = new JButton("Chọn Ảnh");
-        chooseImageButton.setPreferredSize(new Dimension(130, 32));
+        imagePreview.setPreferredSize(new Dimension(120, 90));
+        imagePreview.setMinimumSize(new Dimension(120, 90));
+        imagePreview.setMaximumSize(new Dimension(120, 90));
+        imagePreview.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        imagePreview.setOpaque(true);
+        imagePreview.setBackground(INPUT_BG);
 
         final String[] selectedImage = new String[1];
+
+        JButton chooseImageButton = new JButton("Chọn Ảnh") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isRollover()) {
+                    g2d.setColor(new Color(71, 85, 105));
+                } else {
+                    g2d.setColor(BACKGROUND_CARD);
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2d.setColor(BORDER_COLOR);
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+
+                g2d.setColor(TEXT_SECONDARY);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        chooseImageButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        chooseImageButton.setPreferredSize(new Dimension(110, 35));
+        chooseImageButton.setMinimumSize(new Dimension(110, 35));
+        chooseImageButton.setMaximumSize(new Dimension(110, 35));
+        chooseImageButton.setBorderPainted(false);
+        chooseImageButton.setContentAreaFilled(false);
+        chooseImageButton.setFocusPainted(false);
+        chooseImageButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         chooseImageButton.addActionListener(ev -> {
             JFileChooser chooser = new JFileChooser();
@@ -754,8 +1290,6 @@ public class AdminPanel extends JPanel {
                         Image scaled = img.getScaledInstance(imagePreview.getWidth(), imagePreview.getHeight(),
                                 Image.SCALE_SMOOTH);
                         imagePreview.setIcon(new ImageIcon(scaled));
-                    } else {
-                        imagePreview.setIcon(null);
                     }
                 } catch (Exception ex) {
                     imagePreview.setIcon(null);
@@ -763,43 +1297,108 @@ public class AdminPanel extends JPanel {
             }
         });
 
-        JPanel imageRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        imageRow.setOpaque(false);
-        imageRow.add(chooseImageButton);
-        imageRow.add(imagePreview);
+        JPanel imagePanel = new JPanel();
+        imagePanel.setLayout(new BoxLayout(imagePanel, BoxLayout.X_AXIS));
+        imagePanel.setOpaque(false);
+        imagePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 15);
-        contentPanel.add(imageLabelTitle, gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        contentPanel.add(imageRow, gbc);
+        JLabel imageLabelTitle = new JLabel("Ảnh đại diện");
+        imageLabelTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        imageLabelTitle.setForeground(TEXT_SECONDARY);
+        imageLabelTitle.setPreferredSize(new Dimension(100, 25));
+        imageLabelTitle.setMinimumSize(new Dimension(100, 25));
+        imageLabelTitle.setMaximumSize(new Dimension(100, 25));
+
+        imagePanel.add(imageLabelTitle);
+        imagePanel.add(Box.createHorizontalStrut(10));
+        imagePanel.add(chooseImageButton);
+        imagePanel.add(Box.createHorizontalStrut(15));
+        imagePanel.add(imagePreview);
+
+        formPanel.add(imagePanel);
+        formPanel.add(Box.createVerticalStrut(25));
+
         // Button panel
         JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.X_AXIS));
         buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        buttonPanel.add(Box.createHorizontalGlue());
 
-        JButton saveButton = new JButton("LƯU");
-        saveButton.setPreferredSize(new Dimension(100, 40));
+        // Save button with gradient
+        JButton saveButton = new JButton("LƯU THẺ") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
+                if (getModel().isPressed()) {
+                    gradient = new GradientPaint(0, 0, new Color(16, 150, 100), getWidth(), 0, SUCCESS_COLOR);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        saveButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        saveButton.setPreferredSize(new Dimension(130, 42));
+        saveButton.setMinimumSize(new Dimension(130, 42));
+        saveButton.setMaximumSize(new Dimension(130, 42));
+        saveButton.setBorderPainted(false);
+        saveButton.setContentAreaFilled(false);
+        saveButton.setFocusPainted(false);
+        saveButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
             String phone = phoneField.getText().trim();
-            String dob = dobField.getText().trim();
+
+            String day = (String) dayCombo.getSelectedItem();
+            String month = (String) monthCombo.getSelectedItem();
+            String year = (String) yearCombo.getSelectedItem();
+            String dob = year + "-" + month + "-" + day;
+
             String address = addressField.getText().trim();
 
             if (fullName.isEmpty() || dob.isEmpty() || phone.isEmpty() || address.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ Họ tên, SĐT, Ngày sinh và Địa chỉ!", "Lỗi",
+                JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ thông tin!", "Lỗi",
                         JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            // Process in background thread
+            // Validate Phone Number (10 digits, starts with 0)
+            if (!phone.matches("^0\\d{9}$")) {
+                JOptionPane.showMessageDialog(dialog, "Số điện thoại không hợp lệ! (Phải có 10 số và bắt đầu bằng 0)",
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Validate Full Name (At least 2 chars)
+            if (fullName.length() < 2) {
+                JOptionPane.showMessageDialog(dialog, "Tên quá ngắn! Vui lòng nhập họ tên đầy đủ.", "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Validate Address (At least 5 chars)
+            if (address.length() < 5) {
+                JOptionPane.showMessageDialog(dialog, "Địa chỉ quá ngắn! Vui lòng nhập địa chỉ cụ thể.", "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             new Thread(() -> {
                 try {
-                    // Step 1: Show PIN input dialog
                     String[] pins = showPinInputDialog();
                     if (pins == null || pins.length < 2) {
                         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(dialog, "Nhập PIN bị hủy!",
@@ -810,111 +1409,165 @@ public class AdminPanel extends JPanel {
                     String userPin = pins[0];
                     String adminPin = pins[1];
 
-                    // Validate PINs
                     if (userPin.length() != 6 || adminPin.length() != 6) {
                         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(dialog, "PIN phải có đúng 6 số!",
                                 "Lỗi", JOptionPane.ERROR_MESSAGE));
                         return;
                     }
 
-                    SwingUtilities.invokeLater(() -> {
-                        dialog.dispose();
-                    });
+                    SwingUtilities.invokeLater(() -> dialog.dispose());
 
-                    // Step 2: Generate CardID
                     String cardId = generateCardId();
-
-                    // Step 3: Format DOB from YYYY-MM-DD to DDMMYYYY
                     String formattedDob = convertDateFormat(dob);
                     String regDate = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy"));
 
-                    // Step 4: Setup card (connect, getPublicKey, setupCard, initUserData)
                     connManager = new CardConnectionManager();
                     connManager.connectCard();
 
                     CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
                     setupManager.getPublicKey();
                     setupManager.setupCard(userPin, adminPin);
-                    setupManager.verifyPin(userPin); // REQUIRED: Verify PIN after setup
+                    setupManager.verifyPin(userPin);
                     setupManager.initUserData(cardId, fullName, formattedDob, phone, address, regDate);
 
-                    // Step 4.5: Upload image to card if selected
                     boolean imageUploaded = false;
                     if (selectedImage[0] != null && !selectedImage[0].isEmpty()) {
                         File imageFile = new File(selectedImage[0]);
                         if (imageFile.exists()) {
-                            System.out.println("[ADD_CARD] Uploading image to card...");
                             CardImageManager imageManager = new CardImageManager(connManager.getChannel());
                             imageUploaded = imageManager.uploadImage(imageFile);
-                            if (imageUploaded) {
-                                System.out.println("[ADD_CARD] Image uploaded successfully!");
-                            } else {
-                                System.out.println("[ADD_CARD] Image upload failed!");
-                            }
                         }
                     }
 
                     connManager.disconnectCard();
 
-                    // Step 5: Insert to database
                     final boolean imgUploaded = imageUploaded;
                     if (insertCard(cardId, fullName, phone, dob, address, "Basic", selectedImage[0])) {
-                        // Step 6: Save card public key to database AFTER successful insert
                         try {
                             byte[] pubBytes = setupManager.getKeyManager().getCardPublicKeyEncoded();
                             if (pubBytes != null) {
                                 cardService.updateCardPublicKey(cardId, pubBytes);
                             }
                         } catch (Exception _e) {
-                            System.err.println("Warning: failed to save card public key to DB: " + _e.getMessage());
+                            System.err.println("Warning: failed to save card public key: " + _e.getMessage());
                         }
 
                         SwingUtilities.invokeLater(() -> {
-                            String imageStatus = "";
-                            if (selectedImage[0] != null && !selectedImage[0].isEmpty()) {
-                                imageStatus = imgUploaded ? "\nẢnh: Đã upload lên thẻ ✓" : "\nẢnh: Upload thất bại ✗";
-                            }
-                            JOptionPane.showMessageDialog(
-                                    SwingUtilities.getWindowAncestor(AdminPanel.this),
-                                    "Thêm thẻ thành công!\nCardID: " + cardId +
-                                            "\nUser PIN: " + userPin +
-                                            "\nAdmin PIN: " + adminPin + imageStatus,
+                            String imageStatus = selectedImage[0] != null && !selectedImage[0].isEmpty()
+                                    ? (imgUploaded ? "\nẢnh: ✓" : "\nẢnh: ✗")
+                                    : "";
+                            JOptionPane.showMessageDialog(SwingUtilities.getWindowAncestor(AdminPanel.this),
+                                    "Thêm thẻ thành công!\nCardID: " + cardId + "\nUser PIN: " + userPin
+                                            + "\nAdmin PIN: " + adminPin + imageStatus,
                                     "Thành công", JOptionPane.INFORMATION_MESSAGE);
                             loadCardsToTable(tableModel);
                         });
                     } else {
                         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
-                                SwingUtilities.getWindowAncestor(AdminPanel.this),
-                                "Lỗi khi thêm thẻ vào database!", "Lỗi", JOptionPane.ERROR_MESSAGE));
+                                SwingUtilities.getWindowAncestor(AdminPanel.this), "Lỗi khi thêm thẻ!", "Lỗi",
+                                JOptionPane.ERROR_MESSAGE));
                     }
                 } catch (Exception ex) {
                     SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
-                            SwingUtilities.getWindowAncestor(AdminPanel.this),
-                            "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE));
+                            SwingUtilities.getWindowAncestor(AdminPanel.this), "Lỗi: " + ex.getMessage(), "Lỗi",
+                            JOptionPane.ERROR_MESSAGE));
                     ex.printStackTrace();
                 }
             }).start();
         });
         buttonPanel.add(saveButton);
 
-        JButton cancelButton = new JButton("HỦY");
-        cancelButton.setPreferredSize(new Dimension(100, 40));
+        buttonPanel.add(Box.createHorizontalStrut(15));
+
+        // Cancel button
+        JButton cancelButton = new JButton("HỦY") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                g2d.setColor(getModel().isRollover() ? new Color(71, 85, 105) : BACKGROUND_CARD);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2d.setColor(BORDER_COLOR);
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+
+                g2d.setColor(TEXT_SECONDARY);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        cancelButton.setPreferredSize(new Dimension(100, 42));
+        cancelButton.setMinimumSize(new Dimension(100, 42));
+        cancelButton.setMaximumSize(new Dimension(100, 42));
+        cancelButton.setBorderPainted(false);
+        cancelButton.setContentAreaFilled(false);
+        cancelButton.setFocusPainted(false);
+        cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         cancelButton.addActionListener(e -> dialog.dispose());
         buttonPanel.add(cancelButton);
 
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 2;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        contentPanel.add(buttonPanel, gbc);
+        buttonPanel.add(Box.createHorizontalGlue());
+        formPanel.add(buttonPanel);
 
+        contentPanel.add(formPanel, BorderLayout.CENTER);
         dialog.add(contentPanel);
         dialog.setVisible(true);
     }
 
-    /**
-     * Insert new card to database
-     */
+    // Helper method to create styled text field
+    private JTextField createStyledTextField(String placeholder) {
+        JTextField field = new JTextField() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (getText().isEmpty() && !hasFocus()) {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setColor(TEXT_MUTED);
+                    g2d.setFont(getFont().deriveFont(Font.ITALIC));
+                    g2d.drawString(placeholder, 12, getHeight() / 2 + 5);
+                    g2d.dispose();
+                }
+            }
+        };
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBackground(INPUT_BG);
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                new EmptyBorder(10, 12, 10, 12)));
+        field.setPreferredSize(new Dimension(300, 42));
+        field.setMinimumSize(new Dimension(300, 42));
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        return field;
+    }
+
+    // Helper method to create form row
+    private JPanel createFormRow(String labelText, JComponent field) {
+        JPanel row = new JPanel();
+        row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        label.setForeground(TEXT_SECONDARY);
+        label.setPreferredSize(new Dimension(100, 42));
+        label.setMinimumSize(new Dimension(100, 42));
+        label.setMaximumSize(new Dimension(100, 42));
+
+        row.add(label);
+        row.add(Box.createHorizontalStrut(10));
+        row.add(field);
+
+        return row;
+    }
+
     /**
      * Insert new card to database
      */
@@ -1220,121 +1873,316 @@ public class AdminPanel extends JPanel {
      * Create Get User Info tab
      */
     private JPanel createGetInfoPanel() {
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+            }
+        };
         panel.setLayout(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 250));
-        panel.setBorder(new EmptyBorder(30, 30, 30, 30));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(25, 40, 20, 40));
 
-        // Title
+        // Top section - Title and subtitle
+        JPanel headerSection = new JPanel();
+        headerSection.setLayout(new BoxLayout(headerSection, BoxLayout.Y_AXIS));
+        headerSection.setOpaque(false);
+        headerSection.setBorder(new EmptyBorder(0, 0, 25, 0));
+
         JLabel titleLabel = new JLabel("LẤY THÔNG TIN NGƯỜI DÙNG");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(ADMIN_COLOR);
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        titleLabel.setBorder(new EmptyBorder(0, 0, 20, 0));
-        panel.add(titleLabel, BorderLayout.NORTH);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        headerSection.add(titleLabel);
 
-        // Main content panel (horizontal layout)
-        JPanel contentPanel = new JPanel(new GridBagLayout());
-        contentPanel.setOpaque(false);
+        headerSection.add(Box.createVerticalStrut(8));
+
+        JLabel subtitleLabel = new JLabel("Quét thẻ hoặc nhập thông tin thủ công để truy xuất dữ liệu");
+        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitleLabel.setForeground(TEXT_SECONDARY);
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        headerSection.add(subtitleLabel);
+
+        panel.add(headerSection, BorderLayout.NORTH);
+
+        // Main content - Card container with glassmorphism
+        JPanel cardContainer = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Dark semi-transparent background
+                g2d.setColor(new Color(30, 41, 59, 230));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+
+                // Subtle border
+                g2d.setColor(BORDER_COLOR);
+                g2d.setStroke(new BasicStroke(1));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+
+                g2d.dispose();
+            }
+        };
+        cardContainer.setLayout(new GridBagLayout());
+        cardContainer.setOpaque(false);
+        cardContainer.setBorder(new EmptyBorder(25, 30, 25, 30));
+
         GridBagConstraints gbc = new GridBagConstraints();
 
-        // Left side - Image panel
-        JPanel imagePanel = new JPanel(new BorderLayout());
-        imagePanel.setBackground(Color.WHITE);
-        imagePanel.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(200, 200, 200), 1),
-                new EmptyBorder(10, 10, 10, 10)));
-        imagePanel.setPreferredSize(new Dimension(250, 300));
+        // Left side - Image section
+        JPanel imageSection = new JPanel(new BorderLayout());
+        imageSection.setOpaque(false);
+        imageSection.setMinimumSize(new Dimension(280, 300));
 
-        JLabel imageLabel = new JLabel("Ảnh thẻ", SwingConstants.CENTER);
-        imageLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-        imageLabel.setForeground(new Color(150, 150, 150));
-        imageLabel.setPreferredSize(new Dimension(230, 250));
-        imagePanel.add(imageLabel, BorderLayout.CENTER);
-
-        JLabel imageTitleLabel = new JLabel("ẢNH THẺ", SwingConstants.CENTER);
+        JLabel imageTitleLabel = new JLabel("ẢNH THẺ");
         imageTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         imageTitleLabel.setForeground(ADMIN_COLOR);
-        imagePanel.add(imageTitleLabel, BorderLayout.NORTH);
+        imageTitleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        imageSection.add(imageTitleLabel, BorderLayout.NORTH);
+
+        // Dashed border image area
+        JPanel imageArea = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Dark background
+                g2d.setColor(new Color(15, 23, 42));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+
+                // Dashed border
+                g2d.setColor(BORDER_COLOR);
+                float[] dash = { 8, 6 };
+                g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, dash, 0));
+                g2d.drawRoundRect(4, 4, getWidth() - 8, getHeight() - 8, 8, 8);
+
+                g2d.dispose();
+            }
+        };
+        imageArea.setOpaque(false);
+        imageArea.setPreferredSize(new Dimension(260, 280));
+        imageArea.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Center content for image placeholder
+        JPanel imagePlaceholder = new JPanel();
+        imagePlaceholder.setLayout(new BoxLayout(imagePlaceholder, BoxLayout.Y_AXIS));
+        imagePlaceholder.setOpaque(false);
+
+        // User icon placeholder
+        JLabel iconLabel = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int size = 60;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+
+                // Draw user icon
+                g2d.setColor(BORDER_COLOR);
+                g2d.setStroke(new BasicStroke(2));
+                // Frame
+                g2d.drawRoundRect(x, y, size, size, 8, 8);
+                // Head
+                g2d.drawOval(x + size / 2 - 12, y + 12, 24, 24);
+                // Body
+                g2d.drawArc(x + 10, y + 38, size - 20, 30, 0, 180);
+
+                g2d.dispose();
+            }
+        };
+        iconLabel.setPreferredSize(new Dimension(80, 80));
+        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        imagePlaceholder.add(Box.createVerticalGlue());
+        imagePlaceholder.add(iconLabel);
+
+        JLabel imageLabel = new JLabel("Chưa có ảnh thẻ");
+        imageLabel.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+        imageLabel.setForeground(TEXT_MUTED);
+        imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        imagePlaceholder.add(Box.createVerticalStrut(15));
+        imagePlaceholder.add(imageLabel);
+        imagePlaceholder.add(Box.createVerticalGlue());
+
+        imageArea.add(imagePlaceholder, BorderLayout.CENTER);
+        imageSection.add(imageArea, BorderLayout.CENTER);
 
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 0, 20);
-        gbc.anchor = GridBagConstraints.NORTH;
-        contentPanel.add(imagePanel, gbc);
+        gbc.weightx = 0.4;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.insets = new Insets(0, 0, 0, 25);
+        cardContainer.add(imageSection, gbc);
 
-        // Right side - Info panel
-        JPanel infoPanel = new JPanel();
-        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        infoPanel.setOpaque(false);
+        // Right side - Log section
+        JPanel logSection = new JPanel(new BorderLayout());
+        logSection.setOpaque(false);
+        logSection.setMinimumSize(new Dimension(350, 300));
 
-        // Info text area
+        // Log header with status
+        JPanel logHeader = new JPanel(new BorderLayout());
+        logHeader.setOpaque(false);
+        logHeader.setBorder(new EmptyBorder(0, 0, 10, 0));
+
+        JLabel logTitleLabel = new JLabel("Nhật ký hệ thống");
+        logTitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        logTitleLabel.setForeground(TEXT_SECONDARY);
+        logHeader.add(logTitleLabel, BorderLayout.WEST);
+
+        // Status indicator
+        JLabel statusLabel = new JLabel("Sẵn sàng") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Green dot
+                g2d.setColor(SUCCESS_COLOR);
+                g2d.fillOval(2, (getHeight() - 8) / 2, 8, 8);
+
+                // Text
+                g2d.setColor(SUCCESS_COLOR);
+                g2d.setFont(getFont());
+                g2d.drawString("Sẵn sàng", 14, getHeight() / 2 + 4);
+
+                g2d.dispose();
+            }
+        };
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setPreferredSize(new Dimension(80, 20));
+        logHeader.add(statusLabel, BorderLayout.EAST);
+
+        logSection.add(logHeader, BorderLayout.NORTH);
+
+        // Log text area
         JTextArea infoArea = new JTextArea();
-        infoArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        infoArea.setFont(new Font("Consolas", Font.PLAIN, 13));
         infoArea.setEditable(false);
         infoArea.setLineWrap(true);
         infoArea.setWrapStyleWord(true);
-        infoArea.setBorder(new EmptyBorder(10, 10, 10, 10));
-        infoArea.setBackground(Color.WHITE);
-        infoArea.setText("Nhấn nút 'LẤY THÔNG TIN' để đọc dữ liệu từ thẻ...");
+        infoArea.setBackground(new Color(15, 23, 42));
+        infoArea.setForeground(TEXT_SECONDARY);
+        infoArea.setCaretColor(SUCCESS_COLOR);
+        infoArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+        infoArea.setText("Nhấn nút 'LẤY THÔNG TIN' để đọc dữ liệu từ thẻ...\n|");
 
         JScrollPane scrollPane = new JScrollPane(infoArea);
-        scrollPane.setPreferredSize(new Dimension(350, 200));
-        scrollPane.setBorder(new LineBorder(new Color(200, 200, 200), 1));
-        infoPanel.add(scrollPane);
-        infoPanel.add(Box.createVerticalStrut(20));
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        scrollPane.setPreferredSize(new Dimension(380, 200));
+        scrollPane.getViewport().setBackground(new Color(15, 23, 42));
+        logSection.add(scrollPane, BorderLayout.CENTER);
 
-        // Get Info button
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 0.6;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        cardContainer.add(logSection, gbc);
+
+        // Card container fills horizontal space
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+        GridBagConstraints wrapGbc = new GridBagConstraints();
+        wrapGbc.gridx = 0;
+        wrapGbc.gridy = 0;
+        wrapGbc.weightx = 1.0;
+        wrapGbc.weighty = 1.0;
+        wrapGbc.fill = GridBagConstraints.HORIZONTAL;
+        wrapGbc.anchor = GridBagConstraints.NORTH;
+        wrapGbc.insets = new Insets(0, 20, 0, 20);
+        centerWrapper.add(cardContainer, wrapGbc);
+
+        panel.add(centerWrapper, BorderLayout.CENTER);
+
+        // Bottom section - Button and helper text
+        JPanel bottomSection = new JPanel();
+        bottomSection.setLayout(new BoxLayout(bottomSection, BoxLayout.Y_AXIS));
+        bottomSection.setOpaque(false);
+        bottomSection.setBorder(new EmptyBorder(20, 0, 0, 0));
+
+        // Get Info button with gradient
         JButton getInfoButton = new JButton("LẤY THÔNG TIN") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
                 if (getModel().isPressed()) {
-                    g2d.setColor(SUCCESS_COLOR.darker());
+                    gradient = new GradientPaint(0, 0, new Color(16, 150, 100), getWidth(), 0, SUCCESS_COLOR);
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(SUCCESS_COLOR.brighter());
+                    gradient = new GradientPaint(0, 0, new Color(52, 211, 153), getWidth(), 0, SUCCESS_COLOR);
                 } else {
-                    g2d.setColor(SUCCESS_COLOR);
+                    gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                // Shadow
+                if (!getModel().isPressed()) {
+                    g2d.setColor(new Color(16, 185, 129, 50));
+                    g2d.fillRoundRect(2, 4, getWidth() - 4, getHeight() - 2, 10, 10);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+
+                // Icon and text
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                String text = getText();
+                int textWidth = fm.stringWidth(text);
+                int textX = (getWidth() - textWidth) / 2 + 12;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+
+                // Card icon
+                int iconX = textX - 25;
+                int iconY = textY - 12;
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRoundRect(iconX, iconY, 16, 12, 2, 2);
+                g2d.drawLine(iconX + 4, iconY + 5, iconX + 12, iconY + 5);
+                g2d.drawLine(iconX + 4, iconY + 8, iconX + 8, iconY + 8);
+
+                g2d.drawString(text, textX, textY);
+
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
         getInfoButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         getInfoButton.setForeground(Color.WHITE);
-        getInfoButton.setPreferredSize(new Dimension(200, 45));
-        getInfoButton.setMaximumSize(new Dimension(200, 45));
+        getInfoButton.setPreferredSize(new Dimension(220, 48));
+        getInfoButton.setMaximumSize(new Dimension(220, 48));
         getInfoButton.setBorderPainted(false);
         getInfoButton.setContentAreaFilled(false);
         getInfoButton.setFocusPainted(false);
         getInfoButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         getInfoButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Button action - keep original logic
         getInfoButton.addActionListener(e -> {
-            // Run in background thread
             new Thread(() -> {
                 try {
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText("Đang kết nối đến thẻ...");
+                        infoArea.setText("Đang kết nối đến thẻ...\n");
+                        infoArea.setForeground(TEXT_SECONDARY);
                         imageLabel.setIcon(null);
                         imageLabel.setText("Đang tải...");
                     });
 
-                    // Connect to card
                     connManager = new CardConnectionManager();
                     connManager.connectCard();
 
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText("Đang lấy thông tin...");
+                        infoArea.append("✓ Kết nối thành công\nĐang lấy thông tin...\n");
                     });
 
-                    // Get info using CardKeyManager and CardInfoManager
                     CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
                     keyManager.getPublicKey();
 
-                    // Load app keypair from file (don't generate new one!)
                     if (!keyManager.loadAppKeyPair()) {
                         throw new Exception("Không tìm thấy app keypair. Vui lòng thêm thẻ mới trước.");
                     }
@@ -1342,7 +2190,6 @@ public class AdminPanel extends JPanel {
                     CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
                     CardInfoManager.UserInfo userInfo = infoManager.getInfo();
 
-                    // Save card public key into DB for this card
                     try {
                         byte[] pubBytes = keyManager.getCardPublicKeyEncoded();
                         if (pubBytes != null && userInfo != null && userInfo.cardId != null
@@ -1353,29 +2200,25 @@ public class AdminPanel extends JPanel {
                         System.err.println("Warning: failed to save card public key to DB: " + _e.getMessage());
                     }
 
-                    // Get image from card
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText(userInfo.toString() + "\n\nĐang tải ảnh từ thẻ...");
+                        infoArea.append("✓ Thông tin đã nhận\nĐang tải ảnh từ thẻ...\n");
                     });
 
                     CardImageManager imageManager = new CardImageManager(connManager.getChannel());
                     byte[] imageData = imageManager.downloadImage();
 
-                    // Disconnect
                     connManager.disconnectCard();
 
-                    // Update UI
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText(userInfo.toString());
+                        infoArea.setText("✓ Hoàn tất lấy thông tin\n\n" + userInfo.toString());
+                        infoArea.setForeground(TEXT_PRIMARY);
 
-                        // Display image
                         if (imageData != null && imageManager.isValidJpeg(imageData)) {
                             try {
                                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageData));
                                 if (img != null) {
-                                    // Scale image to fit
-                                    int maxW = 220;
-                                    int maxH = 240;
+                                    int maxW = 200;
+                                    int maxH = 220;
                                     int w = img.getWidth();
                                     int h = img.getHeight();
                                     double scale = Math.min((double) maxW / w, (double) maxH / h);
@@ -1401,11 +2244,12 @@ public class AdminPanel extends JPanel {
 
                 } catch (Exception ex) {
                     SwingUtilities.invokeLater(() -> {
-                        infoArea.setText("Lỗi: " + ex.getMessage());
+                        infoArea.setText("✗ Lỗi: " + ex.getMessage());
+                        infoArea.setForeground(ADMIN_COLOR);
                         imageLabel.setIcon(null);
                         imageLabel.setText("Lỗi");
                         JOptionPane.showMessageDialog(
-                                SwingUtilities.getWindowAncestor(contentPanel),
+                                SwingUtilities.getWindowAncestor(panel),
                                 "Lỗi khi lấy thông tin: " + ex.getMessage(),
                                 "Lỗi",
                                 JOptionPane.ERROR_MESSAGE);
@@ -1415,14 +2259,17 @@ public class AdminPanel extends JPanel {
             }).start();
         });
 
-        infoPanel.add(getInfoButton);
+        bottomSection.add(getInfoButton);
+        bottomSection.add(Box.createVerticalStrut(10));
 
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        contentPanel.add(infoPanel, gbc);
+        JLabel helperText = new JLabel("Đảm bảo thiết bị đọc thẻ đã được kết nối");
+        helperText.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        helperText.setForeground(TEXT_MUTED);
+        helperText.setAlignmentX(Component.CENTER_ALIGNMENT);
+        bottomSection.add(helperText);
 
-        panel.add(contentPanel, BorderLayout.CENTER);
+        panel.add(bottomSection, BorderLayout.SOUTH);
+
         return panel;
     }
 
@@ -1430,104 +2277,141 @@ public class AdminPanel extends JPanel {
      * Create Add Book tab
      */
     private JPanel createAddBookPanel() {
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+            }
+        };
         panel.setLayout(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 250));
-        panel.setBorder(new EmptyBorder(30, 30, 30, 30));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(25, 40, 20, 40));
 
-        // Title
+        // Header section
+        JPanel headerSection = new JPanel();
+        headerSection.setLayout(new BoxLayout(headerSection, BoxLayout.Y_AXIS));
+        headerSection.setOpaque(false);
+        headerSection.setBorder(new EmptyBorder(0, 0, 25, 0));
+
         JLabel titleLabel = new JLabel("THÊM SÁCH MỚI");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(ADMIN_COLOR);
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        titleLabel.setBorder(new EmptyBorder(0, 0, 20, 0));
-        panel.add(titleLabel, BorderLayout.NORTH);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        headerSection.add(titleLabel);
 
-        // Form panel
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(200, 200, 200), 1),
-                new EmptyBorder(30, 40, 30, 40)));
+        headerSection.add(Box.createVerticalStrut(8));
+
+        JLabel subtitleLabel = new JLabel("Điền thông tin chi tiết để thêm sách vào hệ thống kho");
+        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitleLabel.setForeground(TEXT_SECONDARY);
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        headerSection.add(subtitleLabel);
+
+        panel.add(headerSection, BorderLayout.NORTH);
+
+        // Form card with glassmorphism
+        JPanel formCard = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                g2d.setColor(new Color(30, 41, 59, 230));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+
+                g2d.setColor(BORDER_COLOR);
+                g2d.setStroke(new BasicStroke(1));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+
+                g2d.dispose();
+            }
+        };
+        formCard.setLayout(new GridBagLayout());
+        formCard.setOpaque(false);
+        formCard.setBorder(new EmptyBorder(20, 30, 20, 30));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.insets = new Insets(6, 10, 6, 10);
 
-        // Book ID
+        // Book ID - with icon
         gbc.gridx = 0;
         gbc.gridy = 0;
+        gbc.weightx = 0.3;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Mã Sách:"), gbc);
+        formCard.add(createDarkLabel("Mã Sách:"), gbc);
 
         gbc.gridx = 1;
+        gbc.weightx = 0.7;
         gbc.anchor = GridBagConstraints.WEST;
-        JTextField bookIdField = createTextField(20);
+        JTextField bookIdField = createDarkTextField("Mã sách tự động");
         bookIdField.setText(generateBookId());
-        formPanel.add(bookIdField, gbc);
+        bookIdField.setEditable(false);
+        bookIdField.setBackground(new Color(39, 39, 42));
+        formCard.add(bookIdField, gbc);
 
         // Title
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Tên Sách:"), gbc);
+        formCard.add(createDarkLabel("Tên Sách:"), gbc);
 
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
-        JTextField titleField = createTextField(30);
-        formPanel.add(titleField, gbc);
+        JTextField titleField = createDarkTextField("Nhập tên sách...");
+        formCard.add(titleField, gbc);
 
         // Author
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Tác Giả:"), gbc);
+        formCard.add(createDarkLabel("Tác Giả:"), gbc);
 
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
-        JTextField authorField = createTextField(30);
-        formPanel.add(authorField, gbc);
+        JTextField authorField = createDarkTextField("Nhập tên tác giả...");
+        formCard.add(authorField, gbc);
 
         // Publisher
         gbc.gridx = 0;
         gbc.gridy = 3;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Nhà Xuất Bản:"), gbc);
+        formCard.add(createDarkLabel("Nhà Xuất Bản:"), gbc);
 
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
-        JTextField publisherField = createTextField(30);
-        formPanel.add(publisherField, gbc);
+        JTextField publisherField = createDarkTextField("Nhập nhà xuất bản...");
+        formCard.add(publisherField, gbc);
 
         // Price
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Giá (VNĐ):"), gbc);
+        formCard.add(createDarkLabel("Giá (VNĐ):"), gbc);
 
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
-        JTextField priceField = createTextField(15);
+        JTextField priceField = createDarkTextField("0");
         priceField.setText("0");
-        formPanel.add(priceField, gbc);
+        formCard.add(priceField, gbc);
 
         // Stock
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Số Lượng:"), gbc);
+        formCard.add(createDarkLabel("Số Lượng:"), gbc);
 
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
-        JTextField stockField = createTextField(10);
+        JTextField stockField = createDarkTextField("1");
         stockField.setText("1");
-        formPanel.add(stockField, gbc);
+        formCard.add(stockField, gbc);
 
-        // Category
+        // Category - styled combo box
         gbc.gridx = 0;
         gbc.gridy = 6;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Thể Loại:"), gbc);
+        formCard.add(createDarkLabel("Thể Loại:"), gbc);
 
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
@@ -1535,72 +2419,76 @@ public class AdminPanel extends JPanel {
                 "Tâm lý", "Lịch sử", "Khác" };
         JComboBox<String> categoryCombo = new JComboBox<>(categories);
         categoryCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        categoryCombo.setPreferredSize(new Dimension(200, 35));
-        formPanel.add(categoryCombo, gbc);
-
-        // Image path
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(createLabel("Ảnh Bìa:"), gbc);
-
-        gbc.gridx = 1;
-        gbc.anchor = GridBagConstraints.WEST;
-        JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        imagePanel.setOpaque(false);
-        JTextField imagePathField = createTextField(20);
-        imagePathField.setEditable(false);
-        JButton browseButton = new JButton("Chọn...");
-        browseButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        browseButton.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileFilter(
-                    new javax.swing.filechooser.FileNameExtensionFilter("Image Files", "jpg", "jpeg", "png", "gif"));
-            if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
-                imagePathField.setText(chooser.getSelectedFile().getAbsolutePath());
-            }
-        });
-        imagePanel.add(imagePathField);
-        imagePanel.add(Box.createHorizontalStrut(10));
-        imagePanel.add(browseButton);
-        formPanel.add(imagePanel, gbc);
+        categoryCombo.setBackground(INPUT_BG);
+        categoryCombo.setForeground(TEXT_PRIMARY);
+        categoryCombo.setMinimumSize(new Dimension(200, 32));
+        categoryCombo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                BorderFactory.createEmptyBorder(3, 8, 3, 8)));
+        formCard.add(categoryCombo, gbc);
 
         // Buttons
         gbc.gridx = 0;
-        gbc.gridy = 8;
+        gbc.gridy = 7;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(25, 10, 10, 10);
+        gbc.insets = new Insets(15, 10, 5, 10);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         buttonPanel.setOpaque(false);
 
-        // Add button
+        // Add button with gradient and icon
         JButton addButton = new JButton("THÊM SÁCH") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
                 if (getModel().isPressed()) {
-                    g2d.setColor(SUCCESS_COLOR.darker());
+                    gradient = new GradientPaint(0, 0, new Color(16, 150, 100), getWidth(), 0, SUCCESS_COLOR);
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(SUCCESS_COLOR.brighter());
+                    gradient = new GradientPaint(0, 0, new Color(52, 211, 153), getWidth(), 0, SUCCESS_COLOR);
                 } else {
-                    g2d.setColor(SUCCESS_COLOR);
+                    gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                if (!getModel().isPressed()) {
+                    g2d.setColor(new Color(16, 185, 129, 50));
+                    g2d.fillRoundRect(2, 4, getWidth() - 4, getHeight() - 2, 10, 10);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                String text = getText();
+                int textWidth = fm.stringWidth(text);
+                int textX = (getWidth() - textWidth) / 2 + 10;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+
+                // Plus icon
+                int iconX = textX - 22;
+                int iconY = textY - 8;
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawLine(iconX, iconY, iconX + 12, iconY);
+                g2d.drawLine(iconX + 6, iconY - 6, iconX + 6, iconY + 6);
+
+                g2d.drawString(text, textX, textY);
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
         addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         addButton.setForeground(Color.WHITE);
-        addButton.setPreferredSize(new Dimension(150, 45));
+        addButton.setPreferredSize(new Dimension(160, 48));
         addButton.setBorderPainted(false);
         addButton.setContentAreaFilled(false);
         addButton.setFocusPainted(false);
         addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
+        // Add button action - keep original logic
         addButton.addActionListener(e -> {
             String bookId = bookIdField.getText().trim();
             String bookTitle = titleField.getText().trim();
@@ -1609,9 +2497,8 @@ public class AdminPanel extends JPanel {
             String priceStr = priceField.getText().trim();
             String stockStr = stockField.getText().trim();
             String category = (String) categoryCombo.getSelectedItem();
-            String imagePath = imagePathField.getText().trim();
+            String imagePath = ""; // No image path since we removed image picker
 
-            // Validation
             if (bookId.isEmpty() || bookTitle.isEmpty() || author.isEmpty()) {
                 JOptionPane.showMessageDialog(panel, "Vui lòng điền đầy đủ Mã sách, Tên sách và Tác giả!", "Lỗi",
                         JOptionPane.ERROR_MESSAGE);
@@ -1628,11 +2515,9 @@ public class AdminPanel extends JPanel {
                 return;
             }
 
-            // Insert to database
             if (insertBook(bookId, bookTitle, author, publisher, price, stock, category, imagePath)) {
                 JOptionPane.showMessageDialog(panel, "Thêm sách thành công!\nMã sách: " + bookId, "Thành công",
                         JOptionPane.INFORMATION_MESSAGE);
-                // Reset form
                 bookIdField.setText(generateBookId());
                 titleField.setText("");
                 authorField.setText("");
@@ -1640,34 +2525,56 @@ public class AdminPanel extends JPanel {
                 priceField.setText("0");
                 stockField.setText("1");
                 categoryCombo.setSelectedIndex(0);
-                imagePathField.setText("");
             } else {
                 JOptionPane.showMessageDialog(panel, "Lỗi khi thêm sách vào database!", "Lỗi",
                         JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        // Clear button
+        // Clear button with icon
         JButton clearButton = new JButton("XÓA FORM") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
                 if (getModel().isPressed()) {
-                    g2d.setColor(Color.GRAY.darker());
+                    g2d.setColor(new Color(55, 65, 81));
                 } else if (getModel().isRollover()) {
-                    g2d.setColor(Color.GRAY.brighter());
+                    g2d.setColor(new Color(75, 85, 99));
                 } else {
-                    g2d.setColor(Color.GRAY);
+                    g2d.setColor(new Color(55, 65, 81));
                 }
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+
+                g2d.setColor(BORDER_COLOR);
+                g2d.setStroke(new BasicStroke(1));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 3, 10, 10);
+
+                g2d.setColor(TEXT_SECONDARY);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                String text = getText();
+                int textWidth = fm.stringWidth(text);
+                int textX = (getWidth() - textWidth) / 2 + 10;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+
+                // Trash icon
+                int iconX = textX - 20;
+                int iconY = textY - 10;
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRoundRect(iconX, iconY, 12, 14, 2, 2);
+                g2d.drawLine(iconX - 2, iconY, iconX + 14, iconY);
+                g2d.drawLine(iconX + 4, iconY - 3, iconX + 8, iconY - 3);
+
+                g2d.drawString(text, textX, textY);
                 g2d.dispose();
-                super.paintComponent(g);
             }
         };
         clearButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        clearButton.setForeground(Color.WHITE);
-        clearButton.setPreferredSize(new Dimension(120, 45));
+        clearButton.setForeground(TEXT_SECONDARY);
+        clearButton.setPreferredSize(new Dimension(140, 48));
         clearButton.setBorderPainted(false);
         clearButton.setContentAreaFilled(false);
         clearButton.setFocusPainted(false);
@@ -1681,20 +2588,328 @@ public class AdminPanel extends JPanel {
             priceField.setText("0");
             stockField.setText("1");
             categoryCombo.setSelectedIndex(0);
-            imagePathField.setText("");
         });
 
         buttonPanel.add(addButton);
         buttonPanel.add(clearButton);
-        formPanel.add(buttonPanel, gbc);
+        formCard.add(buttonPanel, gbc);
 
-        // Center the form
-        JPanel centerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        // Center wrapper with horizontal fill
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
         centerWrapper.setOpaque(false);
-        centerWrapper.add(formPanel);
+        GridBagConstraints wrapGbc = new GridBagConstraints();
+        wrapGbc.gridx = 0;
+        wrapGbc.gridy = 0;
+        wrapGbc.weightx = 1.0;
+        wrapGbc.weighty = 1.0;
+        wrapGbc.fill = GridBagConstraints.HORIZONTAL;
+        wrapGbc.anchor = GridBagConstraints.NORTH;
+        wrapGbc.insets = new Insets(0, 50, 0, 50);
+        centerWrapper.add(formCard, wrapGbc);
 
         panel.add(centerWrapper, BorderLayout.CENTER);
         return panel;
+    }
+
+    // Create Add Stationery tab (Thêm VPP)
+    private JPanel createAddStationeryPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Header
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setOpaque(false);
+
+        JLabel titleLabel = new JLabel("THÊM VĂN PHÒNG PHẨM");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel subTitleLabel = new JLabel("Điền thông tin chi tiết để thêm VPP vào hệ thống kho");
+        subTitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subTitleLabel.setForeground(TEXT_SECONDARY);
+        subTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        headerPanel.add(titleLabel);
+        headerPanel.add(Box.createVerticalStrut(5));
+        headerPanel.add(subTitleLabel);
+        headerPanel.add(Box.createVerticalStrut(30));
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+
+        // Form Card using Glassmorphism
+        JPanel formCard = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(new Color(30, 41, 59, 230));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2d.setColor(BORDER_COLOR);
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+                g2d.dispose();
+            }
+        };
+        formCard.setOpaque(false);
+        formCard.setBorder(new EmptyBorder(20, 30, 20, 30));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 10, 6, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 0;
+
+        // ID
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        formCard.add(createDarkLabel("Mã VPP:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.weightx = 1.0;
+        JTextField idField = createDarkTextField("Mã tự động");
+        idField.setText(generateStationeryId());
+        idField.setEditable(false);
+        idField.setBackground(new Color(39, 39, 42));
+        formCard.add(idField, gbc);
+
+        // Name
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        formCard.add(createDarkLabel("Tên VPP:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField nameField = createDarkTextField("Nhập tên VPP...");
+        formCard.add(nameField, gbc);
+
+        // Price
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        formCard.add(createDarkLabel("Giá (VNĐ):"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField priceField = createDarkTextField("0");
+        formCard.add(priceField, gbc);
+
+        // Stock
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.weightx = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        formCard.add(createDarkLabel("Số Lượng:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.WEST;
+        JTextField stockField = createDarkTextField("1");
+        formCard.add(stockField, gbc);
+
+        // Buttons
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(20, 10, 5, 10);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton addButton = new JButton("THÊM VPP") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
+                if (getModel().isPressed()) {
+                    gradient = new GradientPaint(0, 0, new Color(16, 150, 100), getWidth(), 0, SUCCESS_COLOR);
+                } else if (getModel().isRollover()) {
+                    gradient = new GradientPaint(0, 0, new Color(52, 211, 153), getWidth(), 0, SUCCESS_COLOR);
+                } else {
+                    gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
+                }
+
+                if (!getModel().isPressed()) {
+                    g2d.setColor(new Color(16, 185, 129, 50));
+                    g2d.fillRoundRect(2, 4, getWidth() - 4, getHeight() - 2, 10, 10);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                String text = getText();
+                int textWidth = fm.stringWidth(text);
+                int textX = (getWidth() - textWidth) / 2 + 10;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+
+                // Plus icon
+                int iconX = textX - 22;
+                int iconY = textY - 8;
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawLine(iconX, iconY, iconX + 12, iconY);
+                g2d.drawLine(iconX + 6, iconY - 6, iconX + 6, iconY + 6);
+
+                g2d.drawString(text, textX, textY);
+                g2d.dispose();
+            }
+        };
+        addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        addButton.setForeground(Color.WHITE);
+        addButton.setPreferredSize(new Dimension(160, 48));
+        addButton.setBorderPainted(false);
+        addButton.setContentAreaFilled(false);
+        addButton.setFocusPainted(false);
+        addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        addButton.addActionListener(e -> {
+            String name = nameField.getText().trim();
+            String priceStr = priceField.getText().trim();
+            String stockStr = stockField.getText().trim();
+
+            if (name.isEmpty() || name.equals("Nhập tên VPP...")) {
+                JOptionPane.showMessageDialog(panel, "Vui lòng nhập tên VPP!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            double price = 0;
+            int stock = 0;
+            try {
+                price = Double.parseDouble(priceStr);
+                stock = Integer.parseInt(stockStr);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(panel, "Giá và số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (insertStationery(idField.getText(), name, price, stock, null)) {
+                JOptionPane.showMessageDialog(panel, "Thêm VPP thành công!", "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE);
+                idField.setText(generateStationeryId());
+                nameField.setText("");
+                priceField.setText("0");
+                stockField.setText("1");
+            } else {
+                JOptionPane.showMessageDialog(panel, "Lỗi khi thêm VPP!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        JButton clearButton = new JButton("XÓA FORM") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (getModel().isPressed()) {
+                    g2d.setColor(new Color(55, 65, 81));
+                } else if (getModel().isRollover()) {
+                    g2d.setColor(new Color(75, 85, 99));
+                } else {
+                    g2d.setColor(new Color(55, 65, 81));
+                }
+
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+
+                g2d.setColor(BORDER_COLOR);
+                g2d.setStroke(new BasicStroke(1));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 3, 10, 10);
+
+                g2d.setColor(TEXT_SECONDARY);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                String text = getText();
+                int textWidth = fm.stringWidth(text);
+                int textX = (getWidth() - textWidth) / 2 + 10;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+
+                // Trash icon
+                int iconX = textX - 20;
+                int iconY = textY - 10;
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRoundRect(iconX, iconY, 12, 14, 2, 2);
+                g2d.drawLine(iconX - 2, iconY, iconX + 14, iconY);
+                g2d.drawLine(iconX + 4, iconY - 3, iconX + 8, iconY - 3);
+
+                g2d.drawString(text, textX, textY);
+                g2d.dispose();
+            }
+        };
+        clearButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        clearButton.setForeground(TEXT_SECONDARY);
+        clearButton.setPreferredSize(new Dimension(140, 48));
+        clearButton.setBorderPainted(false);
+        clearButton.setContentAreaFilled(false);
+        clearButton.setFocusPainted(false);
+        clearButton.addActionListener(e -> {
+            idField.setText(generateStationeryId());
+            nameField.setText("");
+            priceField.setText("0");
+            stockField.setText("1");
+        });
+
+        buttonPanel.add(addButton);
+        buttonPanel.add(clearButton);
+        formCard.add(buttonPanel, gbc);
+
+        // Center Wrapper
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+        GridBagConstraints wrapGbc = new GridBagConstraints();
+        wrapGbc.fill = GridBagConstraints.HORIZONTAL;
+        wrapGbc.anchor = GridBagConstraints.NORTH;
+        wrapGbc.weightx = 1.0;
+        wrapGbc.gridx = 0;
+        wrapGbc.gridy = 0;
+        wrapGbc.insets = new Insets(0, 50, 0, 50);
+
+        centerWrapper.add(formCard, wrapGbc);
+        panel.add(centerWrapper, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    // Helper: Create dark themed label
+    private JLabel createDarkLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        label.setForeground(TEXT_SECONDARY);
+        return label;
+    }
+
+    // Helper: Create dark themed text field
+    private JTextField createDarkTextField(String placeholder) {
+        JTextField field = new JTextField() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (getText().isEmpty() && !hasFocus()) {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setColor(TEXT_MUTED);
+                    g2d.setFont(getFont().deriveFont(Font.ITALIC));
+                    g2d.drawString(placeholder, 12, getHeight() / 2 + 5);
+                    g2d.dispose();
+                }
+            }
+        };
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBackground(INPUT_BG);
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        field.setMinimumSize(new Dimension(200, 32));
+        return field;
     }
 
     /**
@@ -2194,6 +3409,47 @@ public class AdminPanel extends JPanel {
 
         dialog.add(contentPanel);
         dialog.setVisible(true);
+    }
+
+    /**
+     * Generate unique Stationery ID (S00001 - S99999)
+     */
+    private String generateStationeryId() {
+        int nextNum = 1;
+        String sql = "SELECT MAX(CAST(SUBSTR(ItemID, 2) AS INTEGER)) as maxNum FROM Stationery WHERE ItemID LIKE 'S%'";
+        try (Connection conn = DBConnect.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                int maxNum = rs.getInt("maxNum");
+                if (!rs.wasNull()) {
+                    nextNum = maxNum + 1;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi sinh StationeryID: " + e.getMessage());
+        }
+        return "S" + String.format("%05d", nextNum);
+    }
+
+    /**
+     * Insert stationery to database
+     */
+    private boolean insertStationery(String itemId, String name, double price, int stock, String imagePath) {
+        String sql = "INSERT INTO Stationery (ItemID, Name, Price, Stock, ImagePath) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, itemId);
+            pstmt.setString(2, name);
+            pstmt.setDouble(3, price);
+            pstmt.setInt(4, stock);
+            pstmt.setString(5, imagePath == null || imagePath.isEmpty() ? null : imagePath);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi thêm VPP: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
     // Button Renderer for JTable
