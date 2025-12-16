@@ -64,7 +64,7 @@ public class HomePanel extends javax.swing.JPanel {
         boolean cardDataLoaded = false;
 
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             connManager.connectCard();
             try {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());

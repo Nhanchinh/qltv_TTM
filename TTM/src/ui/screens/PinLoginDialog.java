@@ -224,7 +224,7 @@ public class PinLoginDialog extends JDialog {
         new Thread(() -> {
             CardConnectionManager connManager = null;
             try {
-                connManager = new CardConnectionManager();
+                connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 SwingUtilities.invokeLater(() -> errorLabel.setText("Đang xác thực..."));

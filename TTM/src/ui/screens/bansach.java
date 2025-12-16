@@ -536,7 +536,7 @@ public class bansach extends javax.swing.JPanel {
         // Lấy điểm từ thẻ (Smart Card)
         int currentPoints = 0;
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -691,10 +691,10 @@ public class bansach extends javax.swing.JPanel {
 
         cartItems.add(new CartItem(bookId, book.title, quantity, book.price, discount));
 
-        // Nếu đây là sách đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm tích
-        // lũy
-        if (cartItems.size() == 1 && card != null && pointsUsedField != null) {
-            pointsUsedField.setText(String.valueOf(card.totalPoints));
+        // Tự động set điểm sử dụng = điểm tích lũy từ thẻ (luôn luôn, không chỉ khi giỏ
+        // trống)
+        if (pointsUsedField != null && maxPointsAvailable > 0) {
+            pointsUsedField.setText(String.valueOf(maxPointsAvailable));
         }
 
         updateCartTable();
@@ -775,7 +775,7 @@ public class bansach extends javax.swing.JPanel {
         boolean cardHasEnough = false;
         CardConnectionManager connManager = null;
         try {
-            connManager = new CardConnectionManager();
+            connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -832,7 +832,7 @@ public class bansach extends javax.swing.JPanel {
         // 2) Charge the card & Use Points
         boolean transactionSuccess = false;
         try {
-            connManager = new CardConnectionManager(); // New connection
+            connManager = CardConnectionManager.getInstance(); // Reuse connection
             if (!connManager.connectCard()) {
                 throw new Exception("Không thể kết nối lại thẻ để thanh toán.");
             }

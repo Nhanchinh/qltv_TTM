@@ -24,6 +24,10 @@ public class vpp extends javax.swing.JPanel {
     private String currentCardId = "CARD001";
     private int maxPointsAvailable = 0;
 
+    // Độ giảm giá và tích điểm theo hạng thành viên
+    private double currentDiscount = 0; // Normal=0%, Silver=3%, Gold=5%, Diamond=10%
+    private double currentPointsPercent = 0; // Normal=0%, Silver=3%, Gold=5%, Diamond=10%
+
     /**
      * Set CardID từ thẻ đăng nhập
      */
@@ -41,17 +45,22 @@ public class vpp extends javax.swing.JPanel {
         String name;
         int quantity;
         double unitPrice;
-        double discountPercent; // Added for consistency if needed, though VPP might not have discounts yet
+        double discountPercent; // Giảm giá theo hạng thành viên
 
-        CartItem(String itemId, String name, int quantity, double unitPrice) {
+        CartItem(String itemId, String name, int quantity, double unitPrice, double discountPercent) {
             this.itemId = itemId;
             this.name = name;
             this.quantity = quantity;
             this.unitPrice = unitPrice;
-            this.discountPercent = 0;
+            this.discountPercent = discountPercent;
         }
 
         double getTotalPrice() {
+            return unitPrice * quantity * (1 - discountPercent / 100.0);
+        }
+
+        // Lấy giá gốc (không giảm giá) để tính điểm
+        double getOriginalPrice() {
             return unitPrice * quantity;
         }
     }
@@ -87,6 +96,26 @@ public class vpp extends javax.swing.JPanel {
         CardService.Card card = cardService.getCardById(currentCardId);
         if (card != null) {
             cardIdField.setText(card.cardId);
+
+            // Tính giảm giá và điểm thưởng theo hạng thành viên
+            String memberType = card.memberType;
+            if (memberType != null) {
+                if (memberType.equalsIgnoreCase("Normal") || memberType.equalsIgnoreCase("ThanhVien")) {
+                    currentDiscount = 0;
+                    currentPointsPercent = 0;
+                } else if (memberType.equalsIgnoreCase("Silver") || memberType.equalsIgnoreCase("Bac")) {
+                    currentDiscount = 3;
+                    currentPointsPercent = 3;
+                } else if (memberType.equalsIgnoreCase("Gold") || memberType.equalsIgnoreCase("Vang")) {
+                    currentDiscount = 5;
+                    currentPointsPercent = 5;
+                } else if (memberType.equalsIgnoreCase("Diamond") || memberType.equalsIgnoreCase("KimCuong")) {
+                    currentDiscount = 10;
+                    currentPointsPercent = 10;
+                }
+            }
+            System.out.println("[VPP] Member: " + memberType + ", Discount: " + currentDiscount + "%, Points: "
+                    + currentPointsPercent + "%");
         }
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
         if (saleDateField != null)
@@ -95,7 +124,7 @@ public class vpp extends javax.swing.JPanel {
         // Lấy điểm từ thẻ (Smart Card)
         int currentPoints = 0;
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -127,10 +156,11 @@ public class vpp extends javax.swing.JPanel {
     }
 
     private void updateCartTable() {
-        String[] columns = { "Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền" };
-        Object[][] data = new Object[cartItems.size()][5];
+        String[] columns = { "Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Giảm giá (%)", "Thành tiền" };
+        Object[][] data = new Object[cartItems.size()][6];
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         double total = 0;
+        int totalPoints = 0;
 
         for (int i = 0; i < cartItems.size(); i++) {
             CartItem item = cartItems.get(i);
@@ -138,9 +168,14 @@ public class vpp extends javax.swing.JPanel {
             data[i][1] = item.name;
             data[i][2] = item.quantity;
             data[i][3] = nf.format(item.unitPrice) + " đ";
+            data[i][4] = (int) item.discountPercent + "%";
             double itemTotal = item.getTotalPrice();
-            data[i][4] = nf.format(itemTotal) + " đ";
+            data[i][5] = nf.format(itemTotal) + " đ";
             total += itemTotal;
+
+            // Tính điểm thưởng: currentPointsPercent% của giá gốc
+            int pointsFromItem = (int) Math.round(item.getOriginalPrice() * currentPointsPercent / 100.0);
+            totalPoints += pointsFromItem;
         }
 
         // Lấy số điểm sử dụng từ field (nếu có)
@@ -174,6 +209,8 @@ public class vpp extends javax.swing.JPanel {
         NumberFormat nf2 = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         if (totalField != null)
             totalField.setText(nf2.format(finalTotal) + " đ");
+        if (pointsEarnedField != null)
+            pointsEarnedField.setText(String.valueOf(totalPoints));
     }
 
     /**
@@ -409,7 +446,7 @@ public class vpp extends javax.swing.JPanel {
         botPanel.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 0, 0, new java.awt.Color(241, 245, 249)));
 
         // Info Grid
-        javax.swing.JPanel infoGrid = new javax.swing.JPanel(new java.awt.GridLayout(3, 2, 5, 5));
+        javax.swing.JPanel infoGrid = new javax.swing.JPanel(new java.awt.GridLayout(2, 2, 5, 5));
         infoGrid.setOpaque(false);
         infoGrid.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 5, 0));
 
@@ -430,6 +467,13 @@ public class vpp extends javax.swing.JPanel {
             }
         });
         infoGrid.add(createCompactInfoPanel("Điểm dùng:", pointsUsedField));
+
+        // Thêm field hiển thị điểm thưởng
+        pointsEarnedField = createStyledTextField();
+        pointsEarnedField.setText("0");
+        pointsEarnedField.setEditable(false);
+        pointsEarnedField.setForeground(new java.awt.Color(22, 163, 74)); // Green
+        infoGrid.add(createCompactInfoPanel("Điểm thưởng:", pointsEarnedField));
 
         botPanel.add(infoGrid);
 
@@ -655,14 +699,14 @@ public class vpp extends javax.swing.JPanel {
         }
 
         if (!found) {
-            cartItems.add(new CartItem(productId, item.name, quantity, item.price));
+            // Thêm với giảm giá theo hạng thành viên
+            cartItems.add(new CartItem(productId, item.name, quantity, item.price, currentDiscount));
         }
 
-        // Nếu đây là sản phẩm đầu tiên trong giỏ hàng, tự động set điểm sử dụng = điểm
-        // tích lũy
-        CardService.Card card = cardService.getCardById(currentCardId);
-        if (cartItems.size() == 1 && card != null && pointsUsedField != null) {
-            pointsUsedField.setText(String.valueOf(card.totalPoints));
+        // Tự động set điểm sử dụng = điểm tích lũy từ thẻ (luôn luôn, không chỉ khi giỏ
+        // trống)
+        if (pointsUsedField != null && maxPointsAvailable > 0) {
+            pointsUsedField.setText(String.valueOf(maxPointsAvailable));
         }
 
         updateCartTable();
@@ -719,8 +763,10 @@ public class vpp extends javax.swing.JPanel {
 
         // Tính tổng tiền
         double grandTotal = 0;
+        double originalTotal = 0;
         for (CartItem item : cartItems) {
             grandTotal += item.getTotalPrice();
+            originalTotal += item.getOriginalPrice();
         }
 
         // Số tiền thực cần thanh toán qua thẻ
@@ -728,14 +774,14 @@ public class vpp extends javax.swing.JPanel {
         if (amountToPay < 0)
             amountToPay = 0;
 
-        // Điểm thưởng = 3% của số tiền thanh toán thực tế
-        int pointsToAward = (int) Math.round(amountToPay * 0.03);
+        // Điểm thưởng = currentPointsPercent% của giá gốc (trước giảm giá)
+        int pointsToAward = (int) Math.round(originalTotal * currentPointsPercent / 100.0);
 
         // Check card balance and points via smart card
         boolean cardHasEnough = false;
         CardConnectionManager connManager = null;
         try {
-            connManager = new CardConnectionManager();
+            connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -806,7 +852,7 @@ public class vpp extends javax.swing.JPanel {
         // 2) Charge the card & Use Points
         boolean transactionSuccess = false;
         try {
-            connManager = new CardConnectionManager();
+            connManager = CardConnectionManager.getInstance();
             if (!connManager.connectCard()) {
                 throw new Exception("Không thể kết nối lại thẻ để thanh toán.");
             }
@@ -918,4 +964,6 @@ public class vpp extends javax.swing.JPanel {
     private javax.swing.JTextField totalField;
     private javax.swing.JButton checkoutButton;
     private javax.swing.JButton clearCartButton;
+    private javax.swing.JLabel pointsEarnedLabel;
+    private javax.swing.JTextField pointsEarnedField;
 }

@@ -44,7 +44,7 @@ public class CardConnectionPanel extends JFrame {
     private static final Color BUTTON_HOVER = new Color(129, 140, 248); // Indigo 400
 
     public CardConnectionPanel() {
-        cardConnectionManager = new CardConnectionManager();
+        cardConnectionManager = CardConnectionManager.getInstance();
         initComponents();
         setupFrame();
         startPulseAnimation();

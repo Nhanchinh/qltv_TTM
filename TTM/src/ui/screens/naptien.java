@@ -74,7 +74,7 @@ public class naptien extends javax.swing.JPanel {
      */
     private int getBalanceFromCard() {
         try {
-            CardConnectionManager manager = new CardConnectionManager();
+            CardConnectionManager manager = CardConnectionManager.getInstance();
             if (manager.connectCard()) {
                 javax.smartcardio.CardChannel channel = manager.getChannel();
                 if (channel != null) {
@@ -450,7 +450,7 @@ public class naptien extends javax.swing.JPanel {
 
     private boolean depositToCard(int amount) {
         try {
-            CardConnectionManager manager = new CardConnectionManager();
+            CardConnectionManager manager = CardConnectionManager.getInstance();
             if (!manager.connectCard())
                 return false;
 

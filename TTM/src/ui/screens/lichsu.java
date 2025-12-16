@@ -313,7 +313,7 @@ public class lichsu extends javax.swing.JPanel {
                 if (status.equalsIgnoreCase("Đang mượn") || status.equalsIgnoreCase("mượn")
                         || status.equalsIgnoreCase("Borrowed")) {
                     c.setForeground(new java.awt.Color(245, 158, 11)); // Amber
-                    c.setText("⏳ Đang mượn");
+                    c.setText(" Đang thuê");
                 } else if (status.equalsIgnoreCase("Đã trả") || status.equalsIgnoreCase("tra")
                         || status.equalsIgnoreCase("Returned")) {
                     c.setForeground(new java.awt.Color(16, 185, 129)); // Emerald

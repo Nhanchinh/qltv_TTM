@@ -284,7 +284,7 @@ public class doipin extends javax.swing.JPanel {
             CardConnectionManager connManager = null;
             try {
                 // Connect to card
-                connManager = new CardConnectionManager();
+                connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
@@ -329,7 +329,7 @@ public class doipin extends javax.swing.JPanel {
                 Thread.sleep(500); // Wait a bit for card to settle
 
                 // Reconnect and verify new PIN
-                connManager = new CardConnectionManager();
+                connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 CardVerifyManager newVerifyManager = new CardVerifyManager(connManager.getChannel());

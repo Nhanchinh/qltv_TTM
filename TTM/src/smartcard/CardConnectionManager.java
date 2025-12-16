@@ -13,8 +13,9 @@ import javax.smartcardio.ResponseAPDU;
 import javax.smartcardio.TerminalFactory;
 
 /**
- * Manager class for handling smart card connection
- * Provides methods for connecting and disconnecting from a smart card
+ * Singleton Manager class for handling smart card connection.
+ * Maintains a single persistent connection to the smart card.
+ * Connection is established once at login and reused throughout the session.
  */
 public class CardConnectionManager {
 
@@ -23,12 +24,22 @@ public class CardConnectionManager {
     private static final int MAX_CONNECT_ATTEMPTS = 3;
     private static final long RETRY_DELAY_MS = 800L;
 
+    // Singleton instance
+    private static CardConnectionManager instance;
+    private static final Object LOCK = new Object();
+
     private TerminalFactory factory;
     private CardTerminal terminal;
     private Card card;
     private CardChannel channel;
 
-    public CardConnectionManager() {
+    // Flag to track if currently connected
+    private boolean connected = false;
+
+    /**
+     * Private constructor for Singleton pattern
+     */
+    private CardConnectionManager() {
         this.factory = null;
         this.terminal = null;
         this.card = null;
@@ -36,13 +47,78 @@ public class CardConnectionManager {
     }
 
     /**
-     * Attempts to connect to the first available smart card terminal
+     * Get the singleton instance of CardConnectionManager.
+     * Creates a new instance if one doesn't exist.
      * 
-     * @return true if connection successful, false otherwise
+     * @return The singleton CardConnectionManager instance
+     */
+    public static CardConnectionManager getInstance() {
+        if (instance == null) {
+            synchronized (LOCK) {
+                if (instance == null) {
+                    instance = new CardConnectionManager();
+                }
+            }
+        }
+        return instance;
+    }
+
+    /**
+     * Reset the singleton instance (use when logging out or switching cards)
+     */
+    public static void resetInstance() {
+        synchronized (LOCK) {
+            if (instance != null) {
+                instance.forceDisconnect();
+                instance = null;
+            }
+        }
+    }
+
+    /**
+     * Attempts to connect to the first available smart card terminal.
+     * If already connected, returns true immediately without reconnecting.
+     * 
+     * @return true if connection successful or already connected, false otherwise
      * @throws Exception if connection fails
      */
     public boolean connectCard() throws Exception {
+        // If already connected, just verify and return
+        if (connected && card != null && channel != null) {
+            try {
+                // Quick check if connection is still valid
+                if (isConnectionValid()) {
+                    System.out.println(">>> Đang sử dụng kết nối thẻ hiện có");
+                    return true;
+                }
+            } catch (Exception e) {
+                // Connection is stale, need to reconnect
+                LOGGER.info("Kết nối cũ không còn hợp lệ, đang kết nối lại...");
+                cleanup();
+                connected = false;
+            }
+        }
+
         return connectCardWithRetries(MAX_CONNECT_ATTEMPTS);
+    }
+
+    /**
+     * Check if the current connection is still valid
+     */
+    private boolean isConnectionValid() {
+        if (card == null || channel == null) {
+            return false;
+        }
+        try {
+            // Try a simple command to verify connection
+            // GET RESPONSE with empty data - should return 6C00 or similar if applet is
+            // selected
+            byte[] aid = hexStringToByteArray("11223344550300");
+            ResponseAPDU response = channel.transmit(new CommandAPDU(0x00, 0xA4, 0x04, 0x00, aid));
+            return response.getSW() == 0x9000;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -58,13 +134,15 @@ public class CardConnectionManager {
                 if (attempt > 1) {
                     LOGGER.info(String.format("Thử kết nối lại thẻ (%d/%d)...", attempt, maxAttempts));
                 }
-                boolean connected = performSingleConnectionAttempt();
-                if (connected) {
+                boolean result = performSingleConnectionAttempt();
+                if (result) {
+                    connected = true;
                     return true;
                 }
             } catch (Exception e) {
                 lastException = e;
                 cleanup();
+                connected = false;
 
                 Level logLevel = (attempt == maxAttempts) ? Level.SEVERE : Level.WARNING;
                 LOGGER.log(logLevel, "Lỗi kết nối thẻ (lần " + attempt + "/" + maxAttempts + "): " + e.getMessage(), e);
@@ -153,20 +231,37 @@ public class CardConnectionManager {
         }
 
         System.out.println(">>> Kết nối thành công!");
+        connected = true;
         return true;
     }
 
     /**
-     * Disconnects from the smart card
+     * Disconnects from the smart card.
+     * In Singleton mode, this is a no-op to maintain persistent connection.
+     * Use forceDisconnect() when you really need to disconnect (e.g., logout).
+     * 
+     * @return true always (connection is maintained)
+     */
+    public boolean disconnectCard() {
+        // NO-OP in singleton mode - connection is maintained
+        // This prevents accidental disconnection from individual screens
+        System.out.println(">>> [Singleton] Giữ kết nối thẻ (bỏ qua yêu cầu ngắt)");
+        return true;
+    }
+
+    /**
+     * Force disconnect from the smart card.
+     * Use this when you really need to disconnect (logout, card change, etc.)
      * 
      * @return true if disconnection successful
      */
-    public boolean disconnectCard() {
+    public boolean forceDisconnect() {
         try {
             if (card != null) {
                 card.disconnect(false);
                 System.out.println(">>> Đã ngắt kết nối khỏi thẻ!");
             }
+            connected = false;
             return true;
         } catch (CardException e) {
             String msg = e.getMessage();
@@ -176,12 +271,14 @@ public class CardConnectionManager {
                     msg.contains("SCARD_E_INVALID_HANDLE") ||
                     msg.contains("SCARD_E_INVALID_PARAMETER"))) {
                 System.out.println(">>> Đã ngắt kết nối (Tự động - card previously disconnected)");
+                connected = false;
                 return true;
             }
             LOGGER.log(Level.INFO, "Lỗi khi ngắt kết nối (có thể bỏ qua): " + e.getMessage());
             return false;
         } finally {
             cleanup();
+            connected = false;
         }
     }
 
@@ -191,7 +288,7 @@ public class CardConnectionManager {
      * @return true if connected, false otherwise
      */
     public boolean isConnected() {
-        return card != null && channel != null;
+        return connected && card != null && channel != null;
     }
 
     /**
@@ -256,5 +353,6 @@ public class CardConnectionManager {
         card = null;
         channel = null;
         terminal = null;
+        connected = false;
     }
 }

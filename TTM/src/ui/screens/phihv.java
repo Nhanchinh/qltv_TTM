@@ -44,6 +44,8 @@ public class phihv extends javax.swing.JPanel {
     private javax.swing.JTextField discountField;
     private javax.swing.JTextField totalField;
     private javax.swing.JButton paymentButton;
+    private javax.swing.JPanel packagesWrapper; // Để refresh grid khi load card info
+    private javax.swing.JScrollPane packagesScrollPane; // Reference để có thể thay thế
 
     public phihv() {
         cardService = new CardService();
@@ -69,7 +71,7 @@ public class phihv extends javax.swing.JPanel {
 
         // Đọc rank từ thẻ chip
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 // CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -132,6 +134,19 @@ public class phihv extends javax.swing.JPanel {
             if (expiryDateField != null)
                 expiryDateField.setText("Không giới hạn");
         }
+
+        // Refresh packages grid để cập nhật nút "Đang sử dụng"
+        refreshPackagesGrid();
+    }
+
+    private void refreshPackagesGrid() {
+        if (packagesWrapper != null && packagesScrollPane != null) {
+            packagesWrapper.remove(packagesScrollPane);
+            packagesScrollPane = createPackagesGrid();
+            packagesWrapper.add(packagesScrollPane, java.awt.BorderLayout.CENTER);
+            packagesWrapper.revalidate();
+            packagesWrapper.repaint();
+        }
     }
 
     public void reloadCardInfo() {
@@ -159,7 +174,7 @@ public class phihv extends javax.swing.JPanel {
         gbc.weightx = 0.6; // Reduced from 0.65
         gbc.insets = new java.awt.Insets(0, 0, 0, 15);
 
-        javax.swing.JPanel packagesWrapper = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
+        packagesWrapper = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
         packagesWrapper.setOpaque(false);
 
         javax.swing.JLabel pkgTitle = new javax.swing.JLabel("Bảng giá gói hội viên");
@@ -167,7 +182,8 @@ public class phihv extends javax.swing.JPanel {
         pkgTitle.setForeground(new java.awt.Color(30, 41, 59));
         packagesWrapper.add(pkgTitle, java.awt.BorderLayout.NORTH);
 
-        packagesWrapper.add(createPackagesGrid(), java.awt.BorderLayout.CENTER);
+        packagesScrollPane = createPackagesGrid();
+        packagesWrapper.add(packagesScrollPane, java.awt.BorderLayout.CENTER);
 
         contentPanel.add(packagesWrapper, gbc);
 
@@ -301,8 +317,7 @@ public class phihv extends javax.swing.JPanel {
         body.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         for (String benefit : benefits) {
-            javax.swing.JLabel lbl = new javax.swing.JLabel(
-                    "<html><font color='#22c55e'>✔</font> " + benefit + "</html>");
+            javax.swing.JLabel lbl = new javax.swing.JLabel("• " + benefit);
             lbl.setFont(new java.awt.Font("Segoe UI", 0, 13));
             lbl.setForeground(new java.awt.Color(51, 65, 85));
             lbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 0, 4, 0));
@@ -314,27 +329,52 @@ public class phihv extends javax.swing.JPanel {
         footer.setOpaque(false);
         footer.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 15, 0));
 
-        javax.swing.JButton btn = new javax.swing.JButton("Chọn gói");
-        btn.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        btn.setForeground(java.awt.Color.WHITE);
-        btn.setBackground(themeColor);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setPreferredSize(new java.awt.Dimension(120, 36));
-        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        // Kiểm tra xem đây có phải là gói hiện tại không
+        String cardRankCode = "";
+        if (currentRank.equals("Normal"))
+            cardRankCode = "ThanhVien";
+        else if (currentRank.equals("Silver"))
+            cardRankCode = "Bac";
+        else if (currentRank.equals("Gold"))
+            cardRankCode = "Vang";
+        else if (currentRank.equals("Diamond"))
+            cardRankCode = "KimCuong";
 
-        // Hover effect helper
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btn.setBackground(themeColor.darker());
-            }
+        boolean isCurrentPkg = pkgCode.equals(cardRankCode);
 
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                btn.setBackground(themeColor);
-            }
-        });
+        javax.swing.JButton btn;
+        if (isCurrentPkg) {
+            btn = new javax.swing.JButton("Đang sử dụng");
+            btn.setFont(new java.awt.Font("Segoe UI", 1, 14));
+            btn.setForeground(java.awt.Color.WHITE);
+            btn.setBackground(new java.awt.Color(34, 197, 94)); // Green
+            btn.setFocusPainted(false);
+            btn.setBorderPainted(false);
+            btn.setPreferredSize(new java.awt.Dimension(130, 36));
+            btn.setEnabled(false); // Disable nút
+        } else {
+            btn = new javax.swing.JButton("Chọn gói");
+            btn.setFont(new java.awt.Font("Segoe UI", 1, 14));
+            btn.setForeground(java.awt.Color.WHITE);
+            btn.setBackground(themeColor);
+            btn.setFocusPainted(false);
+            btn.setBorderPainted(false);
+            btn.setPreferredSize(new java.awt.Dimension(120, 36));
+            btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
-        btn.addActionListener(e -> selectPackage(pkgCode, pkgPrice, disc, months));
+            // Hover effect helper
+            btn.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    btn.setBackground(themeColor.darker());
+                }
+
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    btn.setBackground(themeColor);
+                }
+            });
+
+            btn.addActionListener(e -> selectPackage(pkgCode, pkgPrice, disc, months));
+        }
         footer.add(btn);
 
         p.add(header, java.awt.BorderLayout.NORTH);
@@ -597,12 +637,7 @@ public class phihv extends javax.swing.JPanel {
         if (upgradeCost == 0) {
             totalField.setText("Miễn phí");
         } else {
-            // Hiển thị phí chênh lệch
-            String priceDisplay = nf.format(upgradeCost) + " đ";
-            if (currentRankPrice > 0) {
-                priceDisplay += " (chênh lệch)";
-            }
-            totalField.setText(priceDisplay);
+            totalField.setText(nf.format(upgradeCost) + " đ");
         }
     }
 
@@ -629,7 +664,7 @@ public class phihv extends javax.swing.JPanel {
         if (selectedPackagePrice > 0) {
             int cardBalance = 0;
             try {
-                CardConnectionManager connManager = new CardConnectionManager();
+                CardConnectionManager connManager = CardConnectionManager.getInstance();
                 if (connManager.connectCard()) {
                     CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                     CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -696,45 +731,84 @@ public class phihv extends javax.swing.JPanel {
 
     private void performUpgrade() {
         // Logic trừ tiền (nếu có) và cập nhật DB, thẻ
-        boolean success = false;
+        boolean paymentSuccess = false;
+        boolean cardUpgradeSuccess = false;
 
-        // 1. Nếu có phí, trừ thẻ trước
-        if (selectedPackagePrice > 0) {
-            try {
-                CardConnectionManager connManager = new CardConnectionManager();
-                if (connManager.connectCard()) {
-                    CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
-                    success = balanceManager.payment((int) selectedPackagePrice);
-                    connManager.disconnectCard();
+        // Xác định rank để upgrade trên thẻ
+        String cardRank = "Normal";
+        if (selectedPackageName.equals("Bac")) {
+            cardRank = "Silver";
+        } else if (selectedPackageName.equals("Vang")) {
+            cardRank = "Gold";
+        } else if (selectedPackageName.equals("KimCuong")) {
+            cardRank = "Diamond";
+        }
 
-                    if (!success) {
-                        javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán bị từ chối bởi thẻ!", "Thất bại",
-                                javax.swing.JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                javax.swing.JOptionPane.showMessageDialog(this, "Lỗi kết nối thẻ khi thanh toán.", "Lỗi",
+        try {
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
+            if (!connManager.connectCard()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Không thể kết nối thẻ!", "Lỗi",
                         javax.swing.JOptionPane.ERROR_MESSAGE);
                 return;
             }
-        } else {
-            success = true; // Free upgrade
+
+            CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+
+            // 1. Nếu có phí, trừ thẻ trước
+            if (selectedPackagePrice > 0) {
+                paymentSuccess = balanceManager.payment((int) selectedPackagePrice);
+                if (!paymentSuccess) {
+                    connManager.disconnectCard();
+                    javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán bị từ chối bởi thẻ!", "Thất bại",
+                            javax.swing.JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                System.out.println("[PHIHV] Payment SUCCESS: " + selectedPackagePrice + " đ");
+            } else {
+                paymentSuccess = true; // Free upgrade
+            }
+
+            // 2. Gọi upgradeRank() trên thẻ để cập nhật giới hạn mượn sách
+            if (paymentSuccess && !cardRank.equals("Normal")) {
+                System.out.println("[PHIHV] Upgrading card to: " + cardRank);
+                cardUpgradeSuccess = balanceManager.upgradeRank(cardRank);
+
+                if (!cardUpgradeSuccess) {
+                    System.err.println("[PHIHV] Card upgrade FAILED! Rank may not be updated on card.");
+                    // Vẫn tiếp tục cập nhật DB (có thể retry sau)
+                } else {
+                    System.out.println("[PHIHV] Card upgrade SUCCESS to: " + cardRank);
+                }
+            } else {
+                cardUpgradeSuccess = true; // Normal không cần upgrade trên thẻ
+            }
+
+            connManager.disconnectCard();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(this, "Lỗi kết nối thẻ khi nâng cấp: " + e.getMessage(), "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
-        // 2. Cập nhật DB
-        if (success) {
+        // 3. Cập nhật DB
+        if (paymentSuccess) {
             boolean dbUpdated = cardService.updateMemberType(currentCardId, selectedPackageName);
             if (dbUpdated) {
-                // 3. Log transaction if paid
+                // 4. Log transaction if paid
                 if (selectedPackagePrice > 0) {
                     String transId = java.util.UUID.randomUUID().toString();
                     transactionService.createTransaction(transId, currentCardId, "MembershipFee", selectedPackagePrice,
                             0);
                 }
 
-                javax.swing.JOptionPane.showMessageDialog(this, "Nâng cấp thành viên thành công!", "Thành công",
+                String message = "Nâng cấp thành viên thành công!";
+                if (!cardUpgradeSuccess) {
+                    message += "\n\nLưu ý: Thẻ chưa được cập nhật giới hạn mượn sách.\nVui lòng liên hệ Admin để cập nhật lại.";
+                }
+
+                javax.swing.JOptionPane.showMessageDialog(this, message, "Thành công",
                         javax.swing.JOptionPane.INFORMATION_MESSAGE);
                 loadCardInfo(); // Reload UI
                 // Reset fields
