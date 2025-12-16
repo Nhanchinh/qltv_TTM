@@ -212,324 +212,6 @@ public class muontra extends javax.swing.JPanel {
         return 0;
     }
 
-    /**
-     * Khởi tạo các component của giao diện
-     */
-    @SuppressWarnings("unchecked")
-    private void initComponents() {
-
-        titleLabel = new javax.swing.JLabel();
-        memberInfoLabel = new javax.swing.JLabel();
-
-        // TabbedPane
-        tabbedPane = new javax.swing.JTabbedPane();
-
-        // Panel Mượn sách
-        borrowPanel = new javax.swing.JPanel();
-        cardIdLabel = new javax.swing.JLabel();
-        cardIdField = new javax.swing.JTextField();
-        bookIdLabel = new javax.swing.JLabel();
-        bookIdField = new javax.swing.JTextField();
-        daysLabel = new javax.swing.JLabel();
-        daysSpinner = new javax.swing.JSpinner();
-        addToCartButton = new javax.swing.JButton();
-        searchButton = new javax.swing.JButton();
-        availableBooksTable = new javax.swing.JScrollPane();
-        booksTable = new javax.swing.JTable();
-        borrowCartTable = new javax.swing.JScrollPane();
-        cartTable = new javax.swing.JTable();
-        removeFromCartButton = new javax.swing.JButton();
-        clearCartButton = new javax.swing.JButton();
-        borrowAllButton = new javax.swing.JButton();
-        cartTotalLabel = new javax.swing.JLabel();
-
-        // Panel Trả sách
-        returnPanel = new javax.swing.JPanel();
-        borrowedBooksTable = new javax.swing.JScrollPane();
-        borrowedTable = new javax.swing.JTable();
-        returnInfoLabel = new javax.swing.JLabel();
-        returnButton = new javax.swing.JButton();
-        lostBookButton = new javax.swing.JButton();
-        refreshButton = new javax.swing.JButton();
-
-        setBackground(new java.awt.Color(245, 245, 250));
-        setLayout(new java.awt.BorderLayout(0, 10));
-
-        // Header panel
-        javax.swing.JPanel headerPanel = new javax.swing.JPanel(new java.awt.BorderLayout());
-        headerPanel.setBackground(new java.awt.Color(245, 245, 250));
-        headerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 0, 40));
-
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Mượn / Trả sách");
-        headerPanel.add(titleLabel, java.awt.BorderLayout.WEST);
-
-        memberInfoLabel.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        memberInfoLabel.setForeground(new java.awt.Color(0, 120, 215));
-        memberInfoLabel.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
-        headerPanel.add(memberInfoLabel, java.awt.BorderLayout.EAST);
-
-        add(headerPanel, java.awt.BorderLayout.NORTH);
-
-        // ============ PANEL MƯỢN SÁCH ============
-        borrowPanel.setBackground(new java.awt.Color(245, 245, 250));
-        borrowPanel.setLayout(new java.awt.BorderLayout(0, 10));
-        borrowPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 30, 30, 30));
-
-        // Top form panel
-        javax.swing.JPanel topPanel = new javax.swing.JPanel();
-        topPanel.setBackground(new java.awt.Color(255, 255, 255));
-        topPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createTitledBorder(null, "Thêm sách vào giỏ mượn",
-                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                        new java.awt.Font("Segoe UI", 1, 14), new java.awt.Color(60, 60, 60)),
-                javax.swing.BorderFactory.createEmptyBorder(10, 15, 10, 15)));
-        topPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 15, 5));
-
-        cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        cardIdLabel.setText("Mã thẻ:");
-        topPanel.add(cardIdLabel);
-        cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        cardIdField.setColumns(10);
-        cardIdField.setText(currentCardId);
-        cardIdField.setEditable(false);
-        topPanel.add(cardIdField);
-
-        bookIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        bookIdLabel.setText("Mã sách:");
-        topPanel.add(bookIdLabel);
-        bookIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        bookIdField.setColumns(10);
-        topPanel.add(bookIdField);
-
-        searchButton.setBackground(new java.awt.Color(0, 120, 215));
-        searchButton.setForeground(new java.awt.Color(255, 255, 255));
-        searchButton.setText("🔍");
-        searchButton.setFocusPainted(false);
-        searchButton.addActionListener(e -> searchBook());
-        topPanel.add(searchButton);
-
-        daysLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        daysLabel.setText("Số ngày:");
-        topPanel.add(daysLabel);
-        daysSpinner.setModel(new javax.swing.SpinnerNumberModel(14, 1, 60, 1));
-        daysSpinner.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        topPanel.add(daysSpinner);
-
-        addToCartButton.setBackground(new java.awt.Color(50, 150, 50));
-        addToCartButton.setForeground(new java.awt.Color(255, 255, 255));
-        addToCartButton.setText("➕ Thêm vào giỏ");
-        addToCartButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        addToCartButton.setFocusPainted(false);
-        addToCartButton.addActionListener(e -> addToCart());
-        topPanel.add(addToCartButton);
-
-        borrowPanel.add(topPanel, java.awt.BorderLayout.NORTH);
-
-        // Center - Split panel for books list and cart
-        javax.swing.JSplitPane splitPane = new javax.swing.JSplitPane(javax.swing.JSplitPane.HORIZONTAL_SPLIT);
-        splitPane.setResizeWeight(0.6);
-        splitPane.setDividerLocation(500);
-
-        // Left - Available books
-        javax.swing.JPanel leftPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 5));
-        leftPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        javax.swing.JLabel booksLabel = new javax.swing.JLabel("📚 Sách có sẵn:");
-        booksLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        leftPanel.add(booksLabel, java.awt.BorderLayout.NORTH);
-
-        String[] bookColumns = { "Mã sách", "Tên sách", "Tác giả", "Giá", "SL có sẵn" };
-        booksTable = new javax.swing.JTable(new Object[][] {}, bookColumns);
-        booksTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        booksTable.setRowHeight(25);
-        booksTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        booksTable.getSelectionModel().addListSelectionListener(e -> {
-            int row = booksTable.getSelectedRow();
-            if (row >= 0) {
-                bookIdField.setText(booksTable.getValueAt(row, 0).toString());
-            }
-        });
-        availableBooksTable.setViewportView(booksTable);
-        leftPanel.add(availableBooksTable, java.awt.BorderLayout.CENTER);
-        splitPane.setLeftComponent(leftPanel);
-
-        // Right - Borrow cart
-        javax.swing.JPanel rightPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 5));
-        rightPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        javax.swing.JLabel cartLabel = new javax.swing.JLabel("🛒 Giỏ mượn:");
-        cartLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        rightPanel.add(cartLabel, java.awt.BorderLayout.NORTH);
-
-        String[] cartColumns = { "Mã sách", "Tên sách", "Số ngày", "Tiền cọc", "Phí thuê", "Tổng" };
-        cartTable = new javax.swing.JTable(new Object[][] {}, cartColumns);
-        cartTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        cartTable.setRowHeight(25);
-        borrowCartTable.setViewportView(cartTable);
-        rightPanel.add(borrowCartTable, java.awt.BorderLayout.CENTER);
-
-        // Cart buttons
-        javax.swing.JPanel cartButtonPanel = new javax.swing.JPanel(
-                new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 5));
-        cartButtonPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        cartTotalLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        cartTotalLabel.setForeground(new java.awt.Color(0, 150, 0));
-        cartTotalLabel.setText("Tổng: 0 đ");
-        cartButtonPanel.add(cartTotalLabel);
-
-        removeFromCartButton.setText("❌ Xóa");
-        removeFromCartButton.setBackground(new java.awt.Color(200, 100, 100));
-        removeFromCartButton.setForeground(java.awt.Color.WHITE);
-        removeFromCartButton.setFocusPainted(false);
-        removeFromCartButton.addActionListener(e -> removeFromCart());
-        cartButtonPanel.add(removeFromCartButton);
-
-        clearCartButton.setText("🗑️ Xóa hết");
-        clearCartButton.setBackground(new java.awt.Color(150, 150, 150));
-        clearCartButton.setForeground(java.awt.Color.WHITE);
-        clearCartButton.setFocusPainted(false);
-        clearCartButton.addActionListener(e -> clearCart());
-        cartButtonPanel.add(clearCartButton);
-
-        rightPanel.add(cartButtonPanel, java.awt.BorderLayout.SOUTH);
-        splitPane.setRightComponent(rightPanel);
-
-        borrowPanel.add(splitPane, java.awt.BorderLayout.CENTER);
-
-        // Bottom - Borrow all button
-        borrowAllButton.setBackground(new java.awt.Color(0, 120, 215));
-        borrowAllButton.setForeground(new java.awt.Color(255, 255, 255));
-        borrowAllButton.setText("✓ XÁC NHẬN MƯỢN TẤT CẢ");
-        borrowAllButton.setFont(new java.awt.Font("Segoe UI", 1, 16));
-        borrowAllButton.setFocusPainted(false);
-        borrowAllButton.setPreferredSize(new java.awt.Dimension(0, 50));
-        borrowAllButton.addActionListener(e -> borrowAllBooks());
-        borrowPanel.add(borrowAllButton, java.awt.BorderLayout.SOUTH);
-
-        // ============ PANEL TRẢ SÁCH ============
-        returnPanel.setBackground(new java.awt.Color(245, 245, 250));
-        returnPanel.setLayout(new java.awt.BorderLayout(0, 10));
-        returnPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 30, 30, 30));
-
-        // Borrowed books table
-        javax.swing.JPanel returnTopPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 5));
-        returnTopPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        javax.swing.JPanel returnHeaderPanel = new javax.swing.JPanel(new java.awt.BorderLayout());
-        returnHeaderPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        javax.swing.JLabel borrowedLabel = new javax.swing.JLabel("📖 Sách đang mượn:");
-        borrowedLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        returnHeaderPanel.add(borrowedLabel, java.awt.BorderLayout.WEST);
-
-        javax.swing.JButton selectAllReturnButton = new javax.swing.JButton("Chọn tất cả");
-        selectAllReturnButton.setBackground(new java.awt.Color(0, 120, 215));
-        selectAllReturnButton.setForeground(java.awt.Color.WHITE);
-        selectAllReturnButton.setFocusPainted(false);
-        selectAllReturnButton.addActionListener(e -> {
-            boolean allSelected = true;
-            // Kiểm tra xem đã chọn hết chưa để toggle
-            for (int i = 0; i < borrowedTable.getRowCount(); i++) {
-                if (!(Boolean) borrowedTable.getValueAt(i, 0)) {
-                    allSelected = false;
-                    break;
-                }
-            }
-            // Set value
-            for (int i = 0; i < borrowedTable.getRowCount(); i++) {
-                borrowedTable.setValueAt(!allSelected, i, 0);
-            }
-        });
-        returnHeaderPanel.add(selectAllReturnButton, java.awt.BorderLayout.EAST);
-
-        returnTopPanel.add(returnHeaderPanel, java.awt.BorderLayout.NORTH);
-
-        String[] returnColumns = { "Chọn", "ID", "Mã sách", "Tên sách", "Ngày mượn", "Hạn trả", "Số ngày", "Phí thuê",
-                "Trạng thái",
-                "Tiền cọc", "Phí phạt" };
-
-        // Custom Model cho Checkbox
-        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(new Object[][] {},
-                returnColumns) {
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                return columnIndex == 0 ? Boolean.class : Object.class;
-            }
-
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 0;
-            }
-        };
-
-        borrowedTable = new javax.swing.JTable(model);
-        borrowedTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        borrowedTable.setRowHeight(25);
-        // TableModelListener để bắt sự kiện checkbox thay đổi
-        borrowedTable.getModel().addTableModelListener(e -> updateReturnInfo());
-
-        borrowedBooksTable.setViewportView(borrowedTable);
-        returnTopPanel.add(borrowedBooksTable, java.awt.BorderLayout.CENTER);
-
-        returnPanel.add(returnTopPanel, java.awt.BorderLayout.CENTER);
-
-        // Bottom buttons
-        javax.swing.JPanel returnBottomPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 10));
-        returnBottomPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        returnInfoLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        returnInfoLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        returnInfoLabel.setText("Chọn sách để trả");
-        returnBottomPanel.add(returnInfoLabel, java.awt.BorderLayout.NORTH);
-
-        javax.swing.JPanel returnButtonPanel = new javax.swing.JPanel(
-                new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 20, 5));
-        returnButtonPanel.setBackground(new java.awt.Color(245, 245, 250));
-
-        returnButton.setBackground(new java.awt.Color(50, 150, 50));
-        returnButton.setForeground(new java.awt.Color(255, 255, 255));
-        returnButton.setText("✓ Trả sách đã chọn");
-        returnButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        returnButton.setFocusPainted(false);
-        returnButton.addActionListener(e -> returnBook());
-        returnButtonPanel.add(returnButton);
-
-        lostBookButton.setBackground(new java.awt.Color(200, 50, 50));
-        lostBookButton.setForeground(new java.awt.Color(255, 255, 255));
-        lostBookButton.setText("❌ Báo mất sách");
-        lostBookButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        lostBookButton.setFocusPainted(false);
-        lostBookButton.addActionListener(e -> reportLostBook());
-        returnButtonPanel.add(lostBookButton);
-
-        refreshButton.setBackground(new java.awt.Color(100, 100, 100));
-        refreshButton.setForeground(new java.awt.Color(255, 255, 255));
-        refreshButton.setText("🔄 Làm mới");
-        refreshButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        refreshButton.setFocusPainted(false);
-        refreshButton.addActionListener(e -> refreshBorrowedList());
-        returnButtonPanel.add(refreshButton);
-
-        returnBottomPanel.add(returnButtonPanel, java.awt.BorderLayout.CENTER);
-        returnPanel.add(returnBottomPanel, java.awt.BorderLayout.SOUTH);
-
-        // Thêm các tab
-        tabbedPane.addTab("📚 Mượn sách", borrowPanel);
-        tabbedPane.addTab("📖 Trả sách", returnPanel);
-        tabbedPane.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        tabbedPane.addChangeListener(e -> {
-            if (tabbedPane.getSelectedIndex() == 1) {
-                loadBorrowedBooks();
-            }
-        });
-
-        add(tabbedPane, java.awt.BorderLayout.CENTER);
-    }
-
     private void loadAvailableBooks() {
         List<BookService.Book> books = bookService.getAllBooks();
         String[] columns = { "Mã sách", "Tên sách", "Tác giả", "Giá", "SL có sẵn" };
@@ -1161,16 +843,547 @@ public class muontra extends javax.swing.JPanel {
         loadMemberInfo();
     }
 
+    private void initComponents() {
+        // Setup Main Panel
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
+        setLayout(new java.awt.BorderLayout(0, 0));
+
+        // 1. Header
+        add(createHeaderPanel(), java.awt.BorderLayout.NORTH);
+
+        // 2. Tabbed Pane
+        tabbedPane = new javax.swing.JTabbedPane();
+        tabbedPane.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        tabbedPane.setBackground(new java.awt.Color(255, 255, 255));
+        tabbedPane.setUI(new ModernTabbedPaneUI());
+
+        // --- Borrow Tab ---
+        borrowPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
+        borrowPanel.setBackground(new java.awt.Color(248, 250, 252));
+        borrowPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Input Section (Top)
+        borrowPanel.add(createBorrowInputPanel(), java.awt.BorderLayout.NORTH);
+
+        // Content Section (Center - Split)
+        javax.swing.JPanel contentGrid = new javax.swing.JPanel(new java.awt.GridBagLayout());
+        contentGrid.setOpaque(false);
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.BOTH;
+        gbc.insets = new java.awt.Insets(0, 0, 0, 10);
+        gbc.weighty = 1.0;
+
+        // Left: Available Books (60%)
+        gbc.gridx = 0;
+        gbc.weightx = 0.6;
+        contentGrid.add(createAvailableBooksPanel(), gbc);
+
+        // Right: Cart (40%)
+        gbc.gridx = 1;
+        gbc.weightx = 0.4;
+        gbc.insets = new java.awt.Insets(0, 10, 0, 0);
+        contentGrid.add(createCartPanel(), gbc);
+
+        borrowPanel.add(contentGrid, java.awt.BorderLayout.CENTER);
+
+        // Bottom: Action
+        borrowAllButton = createModernButton("XÁC NHẬN MƯỢN TẤT CẢ", java.awt.Color.WHITE,
+                new java.awt.Color(16, 185, 129)); // Emerald 500
+        borrowAllButton.setPreferredSize(new java.awt.Dimension(0, 50));
+        borrowAllButton.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        borrowAllButton.addActionListener(e -> borrowAllBooks());
+
+        javax.swing.JPanel bottomWrapper = new javax.swing.JPanel(new java.awt.BorderLayout());
+        bottomWrapper.setOpaque(false);
+        bottomWrapper.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 0, 0, 0));
+        bottomWrapper.add(borrowAllButton, java.awt.BorderLayout.CENTER);
+        borrowPanel.add(bottomWrapper, java.awt.BorderLayout.SOUTH);
+
+        tabbedPane.addTab("  Mượn Sách  ", borrowPanel);
+
+        // --- Return Tab ---
+        returnPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
+        returnPanel.setBackground(new java.awt.Color(248, 250, 252));
+        returnPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        returnPanel.add(createReturnContentPanel(), java.awt.BorderLayout.CENTER);
+        returnPanel.add(createReturnBottomPanel(), java.awt.BorderLayout.SOUTH);
+
+        tabbedPane.addTab("  Trả Sách  ", returnPanel);
+        tabbedPane.addChangeListener(e -> {
+            if (tabbedPane.getSelectedIndex() == 1) {
+                loadBorrowedBooks();
+            }
+        });
+
+        add(tabbedPane, java.awt.BorderLayout.CENTER);
+    }
+
+    // --- Helpers for UI Construction ---
+
+    private javax.swing.JPanel createHeaderPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setBackground(new java.awt.Color(255, 255, 255));
+        p.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)),
+                javax.swing.BorderFactory.createEmptyBorder(20, 30, 20, 30)));
+
+        titleLabel = new javax.swing.JLabel("Mượn / Trả Sách");
+        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 24));
+        titleLabel.setForeground(new java.awt.Color(30, 41, 59));
+
+        memberInfoLabel = new javax.swing.JLabel("Đang tải thông tin...");
+        memberInfoLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        memberInfoLabel.setForeground(new java.awt.Color(59, 130, 246)); // Blue 500
+        memberInfoLabel.setBackground(new java.awt.Color(239, 246, 255));
+        memberInfoLabel.setOpaque(true);
+        memberInfoLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 15, 8, 15));
+
+        p.add(titleLabel, java.awt.BorderLayout.WEST);
+        p.add(memberInfoLabel, java.awt.BorderLayout.EAST);
+        return p;
+    }
+
+    private javax.swing.JPanel createBorrowInputPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.GridBagLayout());
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 20, 15, 20));
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(5, 5, 5, 15);
+        gbc.weighty = 0.0;
+
+        // Card ID
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.0;
+        p.add(createLabel("Mã thẻ:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.2;
+        cardIdField = createStyledTextField();
+        cardIdField.setText(currentCardId);
+        cardIdField.setEditable(false);
+        p.add(cardIdField, gbc);
+
+        // Book ID
+        gbc.gridx = 2;
+        gbc.weightx = 0.0;
+        p.add(createLabel("Mã sách:"), gbc);
+
+        gbc.gridx = 3;
+        gbc.weightx = 0.2;
+        bookIdField = createStyledTextField();
+        p.add(bookIdField, gbc);
+
+        // Search Button
+        gbc.gridx = 4;
+        gbc.weightx = 0.0;
+        gbc.insets = new java.awt.Insets(5, 0, 5, 15);
+        searchButton = createModernButton("Tìm kiếm", java.awt.Color.WHITE, new java.awt.Color(59, 130, 246));
+        searchButton.setPreferredSize(new java.awt.Dimension(100, 36));
+        searchButton.setToolTipText("Tìm sách");
+        searchButton.addActionListener(e -> searchBook());
+        p.add(searchButton, gbc);
+
+        // Days
+        gbc.gridx = 5;
+        gbc.weightx = 0.0;
+        p.add(createLabel("Số ngày:"), gbc);
+
+        gbc.gridx = 6;
+        gbc.weightx = 0.1;
+        daysSpinner = new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(14, 1, 60, 1));
+        daysSpinner.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        daysSpinner.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        p.add(daysSpinner, gbc);
+
+        // Add Button
+        gbc.gridx = 7;
+        gbc.weightx = 0.0;
+        gbc.insets = new java.awt.Insets(5, 20, 5, 0);
+        addToCartButton = createModernButton("Thêm vào giỏ", java.awt.Color.WHITE, new java.awt.Color(59, 130, 246));
+        addToCartButton.addActionListener(e -> addToCart());
+        p.add(addToCartButton, gbc);
+
+        return p;
+    }
+
+    private javax.swing.JPanel createAvailableBooksPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(0, 10));
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        javax.swing.JLabel header = new javax.swing.JLabel("Kho sách");
+        header.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        header.setForeground(new java.awt.Color(30, 41, 59));
+        p.add(header, java.awt.BorderLayout.NORTH);
+
+        String[] bookColumns = { "Mã sách", "Tên sách", "Tác giả", "Giá", "SL có sẵn" };
+        booksTable = createStyledTable(new Object[][] {}, bookColumns);
+        booksTable.getSelectionModel().addListSelectionListener(e -> {
+            int row = booksTable.getSelectedRow();
+            if (row >= 0) {
+                bookIdField.setText(booksTable.getValueAt(row, 0).toString());
+            }
+        });
+        availableBooksTable = new javax.swing.JScrollPane(booksTable);
+        availableBooksTable.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(241, 245, 249)));
+        availableBooksTable.getVerticalScrollBar().setUI(new ModernScrollBarUI());
+        p.add(availableBooksTable, java.awt.BorderLayout.CENTER);
+
+        return p;
+    }
+
+    private javax.swing.JPanel createCartPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(0, 10));
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        javax.swing.JPanel header = new javax.swing.JPanel(new java.awt.BorderLayout());
+        header.setOpaque(false);
+        javax.swing.JLabel title = new javax.swing.JLabel("Giỏ mượn");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        title.setForeground(new java.awt.Color(30, 41, 59));
+
+        cartTotalLabel = new javax.swing.JLabel("Tổng: 0 đ");
+        cartTotalLabel.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        cartTotalLabel.setForeground(new java.awt.Color(22, 163, 74)); // Green 600
+
+        header.add(title, java.awt.BorderLayout.WEST);
+        header.add(cartTotalLabel, java.awt.BorderLayout.EAST);
+        p.add(header, java.awt.BorderLayout.NORTH);
+
+        String[] cartColumns = { "Mã sách", "Tên sách", "Số ngày", "Tiền cọc", "Phí thuê", "Tổng" };
+        cartTable = createStyledTable(new Object[][] {}, cartColumns);
+
+        borrowCartTable = new javax.swing.JScrollPane(cartTable);
+        borrowCartTable.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(241, 245, 249)));
+        borrowCartTable.getVerticalScrollBar().setUI(new ModernScrollBarUI());
+        p.add(borrowCartTable, java.awt.BorderLayout.CENTER);
+
+        // Cart Buttons
+        javax.swing.JPanel btnPanel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 0));
+        btnPanel.setOpaque(false);
+
+        removeFromCartButton = createModernButton("Xóa", java.awt.Color.WHITE, new java.awt.Color(239, 68, 68)); // Red
+                                                                                                                 // 500
+        removeFromCartButton.setPreferredSize(new java.awt.Dimension(80, 32));
+        removeFromCartButton.addActionListener(e -> removeFromCart());
+
+        clearCartButton = createModernButton("Xóa hết", new java.awt.Color(71, 85, 105),
+                new java.awt.Color(226, 232, 240)); // Slate 200
+        clearCartButton.setPreferredSize(new java.awt.Dimension(90, 32));
+        clearCartButton.addActionListener(e -> clearCart());
+
+        btnPanel.add(removeFromCartButton);
+        btnPanel.add(clearCartButton);
+        p.add(btnPanel, java.awt.BorderLayout.SOUTH);
+
+        return p;
+    }
+
+    private javax.swing.JPanel createReturnContentPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(0, 10));
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // Header with Select All
+        javax.swing.JPanel header = new javax.swing.JPanel(new java.awt.BorderLayout());
+        header.setOpaque(false);
+
+        javax.swing.JLabel title = new javax.swing.JLabel("Sách đang mượn");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        title.setForeground(new java.awt.Color(30, 41, 59));
+
+        javax.swing.JButton selectAllBtn = createModernButton("Chọn tất cả", java.awt.Color.WHITE,
+                new java.awt.Color(59, 130, 246));
+        selectAllBtn.setPreferredSize(new java.awt.Dimension(120, 30));
+        selectAllBtn.addActionListener(e -> {
+            boolean allSelected = true;
+            for (int i = 0; i < borrowedTable.getRowCount(); i++) {
+                if (!(Boolean) borrowedTable.getValueAt(i, 0)) {
+                    allSelected = false;
+                    break;
+                }
+            }
+            for (int i = 0; i < borrowedTable.getRowCount(); i++) {
+                borrowedTable.setValueAt(!allSelected, i, 0);
+            }
+        });
+
+        header.add(title, java.awt.BorderLayout.WEST);
+        header.add(selectAllBtn, java.awt.BorderLayout.EAST);
+        p.add(header, java.awt.BorderLayout.NORTH);
+
+        // Table
+        String[] returnColumns = { "Chọn", "ID", "Mã sách", "Tên sách", "Ngày mượn", "Hạn trả", "Số ngày", "Phí thuê",
+                "Trạng thái", "Tiền cọc", "Phí phạt" };
+        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(new Object[][] {},
+                returnColumns) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return columnIndex == 0 ? Boolean.class : Object.class;
+            }
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 0;
+            }
+        };
+
+        borrowedTable = createStyledTable(new Object[][] {}, returnColumns); // Will be replaced by model
+        borrowedTable.setModel(model);
+        borrowedTable.getModel().addTableModelListener(e -> updateReturnInfo());
+        borrowedTable.getColumnModel().getColumn(0).setMaxWidth(50);
+
+        borrowedBooksTable = new javax.swing.JScrollPane(borrowedTable);
+        borrowedBooksTable.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(241, 245, 249)));
+        borrowedBooksTable.getVerticalScrollBar().setUI(new ModernScrollBarUI());
+        p.add(borrowedBooksTable, java.awt.BorderLayout.CENTER);
+
+        return p;
+    }
+
+    private javax.swing.JPanel createReturnBottomPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(0, 15));
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 20, 15, 20));
+
+        returnInfoLabel = new javax.swing.JLabel("Chọn sách để trả");
+        returnInfoLabel.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        returnInfoLabel.setForeground(new java.awt.Color(100, 116, 139));
+        returnInfoLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        p.add(returnInfoLabel, java.awt.BorderLayout.NORTH);
+
+        javax.swing.JPanel btnPanel = new javax.swing.JPanel(
+                new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 20, 0));
+        btnPanel.setOpaque(false);
+
+        returnButton = createModernButton("Trả sách đã chọn", java.awt.Color.WHITE, new java.awt.Color(22, 163, 74));
+        returnButton.setPreferredSize(new java.awt.Dimension(200, 45));
+        returnButton.addActionListener(e -> returnBook());
+
+        lostBookButton = createModernButton("Báo mất sách", java.awt.Color.WHITE, new java.awt.Color(220, 38, 38));
+        lostBookButton.setPreferredSize(new java.awt.Dimension(180, 45));
+        lostBookButton.addActionListener(e -> reportLostBook());
+
+        refreshButton = createModernButton("Làm mới", new java.awt.Color(71, 85, 105),
+                new java.awt.Color(241, 245, 249));
+        refreshButton.setPreferredSize(new java.awt.Dimension(150, 45));
+        refreshButton.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(203, 213, 225)));
+        refreshButton.addActionListener(e -> refreshBorrowedList());
+
+        btnPanel.add(returnButton);
+        btnPanel.add(lostBookButton);
+        btnPanel.add(refreshButton);
+        p.add(btnPanel, java.awt.BorderLayout.CENTER);
+
+        return p;
+    }
+
+    // --- Common Widgets ---
+
+    private javax.swing.JPanel createPanelWithShadow() {
+        javax.swing.JPanel p = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(java.awt.Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+                g2.setColor(new java.awt.Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
+        return p;
+    }
+
+    private javax.swing.JLabel createLabel(String text) {
+        javax.swing.JLabel l = new javax.swing.JLabel(text);
+        l.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        l.setForeground(new java.awt.Color(100, 116, 139));
+        return l;
+    }
+
+    private javax.swing.JTextField createStyledTextField() {
+        javax.swing.JTextField f = new javax.swing.JTextField();
+        f.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        f.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        f.setBackground(new java.awt.Color(248, 250, 252));
+        return f;
+    }
+
+    private javax.swing.JButton createModernButton(String text, java.awt.Color fg, java.awt.Color bg) {
+        javax.swing.JButton b = new javax.swing.JButton(text);
+        b.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        b.setForeground(fg);
+        b.setBackground(bg);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        return b;
+    }
+
+    private javax.swing.JButton createIconButton(String text, java.awt.Color bg) {
+        javax.swing.JButton b = new javax.swing.JButton(text);
+        b.setFont(new java.awt.Font("Segoe UI Symbol", 0, 16));
+        b.setForeground(java.awt.Color.WHITE);
+        b.setBackground(bg);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setPreferredSize(new java.awt.Dimension(40, 36));
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        return b;
+    }
+
+    private javax.swing.JTable createStyledTable(Object[][] data, String[] columns) {
+        javax.swing.JTable t = new javax.swing.JTable(new javax.swing.table.DefaultTableModel(data, columns));
+        t.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        t.setRowHeight(35);
+        t.setSelectionBackground(new java.awt.Color(239, 246, 255));
+        t.setSelectionForeground(new java.awt.Color(15, 23, 42));
+        t.setShowVerticalLines(false);
+        t.setShowHorizontalLines(true);
+        t.setGridColor(new java.awt.Color(241, 245, 249));
+        t.getTableHeader().setFont(new java.awt.Font("Segoe UI", 1, 14));
+        t.getTableHeader().setBackground(new java.awt.Color(248, 250, 252));
+        t.getTableHeader().setForeground(new java.awt.Color(100, 116, 139));
+        t.getTableHeader()
+                .setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)));
+        return t;
+    }
+
+    // Modern ScrollBar
+    private static class ModernScrollBarUI extends javax.swing.plaf.basic.BasicScrollBarUI {
+        @Override
+        protected void configureScrollBarColors() {
+            this.thumbColor = new java.awt.Color(203, 213, 225);
+            this.trackColor = new java.awt.Color(248, 250, 252);
+        }
+
+        @Override
+        protected javax.swing.JButton createDecreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        @Override
+        protected javax.swing.JButton createIncreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        private javax.swing.JButton createZeroButton() {
+            javax.swing.JButton b = new javax.swing.JButton();
+            b.setPreferredSize(new java.awt.Dimension(0, 0));
+            return b;
+        }
+
+        @Override
+        protected void paintThumb(java.awt.Graphics g, javax.swing.JComponent c, java.awt.Rectangle r) {
+            if (r.isEmpty() || !scrollbar.isEnabled())
+                return;
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(thumbColor);
+            g2.fillRoundRect(r.x + 2, r.y + 2, r.width - 4, r.height - 4, 8, 8);
+            g2.dispose();
+        }
+
+        @Override
+        protected void paintTrack(java.awt.Graphics g, javax.swing.JComponent c, java.awt.Rectangle r) {
+            g.setColor(trackColor);
+            g.fillRect(r.x, r.y, r.width, r.height);
+        }
+    }
+
+    // Modern TabbedPane UI
+    private static class ModernTabbedPaneUI extends javax.swing.plaf.basic.BasicTabbedPaneUI {
+        private final java.awt.Color selectedColor = new java.awt.Color(37, 99, 235); // Blue 600
+        private final java.awt.Color selectedBgColor = new java.awt.Color(239, 246, 255); // Blue 50
+        private final java.awt.Color unselectedColor = new java.awt.Color(100, 116, 139); // Slate 500
+        private final java.awt.Color unselectedBgColor = new java.awt.Color(255, 255, 255); // White
+
+        @Override
+        protected void installDefaults() {
+            super.installDefaults();
+            tabAreaInsets = new java.awt.Insets(0, 20, 0, 0);
+            contentBorderInsets = new java.awt.Insets(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void paintTabBorder(java.awt.Graphics g, int tabPlacement, int tabIndex, int x, int y, int w, int h,
+                boolean isSelected) {
+            // No border
+        }
+
+        @Override
+        protected void paintContentBorder(java.awt.Graphics g, int tabPlacement, int selectedIndex) {
+            g.setColor(selectedColor);
+            int tabAreaHeight = calculateTabAreaHeight(tabPlacement, runCount, maxTabHeight);
+            g.fillRect(0, tabAreaHeight - 2, tabPane.getWidth(), 2);
+        }
+
+        @Override
+        protected void paintFocusIndicator(java.awt.Graphics g, int tabPlacement, java.awt.Rectangle[] rects,
+                int tabIndex, java.awt.Rectangle iconRect, java.awt.Rectangle textRect, boolean isSelected) {
+            // No focus
+        }
+
+        @Override
+        protected void paintTabBackground(java.awt.Graphics g, int tabPlacement, int tabIndex, int x, int y, int w,
+                int h, boolean isSelected) {
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+            if (isSelected) {
+                g2.setColor(selectedBgColor);
+                g2.fillRect(x, y, w, h);
+                // Indicator
+                g2.setColor(selectedColor);
+                g2.fillRect(x, y + h - 2, w, 2);
+            } else {
+                g2.setColor(unselectedBgColor);
+                g2.fillRect(x, y, w, h);
+            }
+            g2.dispose();
+        }
+
+        @Override
+        protected void paintText(java.awt.Graphics g, int tabPlacement, java.awt.Font font,
+                java.awt.FontMetrics metrics, int tabIndex, String title, java.awt.Rectangle textRect,
+                boolean isSelected) {
+            g.setFont(isSelected ? font.deriveFont(java.awt.Font.BOLD) : font);
+            g.setColor(isSelected ? selectedColor : unselectedColor);
+            // Draw centered manually to control color easily
+            int textX = textRect.x + (textRect.width - metrics.stringWidth(title)) / 2;
+            int textY = textRect.y + metrics.getAscent();
+            g.drawString(title, textX, textY);
+        }
+
+        @Override
+        protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
+            return 50;
+        }
+
+        @Override
+        protected int calculateTabWidth(int tabPlacement, int tabIndex, java.awt.FontMetrics metrics) {
+            return super.calculateTabWidth(tabPlacement, tabIndex, metrics) + 30; // Standard width + padding
+        }
+    }
+
     // Variables declaration
     private javax.swing.JLabel titleLabel;
     private javax.swing.JLabel memberInfoLabel;
     private javax.swing.JTabbedPane tabbedPane;
     private javax.swing.JPanel borrowPanel;
-    private javax.swing.JLabel cardIdLabel;
     private javax.swing.JTextField cardIdField;
-    private javax.swing.JLabel bookIdLabel;
     private javax.swing.JTextField bookIdField;
-    private javax.swing.JLabel daysLabel;
     private javax.swing.JSpinner daysSpinner;
     private javax.swing.JButton addToCartButton;
     private javax.swing.JButton searchButton;

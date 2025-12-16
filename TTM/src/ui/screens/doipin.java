@@ -1,224 +1,251 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
+ */
 package ui.screens;
 
 import smartcard.CardConnectionManager;
 import smartcard.CardVerifyManager;
 import smartcard.CardSetupManager;
+import javax.swing.JButton;
+import javax.swing.JPasswordField;
 
 /**
- * Screen for changing user PIN
- * User enters old PIN and new PIN
- * Communicates with smart card to change PIN
+ * Modern Change PIN Screen
  */
 public class doipin extends javax.swing.JPanel {
 
     private CardConnectionManager connManager;
 
-    /**
-     * Creates new form ChangePinPanel
-     */
+    // UI Components
+    private JPasswordField oldPinField;
+    private JPasswordField newPinField;
+    private JPasswordField confirmPinField;
+    private javax.swing.JLabel statusLabel;
+    private javax.swing.JButton changeButton;
+
     public doipin() {
         initComponents();
     }
 
-    /**
-     * Initialize GUI components
-     */
-    @SuppressWarnings("unchecked")
     private void initComponents() {
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
+        setLayout(new java.awt.BorderLayout(0, 0));
 
-        titleLabel = new javax.swing.JLabel();
-        mainContainer = new javax.swing.JPanel();
-        
-        // Left panel - Hướng dẫn
-        instructionPanel = new javax.swing.JPanel();
-        instructionTitle = new javax.swing.JLabel();
-        instructionText = new javax.swing.JTextArea();
-        
-        // Right panel - Form đổi PIN
-        formPanel = new javax.swing.JPanel();
-        formTitle = new javax.swing.JLabel();
-        
-        // Old PIN
-        oldPinLabel = new javax.swing.JLabel();
-        oldPinField = new javax.swing.JPasswordField();
-        
-        // New PIN
-        newPinLabel = new javax.swing.JLabel();
-        newPinField = new javax.swing.JPasswordField();
-        
-        // Confirm PIN
-        confirmPinLabel = new javax.swing.JLabel();
-        confirmPinField = new javax.swing.JPasswordField();
-        
-        // Status label
-        statusLabel = new javax.swing.JLabel();
-        
-        // Buttons
-        changeButton = new javax.swing.JButton();
-        cancelButton = new javax.swing.JButton();
+        // 1. Header
+        add(createHeaderPanel(), java.awt.BorderLayout.NORTH);
 
-        setBackground(new java.awt.Color(245, 245, 250));
-        setLayout(new java.awt.BorderLayout(0, 20));
+        // 2. Content
+        javax.swing.JPanel contentPanel = new javax.swing.JPanel(new java.awt.GridBagLayout());
+        contentPanel.setOpaque(false);
+        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(40, 40, 40, 40));
 
-        // Title
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Đổi mã PIN");
-        titleLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 10, 40));
-        add(titleLabel, java.awt.BorderLayout.NORTH);
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
 
-        mainContainer.setLayout(new java.awt.BorderLayout(25, 0));
-        mainContainer.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 50, 40, 50));
-        mainContainer.setBackground(new java.awt.Color(245, 245, 250));
+        // LEFT: Form (50%)
+        gbc.gridx = 0;
+        gbc.weightx = 0.5;
+        gbc.insets = new java.awt.Insets(0, 0, 0, 20);
+        contentPanel.add(createFormPanel(), gbc);
 
-        // ============ LEFT PANEL - INSTRUCTION ============
-        instructionPanel.setBackground(new java.awt.Color(255, 255, 255));
-        instructionPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-        javax.swing.BorderFactory.createTitledBorder(null, "Hướng dẫn",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-        instructionPanel.setLayout(new java.awt.BorderLayout());
-        instructionPanel.setPreferredSize(new java.awt.Dimension(380, 0));
+        // RIGHT: Security Info (50%)
+        gbc.gridx = 1;
+        gbc.weightx = 0.5;
+        gbc.insets = new java.awt.Insets(0, 20, 0, 0);
+        contentPanel.add(createSecurityPanel(), gbc);
 
-        instructionTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
-        instructionTitle.setForeground(new java.awt.Color(0, 120, 215));
-        instructionTitle.setText("Cách thay đổi mã PIN");
-        instructionPanel.add(instructionTitle, java.awt.BorderLayout.NORTH);
-
-        instructionText.setEditable(false);
-        instructionText.setLineWrap(true);
-        instructionText.setWrapStyleWord(true);
-        instructionText.setText("1. Hãy nhập mã PIN cũ của bạn\n\n" +
-                                "2. Nhập mã PIN mới (6 ký tự)\n\n" +
-                                "3. Xác nhận lại mã PIN mới\n\n" +
-                                "4. Nhấn nút 'Đổi PIN'\n\n" +
-                                "Lưu ý:\n" +
-                                "- Mã PIN phải có đúng 6 ký tự\n" +
-                                "- Mã PIN mới phải khác mã PIN cũ\n" +
-                                "- Hãy bảo quản mã PIN của bạn");
-        instructionText.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        instructionText.setForeground(new java.awt.Color(100, 100, 100));
-        instructionText.setBorder(null);
-        instructionText.setBackground(new java.awt.Color(255, 255, 255));
-        instructionPanel.add(instructionText, java.awt.BorderLayout.CENTER);
-
-        mainContainer.add(instructionPanel, java.awt.BorderLayout.WEST);
-
-        // ============ RIGHT PANEL - FORM ============
-        formPanel.setBackground(new java.awt.Color(255, 255, 255));
-        formPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-        javax.swing.BorderFactory.createTitledBorder(null, "Form đổi PIN",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-        formPanel.setLayout(new java.awt.BorderLayout(0, 20));
-
-        formTitle.setFont(new java.awt.Font("Segoe UI", 1, 18));
-        formTitle.setForeground(new java.awt.Color(0, 120, 215));
-        formTitle.setText("Nhập thông tin");
-
-        // Create form fields layout
-        javax.swing.JPanel formFieldsPanel = new javax.swing.JPanel();
-        javax.swing.GroupLayout formLayout = new javax.swing.GroupLayout(formFieldsPanel);
-        formFieldsPanel.setLayout(formLayout);
-        formFieldsPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        oldPinLabel.setText("Mã PIN cũ:");
-        oldPinLabel.setFont(new java.awt.Font("Segoe UI", 0, 13));
-
-        oldPinField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-
-        newPinLabel.setText("Mã PIN mới:");
-        newPinLabel.setFont(new java.awt.Font("Segoe UI", 0, 13));
-
-        newPinField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-
-        confirmPinLabel.setText("Xác nhận PIN mới:");
-        confirmPinLabel.setFont(new java.awt.Font("Segoe UI", 0, 13));
-
-        confirmPinField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-
-        statusLabel.setText(" ");
-        statusLabel.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        statusLabel.setForeground(new java.awt.Color(220, 53, 69));
-
-        formLayout.setHorizontalGroup(
-            formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(formLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(oldPinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(newPinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(confirmPinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(oldPinField)
-                    .addComponent(newPinField)
-                    .addComponent(confirmPinField)
-                    .addComponent(statusLabel))
-                .addContainerGap())
-        );
-
-        formLayout.setVerticalGroup(
-            formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(formLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(oldPinLabel)
-                    .addComponent(oldPinField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(newPinLabel)
-                    .addComponent(newPinField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(formLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(confirmPinLabel)
-                    .addComponent(confirmPinField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(20, 20, 20)
-                .addComponent(statusLabel)
-                .addContainerGap())
-        );
-
-        formPanel.add(formTitle, java.awt.BorderLayout.NORTH);
-        formPanel.add(formFieldsPanel, java.awt.BorderLayout.CENTER);
-
-        // Buttons panel
-        javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
-        buttonPanel.setBackground(new java.awt.Color(255, 255, 255));
-        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 15, 0));
-
-        changeButton.setText("Đổi PIN");
-        changeButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        changeButton.setBackground(new java.awt.Color(0, 120, 215));
-        changeButton.setForeground(java.awt.Color.WHITE);
-        changeButton.setBorderPainted(false);
-        changeButton.setFocusPainted(false);
-        changeButton.setPreferredSize(new java.awt.Dimension(120, 40));
-        changeButton.addActionListener(this::changeButtonActionPerformed);
-        buttonPanel.add(changeButton);
-
-        cancelButton.setText("Xóa");
-        cancelButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        cancelButton.setBackground(new java.awt.Color(108, 117, 125));
-        cancelButton.setForeground(java.awt.Color.WHITE);
-        cancelButton.setBorderPainted(false);
-        cancelButton.setFocusPainted(false);
-        cancelButton.setPreferredSize(new java.awt.Dimension(120, 40));
-        cancelButton.addActionListener(this::cancelButtonActionPerformed);
-        buttonPanel.add(cancelButton);
-
-        formPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
-
-        mainContainer.add(formPanel, java.awt.BorderLayout.CENTER);
-        add(mainContainer, java.awt.BorderLayout.CENTER);
+        add(contentPanel, java.awt.BorderLayout.CENTER);
     }
 
-    /**
-     * Change PIN button action
-     */
+    // --- UI Creators ---
+
+    private javax.swing.JPanel createHeaderPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setBackground(java.awt.Color.WHITE);
+        p.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)));
+        p.setPreferredSize(new java.awt.Dimension(0, 80));
+
+        javax.swing.JLabel title = new javax.swing.JLabel("Đổi Mã PIN");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 28));
+        title.setForeground(new java.awt.Color(15, 23, 42));
+        title.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 30, 0, 0));
+
+        p.add(title, java.awt.BorderLayout.WEST);
+        return p;
+    }
+
+    private javax.swing.JPanel createFormPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.GridBagLayout());
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 30, 40));
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        gbc.gridx = 0;
+
+        // Title
+        javax.swing.JLabel title = new javax.swing.JLabel("Thiết lập mã PIN mới");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        title.setForeground(new java.awt.Color(30, 41, 59));
+        gbc.insets = new java.awt.Insets(0, 0, 30, 0);
+        p.add(title, gbc);
+
+        // Old PIN
+        addFormField(p, gbc, 1, "Mã PIN hiện tại", oldPinField = createStyledPasswordField());
+
+        // New PIN
+        addFormField(p, gbc, 3, "Mã PIN mới (6 số)", newPinField = createStyledPasswordField());
+
+        // Confirm PIN
+        addFormField(p, gbc, 5, "Xác nhận mã PIN mới", confirmPinField = createStyledPasswordField());
+
+        // Status
+        gbc.gridy = 7;
+        gbc.insets = new java.awt.Insets(10, 0, 10, 0);
+        statusLabel = new javax.swing.JLabel(" ");
+        statusLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        statusLabel.setForeground(new java.awt.Color(220, 38, 38)); // Red
+        p.add(statusLabel, gbc);
+
+        // Button
+        gbc.gridy = 8;
+        gbc.insets = new java.awt.Insets(20, 0, 0, 0);
+        changeButton = createModernButton("Cập nhật mã PIN", new java.awt.Color(37, 99, 235));
+        changeButton.addActionListener(this::changeButtonActionPerformed);
+        p.add(changeButton, gbc);
+
+        // Spacer to push up
+        gbc.gridy = 9;
+        gbc.weighty = 1.0;
+        p.add(new javax.swing.JLabel(), gbc);
+
+        return p;
+    }
+
+    private void addFormField(javax.swing.JPanel p, java.awt.GridBagConstraints gbc, int row, String label,
+            javax.swing.JComponent field) {
+        gbc.gridy = row;
+        gbc.insets = new java.awt.Insets(0, 0, 8, 0);
+        javax.swing.JLabel l = new javax.swing.JLabel(label);
+        l.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        l.setForeground(new java.awt.Color(100, 116, 139));
+        p.add(l, gbc);
+
+        gbc.gridy = row + 1;
+        gbc.insets = new java.awt.Insets(0, 0, 20, 0);
+        p.add(field, gbc);
+    }
+
+    private javax.swing.JPanel createSecurityPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout(0, 20));
+        p.setOpaque(false);
+
+        // Visual Card
+        javax.swing.JPanel securityCard = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Gradient (Green to Emerald)
+                java.awt.GradientPaint gp = new java.awt.GradientPaint(
+                        0, 0, new java.awt.Color(16, 185, 129),
+                        getWidth(), getHeight(), new java.awt.Color(5, 150, 105));
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+
+                // Draw Lock Icon (Simple shapes)
+                g2.setColor(new java.awt.Color(255, 255, 255, 220));
+                // Body
+                g2.fillRoundRect(getWidth() / 2 - 40, getHeight() / 2 - 20, 80, 70, 10, 10);
+                // Shackle
+                g2.setStroke(new java.awt.BasicStroke(8));
+                g2.drawArc(getWidth() / 2 - 25, getHeight() / 2 - 60, 50, 60, 0, 180);
+
+                // Keyhole
+                g2.setColor(new java.awt.Color(5, 150, 105));
+                g2.fillOval(getWidth() / 2 - 8, getHeight() / 2 + 10, 16, 16);
+
+                g2.dispose();
+            }
+        };
+        securityCard.setPreferredSize(new java.awt.Dimension(0, 200));
+        securityCard.setOpaque(false);
+        p.add(securityCard, java.awt.BorderLayout.NORTH);
+
+        // Tips Panel
+        javax.swing.JPanel tipsPanel = createPanelWithShadow();
+        tipsPanel.setLayout(new java.awt.BorderLayout());
+        tipsPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25));
+
+        String html = "<html><body style='width: 300px'>" +
+                "<h3 style='color: #1e293b; font-family: Segoe UI'>Lưu ý bảo mật</h3>" +
+                "<ul style='color: #64748b; font-family: Segoe UI; font-size: 13px; line-height: 1.5; padding-left: 15px'>"
+                +
+                "<li>Không sử dụng mã PIN dễ đoán (như 123456, 000000).</li>" +
+                "<li>Mã PIN mới phải khác với mã PIN hiện tại của bạn.</li>" +
+                "<li>Không chia sẻ mã PIN cho bất kỳ ai, kể cả nhân viên thư viện.</li>" +
+                "<li>Đổi mã PIN thường xuyên để tăng cường bảo mật.</li>" +
+                "</ul></body></html>";
+
+        javax.swing.JLabel tips = new javax.swing.JLabel(html);
+        tipsPanel.add(tips, java.awt.BorderLayout.CENTER);
+
+        p.add(tipsPanel, java.awt.BorderLayout.CENTER);
+
+        return p;
+    }
+
+    // --- Helpers ---
+
+    private javax.swing.JPanel createPanelWithShadow() {
+        javax.swing.JPanel p = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(java.awt.Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2.setColor(new java.awt.Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
+        return p;
+    }
+
+    private JPasswordField createStyledPasswordField() {
+        JPasswordField f = new JPasswordField();
+        f.setFont(new java.awt.Font("Segoe UI", 1, 18));
+        f.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)),
+                javax.swing.BorderFactory.createEmptyBorder(10, 15, 10, 15)));
+        f.setBackground(new java.awt.Color(248, 250, 252));
+        f.setPreferredSize(new java.awt.Dimension(0, 50));
+        return f;
+    }
+
+    private javax.swing.JButton createModernButton(String text, java.awt.Color bg) {
+        javax.swing.JButton b = new javax.swing.JButton(text);
+        b.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        b.setForeground(java.awt.Color.WHITE);
+        b.setBackground(bg);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        b.setPreferredSize(new java.awt.Dimension(0, 50));
+        return b;
+    }
+
+    // --- Business Logic (Preserved) ---
+
     private void changeButtonActionPerformed(java.awt.event.ActionEvent evt) {
         String oldPin = new String(oldPinField.getPassword());
         String newPin = new String(newPinField.getPassword());
@@ -266,7 +293,7 @@ public class doipin extends javax.swing.JPanel {
 
                 // Get card setup manager
                 CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
-                // Lấy public key (giống các luồng khác, nhưng dùng cho changePin PLAINTEXT)
+                // Lấy public key
                 if (!setupManager.getPublicKey()) {
                     throw new Exception("Failed to get card public key");
                 }
@@ -278,50 +305,50 @@ public class doipin extends javax.swing.JPanel {
                 // Step 1: Verify old PIN first
                 CardVerifyManager verifyManager = new CardVerifyManager(connManager.getChannel());
                 boolean verified = verifyManager.verifyPin(oldPin);
-                
+
                 if (!verified) {
-                    throw new Exception("Old PIN verification failed");
+                    throw new Exception("Mã PIN cũ không chính xác!");
                 }
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     setStatus("Đang thay đổi mã PIN...", true);
                 });
 
-                // Step 2: Gửi lệnh đổi PIN dạng PLAINTEXT thông qua CardSetupManager
+                // Step 2: Gửi lệnh đổi PIN
                 setupManager.changePin(oldPin, newPin);
-                
+
                 System.out.println("PIN change command sent. Reconnecting to verify...");
-                
+
                 // Step 3: Disconnect and reconnect to verify PIN change
                 connManager.disconnectCard();
-                
+
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     setStatus("Đang xác thực PIN mới...", true);
                 });
-                
+
                 Thread.sleep(500); // Wait a bit for card to settle
-                
+
                 // Reconnect and verify new PIN
                 connManager = new CardConnectionManager();
                 connManager.connectCard();
-                
+
                 CardVerifyManager newVerifyManager = new CardVerifyManager(connManager.getChannel());
                 boolean newPinVerified = newVerifyManager.verifyPin(newPin);
-                
+
                 if (!newPinVerified) {
-                    throw new Exception("New PIN verification failed - change may not have been applied");
+                    throw new Exception("Xác thực mã PIN mới thất bại!");
                 }
-                
+
                 System.out.println("New PIN verified successfully!");
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     setStatus("Thay đổi mã PIN thành công!", true);
-                    
+
                     // Clear fields
                     oldPinField.setText("");
                     newPinField.setText("");
                     confirmPinField.setText("");
-                    
+
                     // Re-enable button after 2 seconds
                     javax.swing.Timer timer = new javax.swing.Timer(2000, e -> changeButton.setEnabled(true));
                     timer.setRepeats(false);
@@ -333,9 +360,9 @@ public class doipin extends javax.swing.JPanel {
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     String errorMsg = ex.getMessage();
                     if ("CARD_BLOCKED".equals(errorMsg)) {
-                        setStatus("Thẻ đã bị khóa!", false);
+                        setStatus("Thẻ đã bị khóa do nhập sai PIN nhiều lần!", false);
                     } else {
-                        setStatus("Loi: " + (errorMsg != null ? errorMsg : ex.getClass().getSimpleName()), false);
+                        setStatus("Lỗi: " + (errorMsg != null ? errorMsg : "Không thể thay đổi PIN"), false);
                     }
                     changeButton.setEnabled(true);
                 });
@@ -352,40 +379,8 @@ public class doipin extends javax.swing.JPanel {
         }).start();
     }
 
-    /**
-     * Cancel button action
-     */
-    private void cancelButtonActionPerformed(java.awt.event.ActionEvent evt) {
-        oldPinField.setText("");
-        newPinField.setText("");
-        confirmPinField.setText("");
-        statusLabel.setText(" ");
-        oldPinField.requestFocus();
-    }
-
-    /**
-     * Set status message
-     */
     private void setStatus(String message, boolean isSuccess) {
-        statusLabel.setForeground(isSuccess ? new java.awt.Color(40, 167, 69) : new java.awt.Color(220, 53, 69));
+        statusLabel.setForeground(isSuccess ? new java.awt.Color(22, 163, 74) : new java.awt.Color(220, 38, 38));
         statusLabel.setText(message);
     }
-
-    // Variables declaration
-    private javax.swing.JLabel titleLabel;
-    private javax.swing.JPanel mainContainer;
-    private javax.swing.JPanel instructionPanel;
-    private javax.swing.JLabel instructionTitle;
-    private javax.swing.JTextArea instructionText;
-    private javax.swing.JPanel formPanel;
-    private javax.swing.JLabel formTitle;
-    private javax.swing.JLabel oldPinLabel;
-    private javax.swing.JPasswordField oldPinField;
-    private javax.swing.JLabel newPinLabel;
-    private javax.swing.JPasswordField newPinField;
-    private javax.swing.JLabel confirmPinLabel;
-    private javax.swing.JPasswordField confirmPinField;
-    private javax.swing.JLabel statusLabel;
-    private javax.swing.JButton changeButton;
-    private javax.swing.JButton cancelButton;
 }

@@ -9,444 +9,74 @@ import services.CardService;
 import smartcard.CardConnectionManager;
 import smartcard.CardBalanceManager;
 import java.text.NumberFormat;
-import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
-import javax.smartcardio.CardChannel;
+import javax.swing.JButton;
 
 /**
- *
- * @author admin
+ * Premium Deposit Panel
  */
 public class naptien extends javax.swing.JPanel {
-    
+
+    // Services
     private TransactionService transactionService;
     private CardService cardService;
     private String currentCardId = "CARD001";
 
-    /**
-     * Creates new form TopUpPanel
-     */
+    // UI Components
+    private javax.swing.JLabel balanceLabel; // On the virtual card
+    private javax.swing.JLabel cardIdLabel; // On the virtual card
+    private javax.swing.JTextField amountField;
+    private javax.swing.JComboBox<String> paymentMethodCombo;
+    private javax.swing.JButton confirmButton;
+
     public naptien() {
         transactionService = new TransactionService();
         cardService = new CardService();
         initComponents();
         loadCardInfo();
     }
-    
-    /**
-     * Set CardID từ thẻ đăng nhập
-     */
+
     public void setCurrentCardId(String cardId) {
         if (cardId != null && !cardId.isEmpty()) {
             this.currentCardId = cardId;
             loadCardInfo();
         }
     }
-    
 
-    /**
-     * Khởi tạo các component của giao diện
-     * Code này được viết thủ công
-     */
-    @SuppressWarnings("unchecked")
-    private void initComponents() {
-
-        titleLabel = new javax.swing.JLabel();
-        
-        // Main container
-        mainContainer = new javax.swing.JPanel();
-        
-        // Left panel - Thông tin tài khoản
-        accountInfoPanel = new javax.swing.JPanel();
-        accountInfoTitle = new javax.swing.JLabel();
-        currentBalanceLabel = new javax.swing.JLabel();
-        currentBalanceField = new javax.swing.JTextField();
-        accountIdLabel = new javax.swing.JLabel();
-        accountIdField = new javax.swing.JTextField();
-        accountNameLabel = new javax.swing.JLabel();
-        accountNameField = new javax.swing.JTextField();
-        
-        // Right panel - Nạp tiền
-        topUpPanel = new javax.swing.JPanel();
-        topUpTitle = new javax.swing.JLabel();
-        
-        // Quick amount buttons
-        quickAmountPanel = new javax.swing.JPanel();
-        quickAmountLabel = new javax.swing.JLabel();
-        
-        // Payment method panel
-        paymentMethodPanel = new javax.swing.JPanel();
-        paymentMethodLabel = new javax.swing.JLabel();
-        paymentMethodCombo = new javax.swing.JComboBox<>();
-        
-        // Amount input
-        amountInputPanel = new javax.swing.JPanel();
-        amountLabel = new javax.swing.JLabel();
-        amountField = new javax.swing.JTextField();
-        
-        // Note input
-        notePanel = new javax.swing.JPanel();
-        noteLabel = new javax.swing.JLabel();
-        noteField = new javax.swing.JTextField();
-        
-        // Buttons
-        confirmButton = new javax.swing.JButton();
-        cancelButton = new javax.swing.JButton();
-
-        setBackground(new java.awt.Color(245, 245, 250));
-        setLayout(new java.awt.BorderLayout(0, 20));
-
-        // Title
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Nạp tiền vào tài khoản");
-        titleLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 10, 40));
-        add(titleLabel, java.awt.BorderLayout.NORTH);
-
-        mainContainer.setLayout(new java.awt.BorderLayout(25, 0));
-        mainContainer.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 50, 40, 50));
-        mainContainer.setBackground(new java.awt.Color(245, 245, 250));
-
-        // ============ LEFT PANEL - THÔNG TIN TÀI KHOẢN ============
-        accountInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
-        accountInfoPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Thông tin tài khoản",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-        accountInfoPanel.setLayout(new java.awt.BorderLayout(0, 20));
-        accountInfoPanel.setPreferredSize(new java.awt.Dimension(380, 0));
-        accountInfoPanel.setMinimumSize(new java.awt.Dimension(320, 0));
-        accountInfoPanel.setMaximumSize(new java.awt.Dimension(450, Integer.MAX_VALUE));
-
-        accountInfoTitle.setFont(new java.awt.Font("Segoe UI", 1, 18));
-        accountInfoTitle.setForeground(new java.awt.Color(0, 120, 215));
-        accountInfoTitle.setText("Tài khoản hiện tại");
-
-        javax.swing.JPanel infoFormPanel = new javax.swing.JPanel();
-        javax.swing.GroupLayout infoLayout = new javax.swing.GroupLayout(infoFormPanel);
-        infoFormPanel.setLayout(infoLayout);
-        infoFormPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        infoLayout.setHorizontalGroup(
-            infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(infoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(currentBalanceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(accountIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(accountNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(currentBalanceField)
-                    .addComponent(accountIdField)
-                    .addComponent(accountNameField))
-                .addContainerGap())
-        );
-
-        infoLayout.setVerticalGroup(
-            infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(infoLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(currentBalanceLabel)
-                    .addComponent(currentBalanceField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(accountIdLabel)
-                    .addComponent(accountIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(infoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(accountNameLabel)
-                    .addComponent(accountNameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
-        );
-
-        // Labels
-        currentBalanceLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        currentBalanceLabel.setText("Số dư hiện tại:");
-        accountIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        accountIdLabel.setText("Mã thẻ:");
-        accountNameLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        accountNameLabel.setText("Tên tài khoản:");
-
-        // Fields
-        currentBalanceField.setFont(new java.awt.Font("Segoe UI", 1, 20));
-        currentBalanceField.setText("500,000 đ");
-        currentBalanceField.setEditable(false);
-        currentBalanceField.setForeground(new java.awt.Color(0, 120, 215));
-        currentBalanceField.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
-        accountIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        accountIdField.setText(currentCardId);
-        accountIdField.setEditable(false);
-        accountNameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        accountNameField.setText("Nguyễn Văn A");
-        accountNameField.setEditable(false);
-
-        accountInfoPanel.add(accountInfoTitle, java.awt.BorderLayout.NORTH);
-        accountInfoPanel.add(infoFormPanel, java.awt.BorderLayout.CENTER);
-
-        // ============ RIGHT PANEL - NẠP TIỀN ============
-        topUpPanel.setBackground(new java.awt.Color(255, 255, 255));
-        topUpPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Nạp tiền",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20)));
-        topUpPanel.setLayout(new java.awt.BorderLayout(0, 20));
-
-        topUpTitle.setFont(new java.awt.Font("Segoe UI", 1, 18));
-        topUpTitle.setForeground(new java.awt.Color(0, 120, 215));
-        topUpTitle.setText("Chọn số tiền nạp");
-
-        // Quick amount buttons
-        quickAmountPanel.setLayout(new java.awt.BorderLayout(0, 10));
-        quickAmountPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        quickAmountLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        quickAmountLabel.setText("Số tiền nhanh:");
-        quickAmountLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 10, 0));
-
-        javax.swing.JPanel buttonsPanel = new javax.swing.JPanel();
-        buttonsPanel.setLayout(new java.awt.GridLayout(2, 3, 12, 12));
-        buttonsPanel.setBackground(new java.awt.Color(255, 255, 255));
-        buttonsPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-        javax.swing.JButton[] quickButtons = {
-            createQuickAmountButton("100,000 đ", 100000),
-            createQuickAmountButton("200,000 đ", 200000),
-            createQuickAmountButton("500,000 đ", 500000),
-            createQuickAmountButton("1,000,000 đ", 1000000),
-            createQuickAmountButton("2,000,000 đ", 2000000),
-            createQuickAmountButton("5,000,000 đ", 5000000)
-        };
-
-        for (javax.swing.JButton btn : quickButtons) {
-            buttonsPanel.add(btn);
-        }
-
-        quickAmountPanel.add(quickAmountLabel, java.awt.BorderLayout.NORTH);
-        quickAmountPanel.add(buttonsPanel, java.awt.BorderLayout.CENTER);
-
-        // Payment method
-        paymentMethodPanel.setLayout(new java.awt.BorderLayout(15, 0));
-        paymentMethodPanel.setBackground(new java.awt.Color(255, 255, 255));
-        paymentMethodPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-        paymentMethodLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        paymentMethodLabel.setText("Phương thức thanh toán:");
-        paymentMethodLabel.setPreferredSize(new java.awt.Dimension(180, 30));
-        paymentMethodCombo.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        paymentMethodCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{
-            "Thẻ ngân hàng", "Ví điện tử", "Chuyển khoản", "Tiền mặt"
-        }));
-        paymentMethodCombo.setPreferredSize(new java.awt.Dimension(200, 35));
-        paymentMethodCombo.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(5, 10, 5, 10)));
-
-        paymentMethodPanel.add(paymentMethodLabel, java.awt.BorderLayout.WEST);
-        paymentMethodPanel.add(paymentMethodCombo, java.awt.BorderLayout.CENTER);
-
-        // Amount input
-        amountInputPanel.setLayout(new java.awt.BorderLayout(15, 0));
-        amountInputPanel.setBackground(new java.awt.Color(255, 255, 255));
-        amountInputPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-        amountLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        amountLabel.setText("Số tiền nạp:");
-        amountLabel.setPreferredSize(new java.awt.Dimension(180, 30));
-        amountField.setFont(new java.awt.Font("Segoe UI", 1, 16));
-        amountField.setColumns(15);
-        amountField.setPreferredSize(new java.awt.Dimension(250, 40));
-        amountField.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
-        amountField.setText("0");
-        amountField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        
-        javax.swing.JLabel vndLabel = new javax.swing.JLabel("VNĐ");
-        vndLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        vndLabel.setPreferredSize(new java.awt.Dimension(50, 40));
-
-        amountInputPanel.add(amountLabel, java.awt.BorderLayout.WEST);
-        amountInputPanel.add(amountField, java.awt.BorderLayout.CENTER);
-        amountInputPanel.add(vndLabel, java.awt.BorderLayout.EAST);
-
-        // Note
-        notePanel.setLayout(new java.awt.BorderLayout(15, 10));
-        notePanel.setBackground(new java.awt.Color(255, 255, 255));
-        notePanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-        noteLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        noteLabel.setText("Ghi chú:");
-        noteLabel.setPreferredSize(new java.awt.Dimension(180, 30));
-        noteField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        noteField.setColumns(25);
-        noteField.setPreferredSize(new java.awt.Dimension(300, 80));
-        noteField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-
-        notePanel.add(noteLabel, java.awt.BorderLayout.NORTH);
-        notePanel.add(noteField, java.awt.BorderLayout.CENTER);
-
-        // Buttons
-        javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
-        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 0));
-        buttonPanel.setBackground(new java.awt.Color(255, 255, 255));
-        buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 0, 10, 0));
-
-        cancelButton.setBackground(new java.awt.Color(150, 150, 150));
-        cancelButton.setForeground(new java.awt.Color(255, 255, 255));
-        cancelButton.setText("Hủy");
-        cancelButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        cancelButton.setFocusPainted(false);
-        cancelButton.setPreferredSize(new java.awt.Dimension(130, 45));
-        cancelButton.setMinimumSize(new java.awt.Dimension(120, 45));
-        cancelButton.setMaximumSize(new java.awt.Dimension(150, 45));
-        cancelButton.setBorderPainted(false);
-        cancelButton.addActionListener(e -> cancelTopUp());
-        cancelButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                cancelButton.setBackground(new java.awt.Color(170, 170, 170));
-            }
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                cancelButton.setBackground(new java.awt.Color(150, 150, 150));
-            }
-        });
-
-        confirmButton.setBackground(new java.awt.Color(0, 120, 215));
-        confirmButton.setForeground(new java.awt.Color(255, 255, 255));
-        confirmButton.setText("💳 Xác nhận nạp tiền");
-        confirmButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        confirmButton.setFocusPainted(false);
-        confirmButton.setPreferredSize(new java.awt.Dimension(220, 45));
-        confirmButton.setMinimumSize(new java.awt.Dimension(200, 45));
-        confirmButton.setMaximumSize(new java.awt.Dimension(250, 45));
-        confirmButton.setBorderPainted(false);
-        confirmButton.addActionListener(e -> confirmTopUp());
-        confirmButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                confirmButton.setBackground(new java.awt.Color(0, 100, 180));
-            }
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                confirmButton.setBackground(new java.awt.Color(0, 120, 215));
-            }
-        });
-
-        buttonPanel.add(cancelButton);
-        buttonPanel.add(confirmButton);
-
-        // Main content panel with all input fields
-        javax.swing.JPanel contentPanel = new javax.swing.JPanel();
-        contentPanel.setLayout(new javax.swing.BoxLayout(contentPanel, javax.swing.BoxLayout.Y_AXIS));
-        contentPanel.setBackground(new java.awt.Color(255, 255, 255));
-        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        
-        // Add panels in order
-        contentPanel.add(quickAmountPanel);
-        contentPanel.add(javax.swing.Box.createVerticalStrut(15));
-        contentPanel.add(paymentMethodPanel);
-        contentPanel.add(javax.swing.Box.createVerticalStrut(15));
-        contentPanel.add(amountInputPanel);
-        contentPanel.add(javax.swing.Box.createVerticalStrut(15));
-        contentPanel.add(notePanel);
-        contentPanel.add(javax.swing.Box.createVerticalGlue());
-
-        topUpPanel.add(topUpTitle, java.awt.BorderLayout.NORTH);
-        topUpPanel.add(contentPanel, java.awt.BorderLayout.CENTER);
-        topUpPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
-
-        mainContainer.add(accountInfoPanel, java.awt.BorderLayout.WEST);
-        mainContainer.add(topUpPanel, java.awt.BorderLayout.CENTER);
-
-        add(mainContainer, java.awt.BorderLayout.CENTER);
-    }
-
-    private javax.swing.JButton createQuickAmountButton(String text, int amount) {
-        javax.swing.JButton button = new javax.swing.JButton(text);
-        button.setBackground(new java.awt.Color(245, 245, 250));
-        button.setForeground(new java.awt.Color(60, 60, 60));
-        button.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        button.setFocusPainted(false);
-        button.setPreferredSize(new java.awt.Dimension(150, 45));
-        button.setMinimumSize(new java.awt.Dimension(120, 45));
-        button.setMaximumSize(new java.awt.Dimension(180, 45));
-        button.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 220, 220), 1),
-            javax.swing.BorderFactory.createEmptyBorder(10, 5, 10, 5)));
-        button.addActionListener(e -> {
-            amountField.setText(String.format("%,d", amount));
-        });
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(new java.awt.Color(0, 120, 215));
-                button.setForeground(new java.awt.Color(255, 255, 255));
-            }
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(new java.awt.Color(245, 245, 250));
-                button.setForeground(new java.awt.Color(60, 60, 60));
-            }
-        });
-        return button;
+    public void reloadCardInfo() {
+        loadCardInfo();
     }
 
     private void loadCardInfo() {
-        // CardService.Card card = cardService.getCardById(currentCardId);
-        // if (card != null) {
-        //     accountIdField.setText(card.cardId);
-        //     accountNameField.setText(card.fullName);
-        //     
-        //     // Ưu tiên lấy số dư từ thẻ
-        //     int cardBalance = getBalanceFromCard();
-        //     if (cardBalance >= 0) {
-        //         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        //         currentBalanceField.setText(nf.format(cardBalance) + " đ");
-        //     } else {
-        //         // Fallback: tính từ database
-        //         List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
-        //         double balance = 0;
-        //         for (TransactionService.Transaction t : transactions) {
-        //             if (t.type.equals("Deposit")) {
-        //                 balance += t.amount;
-        //             } else if (t.type.equals("Payment")) {
-        //                 balance += t.amount;
-        //             }
-        //         }
-        //         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        //         currentBalanceField.setText(nf.format(balance) + " đ");
-        //     }
-        // }
-        // Only use smart card for info
-        accountIdField.setText(currentCardId);
-        accountNameField.setText(""); // Không lấy tên từ DB nữa
+        if (cardIdLabel != null)
+            cardIdLabel.setText(formatCardId(currentCardId));
+
+        // Only use smart card for balance
         int cardBalance = getBalanceFromCard();
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         if (cardBalance >= 0) {
-            currentBalanceField.setText(nf.format(cardBalance) + " đ");
+            String text = nf.format(cardBalance) + " VNĐ";
+            if (balanceLabel != null)
+                balanceLabel.setText(text);
         } else {
-            currentBalanceField.setText("Không xác định");
+            if (balanceLabel != null)
+                balanceLabel.setText("----");
         }
     }
-    
+
+    private String formatCardId(String id) {
+        // Format like credit card: CARD 001 -> CARD 001
+        return id != null ? id.toUpperCase() : "----";
+    }
+
     /**
-     * Lấy số dư từ thẻ smart card
+     * Get Balance from Smart Card
      */
     private int getBalanceFromCard() {
         try {
             CardConnectionManager manager = new CardConnectionManager();
             if (manager.connectCard()) {
-                CardChannel channel = manager.getChannel();
+                javax.smartcardio.CardChannel channel = manager.getChannel();
                 if (channel != null) {
                     CardBalanceManager balanceManager = new CardBalanceManager(channel);
                     CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -457,132 +87,372 @@ public class naptien extends javax.swing.JPanel {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[NAPTIEN] Không thể lấy số dư từ thẻ: " + e.getMessage());
+            System.err.println("[NAPTIEN] Warning: Cannot read card balance: " + e.getMessage());
         }
         return -1;
     }
-    
-    /**
-     * Reload card info (public method for external refresh)
-     */
-    public void reloadCardInfo() {
-        loadCardInfo();
+
+    private void initComponents() {
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
+        setLayout(new java.awt.BorderLayout(0, 0));
+
+        // 1. Header
+        add(createHeaderPanel(), java.awt.BorderLayout.NORTH);
+
+        // 2. Content
+        javax.swing.JPanel contentPanel = new javax.swing.JPanel(new java.awt.GridBagLayout());
+        contentPanel.setOpaque(false);
+        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 40, 40, 40)); // More padding
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // LEFT: Quick Selection Grid (60%)
+        gbc.gridx = 0;
+        gbc.weightx = 0.6;
+        gbc.insets = new java.awt.Insets(0, 0, 0, 30);
+        contentPanel.add(createQuickSelectPanel(), gbc);
+
+        // RIGHT: Virtual Card + Form (40%)
+        gbc.gridx = 1;
+        gbc.weightx = 0.4;
+        gbc.insets = new java.awt.Insets(0, 0, 0, 0);
+        contentPanel.add(createRightPanel(), gbc);
+
+        add(contentPanel, java.awt.BorderLayout.CENTER);
     }
-    
+
+    // --- UI Creators ---
+
+    private javax.swing.JPanel createHeaderPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setBackground(java.awt.Color.WHITE);
+        p.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)));
+        p.setPreferredSize(new java.awt.Dimension(0, 80));
+
+        javax.swing.JLabel title = new javax.swing.JLabel("Nạp Tiền");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 28));
+        title.setForeground(new java.awt.Color(15, 23, 42));
+        title.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 30, 0, 0));
+
+        p.add(title, java.awt.BorderLayout.WEST);
+        return p;
+    }
+
+    private javax.swing.JPanel createQuickSelectPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout(0, 20));
+        p.setOpaque(false);
+
+        javax.swing.JLabel lbl = new javax.swing.JLabel("Chọn mệnh giá nạp");
+        lbl.setFont(new java.awt.Font("Segoe UI", 1, 18));
+        lbl.setForeground(new java.awt.Color(51, 65, 85));
+        p.add(lbl, java.awt.BorderLayout.NORTH);
+
+        // Grid: 2 columns, 3 rows, big gaps
+        javax.swing.JPanel grid = new javax.swing.JPanel(new java.awt.GridLayout(3, 2, 20, 20));
+        grid.setOpaque(false);
+
+        grid.add(createDenominationCard("10.000", new java.awt.Color(20, 184, 166), 10000)); // Teal
+        grid.add(createDenominationCard("20.000", new java.awt.Color(6, 182, 212), 20000)); // Cyan
+        grid.add(createDenominationCard("50.000", new java.awt.Color(59, 130, 246), 50000)); // Blue
+        grid.add(createDenominationCard("100.000", new java.awt.Color(99, 102, 241), 100000)); // Indigo
+        grid.add(createDenominationCard("200.000", new java.awt.Color(139, 92, 246), 200000)); // Violet
+        grid.add(createDenominationCard("500.000", new java.awt.Color(236, 72, 153), 500000)); // Pink
+
+        p.add(grid, java.awt.BorderLayout.CENTER);
+        return p;
+    }
+
+    private javax.swing.JButton createDenominationCard(String displayValue, java.awt.Color color, int amount) {
+        javax.swing.JButton b = new javax.swing.JButton() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Background
+                if (getModel().isRollover()) {
+                    g2.setColor(color);
+                } else {
+                    g2.setColor(java.awt.Color.WHITE);
+                }
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+
+                // Border
+                if (!getModel().isRollover()) {
+                    g2.setColor(new java.awt.Color(226, 232, 240));
+                    g2.setStroke(new java.awt.BasicStroke(2));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
+
+                    // Color bar at bottom
+                    g2.setColor(color);
+                    g2.fillRoundRect(0, getHeight() - 10, getWidth(), 10, 20, 20);
+                    g2.fillRect(0, getHeight() - 10, getWidth(), 5); // square off top of bottom bar
+                }
+
+                // Text
+                g2.setFont(new java.awt.Font("Segoe UI", 1, 24));
+                if (getModel().isRollover()) {
+                    g2.setColor(java.awt.Color.WHITE);
+                } else {
+                    g2.setColor(new java.awt.Color(30, 41, 59));
+                }
+                java.awt.FontMetrics fm = g2.getFontMetrics();
+                String text = displayValue;
+                int x = (getWidth() - fm.stringWidth(text)) / 2;
+                int y = (getHeight() + fm.getAscent()) / 2 - 5;
+                g2.drawString(text, x, y);
+
+                g2.dispose();
+            }
+        };
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setContentAreaFilled(false);
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        b.addActionListener(e -> {
+            amountField.setText(String.valueOf(amount));
+        });
+
+        return b;
+    }
+
+    private javax.swing.JPanel createRightPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel();
+        p.setLayout(new javax.swing.BoxLayout(p, javax.swing.BoxLayout.Y_AXIS));
+        p.setOpaque(false);
+
+        // 1. Virtual Card
+        p.add(createVirtualCard());
+        p.add(javax.swing.Box.createVerticalStrut(25));
+
+        // 2. Input Form
+        p.add(createProcessPanel());
+
+        return p;
+    }
+
+    private javax.swing.JPanel createVirtualCard() {
+        javax.swing.JPanel card = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Gradient Background (Deep Blue to Purple)
+                java.awt.GradientPaint gp = new java.awt.GradientPaint(
+                        0, 0, new java.awt.Color(30, 58, 138), // Blue 900
+                        getWidth(), getHeight(), new java.awt.Color(79, 70, 229) // Indigo 600
+                );
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
+
+                // Chip (Fake visual)
+                g2.setColor(new java.awt.Color(253, 224, 71)); // Yellow
+                g2.fillRoundRect(30, 60, 50, 40, 8, 8);
+
+                g2.dispose();
+            }
+        };
+        card.setLayout(null); // Absolute layout for card look
+        card.setPreferredSize(new java.awt.Dimension(340, 200));
+        card.setMinimumSize(new java.awt.Dimension(340, 200));
+        card.setMaximumSize(new java.awt.Dimension(340, 200));
+
+        // Label: Library Card
+        javax.swing.JLabel lblTitle = new javax.swing.JLabel("THẺ NHÀ SÁCH");
+        lblTitle.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        lblTitle.setForeground(new java.awt.Color(255, 255, 255, 180));
+        lblTitle.setBounds(30, 25, 200, 20);
+        card.add(lblTitle);
+
+        // Card ID
+        cardIdLabel = new javax.swing.JLabel(formatCardId(currentCardId));
+        cardIdLabel.setFont(new java.awt.Font("Monospaced", 1, 18));
+        cardIdLabel.setForeground(java.awt.Color.WHITE);
+        cardIdLabel.setBounds(30, 110, 300, 30);
+        card.add(cardIdLabel);
+
+        // Balance Title
+        javax.swing.JLabel lblBal = new javax.swing.JLabel("Số dư");
+        lblBal.setFont(new java.awt.Font("Segoe UI", 0, 12));
+        lblBal.setForeground(new java.awt.Color(255, 255, 255, 180));
+        lblBal.setBounds(30, 145, 100, 20);
+        card.add(lblBal);
+
+        // Balance Value
+        balanceLabel = new javax.swing.JLabel("Checking...");
+        balanceLabel.setFont(new java.awt.Font("Segoe UI", 1, 22));
+        balanceLabel.setForeground(java.awt.Color.WHITE);
+        balanceLabel.setBounds(30, 160, 280, 30);
+        card.add(balanceLabel);
+
+        return card;
+    }
+
+    private javax.swing.JPanel createProcessPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.GridBagLayout());
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(5, 0, 5, 0);
+
+        // Title
+        javax.swing.JLabel title = new javax.swing.JLabel("Thực hiện nạp tiền");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        title.setForeground(new java.awt.Color(15, 23, 42));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.insets = new java.awt.Insets(0, 0, 15, 0);
+        p.add(title, gbc);
+
+        // Amount Field
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        gbc.insets = new java.awt.Insets(0, 0, 5, 0);
+        javax.swing.JLabel lblAm = new javax.swing.JLabel("Số tiền (VNĐ)");
+        lblAm.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        lblAm.setForeground(new java.awt.Color(100, 116, 139));
+        p.add(lblAm, gbc);
+
+        gbc.gridy = 2;
+        amountField = new javax.swing.JTextField("0");
+        amountField.setFont(new java.awt.Font("Segoe UI", 1, 24));
+        amountField.setForeground(new java.awt.Color(15, 23, 42));
+        amountField.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+        amountField
+                .setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 2, 0, new java.awt.Color(226, 232, 240)));
+        amountField.setBackground(java.awt.Color.WHITE);
+        p.add(amountField, gbc);
+
+        // Payment Method
+        gbc.gridy = 3;
+        gbc.insets = new java.awt.Insets(15, 0, 5, 0);
+        javax.swing.JLabel lblMethod = new javax.swing.JLabel("Phương thức");
+        lblMethod.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        lblMethod.setForeground(new java.awt.Color(100, 116, 139));
+        p.add(lblMethod, gbc);
+
+        gbc.gridy = 4;
+        gbc.insets = new java.awt.Insets(0, 0, 0, 0);
+        paymentMethodCombo = new javax.swing.JComboBox<>(
+                new String[] { "Tiền mặt", "Chuyển khoản Ngân hàng", "Momo / ZaloPay" });
+        paymentMethodCombo.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        paymentMethodCombo.setBackground(java.awt.Color.WHITE);
+        paymentMethodCombo.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        p.add(paymentMethodCombo, gbc);
+
+        // Confirm Button
+        gbc.gridy = 5;
+        gbc.insets = new java.awt.Insets(25, 0, 0, 0);
+        confirmButton = new javax.swing.JButton("XÁC NHẬN NẠP");
+        confirmButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        confirmButton.setForeground(java.awt.Color.WHITE);
+        confirmButton.setBackground(new java.awt.Color(0, 0, 0)); // Black button for premium feel
+        confirmButton.setFocusPainted(false);
+        confirmButton.setBorderPainted(false);
+        confirmButton.setPreferredSize(new java.awt.Dimension(0, 45));
+        confirmButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        confirmButton.addActionListener(e -> confirmTopUp());
+        p.add(confirmButton, gbc);
+
+        return p;
+    }
+
+    // --- Helpers ---
+    private javax.swing.JPanel createPanelWithShadow() {
+        javax.swing.JPanel p = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(java.awt.Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2.setColor(new java.awt.Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
+        return p;
+    }
+
+    // --- Business Logic ---
     private void confirmTopUp() {
-        String amountText = amountField.getText().replace(",", "").trim();
+        String amountText = amountField.getText().replace(",", "").replace(".", "").trim();
         if (amountText.isEmpty() || amountText.equals("0")) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng nhập số tiền cần nạp!", "Thông báo", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Vui lòng nhập số tiền cần nạp!", "Thông báo",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {
             long amount = Long.parseLong(amountText);
             if (amount < 10000) {
-                javax.swing.JOptionPane.showMessageDialog(this, "Số tiền nạp tối thiểu là 10,000 VNĐ!", "Thông báo", 
-                    javax.swing.JOptionPane.WARNING_MESSAGE);
+                javax.swing.JOptionPane.showMessageDialog(this, "Số tiền nạp tối thiểu là 10,000 VNĐ!", "Thông báo",
+                        javax.swing.JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            // Kiểm tra giới hạn (max ~2 tỷ vì dùng int trên thẻ)
             if (amount > Integer.MAX_VALUE) {
-                javax.swing.JOptionPane.showMessageDialog(this, "Số tiền nạp vượt quá giới hạn!", "Thông báo", 
-                    javax.swing.JOptionPane.WARNING_MESSAGE);
+                javax.swing.JOptionPane.showMessageDialog(this, "Số tiền nạp vượt quá giới hạn!", "Thông báo",
+                        javax.swing.JOptionPane.WARNING_MESSAGE);
                 return;
             }
+
             String paymentMethod = (String) paymentMethodCombo.getSelectedItem();
-            int option = javax.swing.JOptionPane.showConfirmDialog(this, 
-                "Xác nhận nạp " + String.format("%,d", amount) + " VNĐ\nPhương thức: " + paymentMethod + "\n\nBạn có muốn tiếp tục?",
-                "Xác nhận nạp tiền",
-                javax.swing.JOptionPane.YES_NO_OPTION);
+            int option = javax.swing.JOptionPane.showConfirmDialog(this,
+                    "Xác nhận nạp " + String.format("%,d", amount) + " VNĐ\nPhương thức: " + paymentMethod
+                            + "\n\nBạn có muốn tiếp tục?",
+                    "Xác nhận nạp tiền",
+                    javax.swing.JOptionPane.YES_NO_OPTION);
+
             if (option == javax.swing.JOptionPane.YES_OPTION) {
-                // 1. Nạp tiền vào thẻ smart card
                 boolean cardSuccess = depositToCard((int) amount);
                 if (!cardSuccess) {
-                    javax.swing.JOptionPane.showMessageDialog(this, 
-                        "Không thể nạp tiền vào thẻ!\nVui lòng kiểm tra kết nối thẻ.", 
-                        "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
+                    javax.swing.JOptionPane.showMessageDialog(this,
+                            "Không thể nạp tiền vào thẻ!\nVui lòng kiểm tra kết nối thẻ.", "Lỗi",
+                            javax.swing.JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                // 2. Không lưu transaction vào database nữa
-                // String transId = UUID.randomUUID().toString();
-                // if (transactionService.createTransaction(transId, currentCardId, "Deposit", amount, 0)) {
-                javax.swing.JOptionPane.showMessageDialog(this, 
-                    "Nạp tiền thành công!\nSố tiền: " + String.format("%,d", amount) + " VNĐ", 
-                    "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+
+                String transId = java.util.UUID.randomUUID().toString();
+                transactionService.createTransaction(transId, currentCardId, "Deposit", amount, 0);
+
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Nạp tiền thành công!\nSố tiền: " + String.format("%,d", amount) + " VNĐ", "Thông báo",
+                        javax.swing.JOptionPane.INFORMATION_MESSAGE);
                 amountField.setText("0");
-                noteField.setText("");
-                loadCardInfo(); // Refresh balance từ thẻ
-                // } else {
-                //     // Nếu lưu DB thất bại nhưng đã nạp vào thẻ rồi
-                //     javax.swing.JOptionPane.showMessageDialog(this, 
-                //         "Đã nạp tiền vào thẻ nhưng lưu giao dịch thất bại!\nVui lòng liên hệ admin.", 
-                //         "Cảnh báo", javax.swing.JOptionPane.WARNING_MESSAGE);
-                //     loadCardInfo();
-                // }
+                loadCardInfo();
             }
         } catch (NumberFormatException e) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+            javax.swing.JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
         }
     }
-    
-    /**
-     * Nạp tiền vào thẻ smart card
-     */
+
     private boolean depositToCard(int amount) {
         try {
             CardConnectionManager manager = new CardConnectionManager();
-            if (!manager.connectCard()) {
-                System.err.println("[NAPTIEN] Không có kết nối thẻ!");
+            if (!manager.connectCard())
                 return false;
-            }
-            CardChannel channel = manager.getChannel();
+
+            javax.smartcardio.CardChannel channel = manager.getChannel();
             CardBalanceManager balanceManager = new CardBalanceManager(channel);
             boolean success = balanceManager.deposit(amount);
             manager.disconnectCard();
-            if (success) {
-                System.out.println("[NAPTIEN] Đã nạp " + amount + " VNĐ vào thẻ thành công!");
-            }
+            if (success)
+                System.out.println("[NAPTIEN] Deposited: " + amount);
             return success;
         } catch (Exception e) {
-            System.err.println("[NAPTIEN] Lỗi nạp tiền vào thẻ: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
-
-    private void cancelTopUp() {
-        amountField.setText("0");
-        noteField.setText("");
-        javax.swing.JOptionPane.showMessageDialog(this, "Đã hủy nạp tiền!", "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    // Variables declaration
-    private javax.swing.JLabel titleLabel;
-    private javax.swing.JPanel mainContainer;
-    private javax.swing.JPanel accountInfoPanel;
-    private javax.swing.JLabel accountInfoTitle;
-    private javax.swing.JLabel currentBalanceLabel;
-    private javax.swing.JTextField currentBalanceField;
-    private javax.swing.JLabel accountIdLabel;
-    private javax.swing.JTextField accountIdField;
-    private javax.swing.JLabel accountNameLabel;
-    private javax.swing.JTextField accountNameField;
-    private javax.swing.JPanel topUpPanel;
-    private javax.swing.JLabel topUpTitle;
-    private javax.swing.JPanel quickAmountPanel;
-    private javax.swing.JLabel quickAmountLabel;
-    private javax.swing.JPanel paymentMethodPanel;
-    private javax.swing.JLabel paymentMethodLabel;
-    private javax.swing.JComboBox<String> paymentMethodCombo;
-    private javax.swing.JPanel amountInputPanel;
-    private javax.swing.JLabel amountLabel;
-    private javax.swing.JTextField amountField;
-    private javax.swing.JPanel notePanel;
-    private javax.swing.JLabel noteLabel;
-    private javax.swing.JTextField noteField;
-    private javax.swing.JButton confirmButton;
-    private javax.swing.JButton cancelButton;
 }
-

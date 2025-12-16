@@ -33,7 +33,6 @@ public class thongtincanhan extends javax.swing.JPanel {
     private String currentCardId = "CARD001";
     private boolean isEditing = false;
     private javax.swing.JLabel cardImageLabel;
-    private javax.swing.JPanel imagePanel;
 
     /**
      * Creates new form PersonalInfoPanel
@@ -285,510 +284,307 @@ public class thongtincanhan extends javax.swing.JPanel {
      * Khởi tạo các component của giao diện
      * Code này được viết thủ công
      */
+    /**
+     * Khởi tạo các component của giao diện
+     * Code này được viết thủ công
+     */
     private void initComponents() {
 
-        // Tạo các component (các thành phần giao diện)
-        titleLabel = new javax.swing.JLabel();
-
-        // Panel ảnh thẻ
-        imagePanel = new javax.swing.JPanel();
-        cardImageLabel = new javax.swing.JLabel();
-
-        // Thông tin cơ bản
-        cardIdLabel = new javax.swing.JLabel();
-        cardIdField = new javax.swing.JTextField();
-        nameLabel = new javax.swing.JLabel();
-        nameField = new javax.swing.JTextField();
-        phoneLabel = new javax.swing.JLabel();
-        phoneField = new javax.swing.JTextField();
-        addressLabel = new javax.swing.JLabel();
-        addressField = new javax.swing.JTextField();
-        dobLabel = new javax.swing.JLabel();
-        dobField = new javax.swing.JTextField();
-        registerDateLabel = new javax.swing.JLabel();
-        registerDateField = new javax.swing.JTextField();
-
-        // Thông tin hội viên
-        memberTypeLabel = new javax.swing.JLabel();
-        memberTypeField = new javax.swing.JTextField();
-        totalSpentLabel = new javax.swing.JLabel();
-        totalSpentField = new javax.swing.JTextField();
-        totalPointsLabel = new javax.swing.JLabel();
-        totalPointsField = new javax.swing.JTextField();
-        fineDebtLabel = new javax.swing.JLabel();
-        fineDebtField = new javax.swing.JTextField();
-        isBlockedLabel = new javax.swing.JLabel();
-        isBlockedField = new javax.swing.JTextField();
-        rankLabel = new javax.swing.JLabel();
-        rankField = new javax.swing.JTextField();
-
-        saveButton = new javax.swing.JButton();
-        basicInfoPanel = new javax.swing.JPanel();
-        memberInfoPanel = new javax.swing.JPanel();
-
-        setBackground(new java.awt.Color(245, 245, 250));
+        // Setup Main Container
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
         setLayout(new java.awt.BorderLayout(0, 0));
 
-        // Thiết lập title
-        javax.swing.JPanel titlePanel = new javax.swing.JPanel();
-        titlePanel.setBackground(new java.awt.Color(245, 245, 250));
-        titlePanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 20, 40));
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Thông tin thẻ");
-        titlePanel.add(titleLabel);
-        add(titlePanel, java.awt.BorderLayout.NORTH);
+        // Header Section - Compact
+        javax.swing.JPanel headerPanel = new javax.swing.JPanel();
+        headerPanel.setBackground(new java.awt.Color(248, 250, 252));
+        headerPanel.setLayout(new javax.swing.BoxLayout(headerPanel, javax.swing.BoxLayout.Y_AXIS));
+        headerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 30, 10, 30)); // Reduced padding
 
-        // Thiết lập các label (nhãn) - Thông tin cơ bản
-        cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        cardIdLabel.setForeground(new java.awt.Color(60, 60, 60));
-        cardIdLabel.setText("Mã thẻ:");
+        titleLabel = new javax.swing.JLabel("Hồ sơ cá nhân");
+        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 24)); // Slightly smaller font
+        titleLabel.setForeground(new java.awt.Color(15, 23, 42)); // Slate 900
+        titleLabel.setAlignmentX(javax.swing.JComponent.LEFT_ALIGNMENT);
 
-        nameLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        nameLabel.setForeground(new java.awt.Color(60, 60, 60));
-        nameLabel.setText("Họ và tên:");
+        javax.swing.JLabel subtitleLabel = new javax.swing.JLabel("Quản lý thông tin và tài khoản của bạn");
+        subtitleLabel.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        subtitleLabel.setForeground(new java.awt.Color(100, 116, 139)); // Slate 500
+        subtitleLabel.setAlignmentX(javax.swing.JComponent.LEFT_ALIGNMENT);
 
-        phoneLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        phoneLabel.setForeground(new java.awt.Color(60, 60, 60));
-        phoneLabel.setText("Số điện thoại:");
+        headerPanel.add(titleLabel);
+        headerPanel.add(javax.swing.Box.createVerticalStrut(3));
+        headerPanel.add(subtitleLabel);
+        add(headerPanel, java.awt.BorderLayout.NORTH);
 
-        addressLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        addressLabel.setForeground(new java.awt.Color(60, 60, 60));
-        addressLabel.setText("Địa chỉ:");
+        // Content Scroll Pane
+        javax.swing.JPanel contentPanel = new javax.swing.JPanel();
+        contentPanel.setBackground(new java.awt.Color(248, 250, 252));
+        contentPanel.setLayout(new java.awt.GridBagLayout());
 
-        dobLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        dobLabel.setForeground(new java.awt.Color(60, 60, 60));
-        dobLabel.setText("Ngày sinh:");
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(0, 15, 15, 15); // Reduced insets
+        gbc.fill = java.awt.GridBagConstraints.BOTH;
+        gbc.anchor = java.awt.GridBagConstraints.NORTHWEST;
 
-        registerDateLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        registerDateLabel.setForeground(new java.awt.Color(60, 60, 60));
-        registerDateLabel.setText("Ngày đăng ký:");
+        // --- Left Column: Profile Card ---
+        javax.swing.JPanel leftPanel = createPanelWithShadow();
+        leftPanel.setPreferredSize(new java.awt.Dimension(260, 420)); // More compact
+        leftPanel.setLayout(new java.awt.BorderLayout(0, 15));
+        leftPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Thông tin hội viên
-        memberTypeLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        memberTypeLabel.setForeground(new java.awt.Color(60, 60, 60));
-        memberTypeLabel.setText("Loại hội viên:");
-
-        totalSpentLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        totalSpentLabel.setForeground(new java.awt.Color(60, 60, 60));
-        totalSpentLabel.setText("Tổng tiền đã chi:");
-
-        totalPointsLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        totalPointsLabel.setForeground(new java.awt.Color(60, 60, 60));
-        totalPointsLabel.setText("Tổng điểm tích lũy:");
-
-        fineDebtLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        fineDebtLabel.setForeground(new java.awt.Color(60, 60, 60));
-        fineDebtLabel.setText("Tiền nợ phạt:");
-
-        isBlockedLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        isBlockedLabel.setForeground(new java.awt.Color(60, 60, 60));
-        isBlockedLabel.setText("Trạng thái thẻ:");
-
-        rankLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        rankLabel.setForeground(new java.awt.Color(60, 60, 60));
-        rankLabel.setText("Hạng thẻ:");
-
-        // Thiết lập các text field (ô nhập liệu) - Thông tin cơ bản
-        cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        cardIdField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        cardIdField.setColumns(30);
-        cardIdField.setEditable(false);
-        cardIdField.setFocusable(false);
-
-        nameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        nameField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        nameField.setColumns(30);
-        nameField.setEditable(false);
-        nameField.setFocusable(false);
-
-        phoneField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        phoneField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        phoneField.setColumns(30);
-        phoneField.setEditable(false);
-        phoneField.setFocusable(false);
-
-        addressField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        addressField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        addressField.setColumns(30);
-        addressField.setEditable(false);
-        addressField.setFocusable(false);
-
-        dobField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        dobField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        dobField.setColumns(30);
-        dobField.setEditable(false);
-        dobField.setFocusable(false);
-
-        registerDateField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        registerDateField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        registerDateField.setColumns(30);
-        registerDateField.setEditable(false);
-
-        // Thông tin hội viên
-        memberTypeField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        memberTypeField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        memberTypeField.setColumns(30);
-        memberTypeField.setEditable(false);
-
-        totalSpentField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        totalSpentField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        totalSpentField.setColumns(30);
-        totalSpentField.setEditable(false);
-
-        totalPointsField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        totalPointsField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        totalPointsField.setColumns(30);
-        totalPointsField.setEditable(false);
-
-        fineDebtField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        fineDebtField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        fineDebtField.setColumns(30);
-        fineDebtField.setEditable(false);
-
-        isBlockedField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        isBlockedField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        isBlockedField.setColumns(30);
-        isBlockedField.setEditable(false);
-
-        rankField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        rankField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)),
-                javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        rankField.setColumns(30);
-        rankField.setEditable(false);
-
-        // Thiết lập panel ảnh thẻ
-        imagePanel.setBackground(new java.awt.Color(255, 255, 255));
-        imagePanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createTitledBorder(
-                        null, "Ảnh thẻ",
-                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                        new java.awt.Font("Segoe UI", 1, 16),
-                        new java.awt.Color(60, 60, 60)),
-                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        imagePanel.setLayout(new java.awt.BorderLayout());
-        imagePanel.setPreferredSize(new java.awt.Dimension(250, 320));
-        imagePanel.setMaximumSize(new java.awt.Dimension(250, 320));
-
+        // Profile Image Area
+        cardImageLabel = new javax.swing.JLabel();
         cardImageLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        cardImageLabel.setVerticalAlignment(javax.swing.SwingConstants.CENTER);
-        cardImageLabel.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        cardImageLabel.setForeground(new java.awt.Color(128, 128, 128));
-        cardImageLabel.setText("<html><center>Đang tải<br>ảnh...</center></html>");
-        cardImageLabel.setPreferredSize(new java.awt.Dimension(200, 250));
-        cardImageLabel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200)));
+        cardImageLabel.setPreferredSize(new java.awt.Dimension(220, 260));
+        cardImageLabel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
         cardImageLabel.setOpaque(true);
-        cardImageLabel.setBackground(new java.awt.Color(245, 245, 250));
-        imagePanel.add(cardImageLabel, java.awt.BorderLayout.CENTER);
+        cardImageLabel.setBackground(new java.awt.Color(241, 245, 249));
+        cardImageLabel.setText(
+                "<html><div style='text-align: center; color: #94a3b8;'>Chưa có ảnh<br>(No Image)</div></html>");
 
-        // Nút upload ảnh
-        uploadImageButton = new javax.swing.JButton();
-        uploadImageButton.setBackground(new java.awt.Color(40, 167, 69));
-        uploadImageButton.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        uploadImageButton.setForeground(new java.awt.Color(255, 255, 255));
-        uploadImageButton.setText("📷 Đổi ảnh");
-        uploadImageButton.setBorderPainted(false);
-        uploadImageButton.setFocusPainted(false);
-        uploadImageButton.setPreferredSize(new java.awt.Dimension(120, 35));
+        // Upload Button
+        uploadImageButton = createModernButton("Đổi ảnh đại diện", new java.awt.Color(255, 255, 255),
+                new java.awt.Color(71, 85, 105));
+        uploadImageButton.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(203, 213, 225)));
+        uploadImageButton.setPreferredSize(new java.awt.Dimension(180, 35));
         uploadImageButton.addActionListener(this::uploadImageButtonActionPerformed);
-        uploadImageButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                uploadImageButton.setBackground(new java.awt.Color(33, 136, 56));
-            }
 
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                uploadImageButton.setBackground(new java.awt.Color(40, 167, 69));
-            }
-        });
+        javax.swing.JPanel imgContainer = new javax.swing.JPanel(new java.awt.BorderLayout(0, 10));
+        imgContainer.setOpaque(false);
+        imgContainer.add(cardImageLabel, java.awt.BorderLayout.CENTER);
+        imgContainer.add(uploadImageButton, java.awt.BorderLayout.SOUTH);
 
-        // Panel chứa nút upload ảnh
-        javax.swing.JPanel uploadButtonPanel = new javax.swing.JPanel();
-        uploadButtonPanel.setBackground(new java.awt.Color(255, 255, 255));
-        uploadButtonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 10));
-        uploadButtonPanel.add(uploadImageButton);
-        imagePanel.add(uploadButtonPanel, java.awt.BorderLayout.SOUTH);
+        leftPanel.add(imgContainer, java.awt.BorderLayout.NORTH);
 
-        // Thiết lập button
-        editButton = new javax.swing.JButton();
-        saveButton = new javax.swing.JButton();
+        // --- Right Column: Info Forms ---
+        javax.swing.JPanel rightPanel = new javax.swing.JPanel();
+        rightPanel.setOpaque(false);
+        rightPanel.setLayout(new javax.swing.BoxLayout(rightPanel, javax.swing.BoxLayout.Y_AXIS));
 
-        // Nút chỉnh sửa
-        editButton.setBackground(new java.awt.Color(108, 117, 125));
-        editButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        editButton.setForeground(new java.awt.Color(255, 255, 255));
-        editButton.setText("✏️ Chỉnh sửa");
-        editButton.setBorderPainted(false);
-        editButton.setFocusPainted(false);
-        editButton.setPreferredSize(new java.awt.Dimension(140, 40));
+        // 1. Basic Info Section
+        javax.swing.JPanel basicSection = createPanelWithShadow();
+        basicSection.setLayout(new java.awt.BorderLayout());
+        basicSection.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 25, 20, 25)); // Compact padding
+
+        javax.swing.JLabel basicTitle = new javax.swing.JLabel("Thông tin cơ bản");
+        basicTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        basicTitle.setForeground(new java.awt.Color(30, 41, 59));
+
+        // Compact Grid Layout (3 rows, 2 cols, reduced gap)
+        javax.swing.JPanel basicForm = new javax.swing.JPanel(new java.awt.GridLayout(3, 2, 15, 10));
+        basicForm.setOpaque(false);
+
+        cardIdField = createStyledTextField();
+        nameField = createStyledTextField();
+        phoneField = createStyledTextField();
+        addressField = createStyledTextField();
+        dobField = createStyledTextField();
+        registerDateField = createStyledTextField();
+
+        basicForm.add(createFormItem("Mã thẻ", cardIdField));
+        basicForm.add(createFormItem("Họ và tên", nameField));
+        basicForm.add(createFormItem("Số điện thoại", phoneField));
+        basicForm.add(createFormItem("Địa chỉ", addressField));
+        basicForm.add(createFormItem("Ngày sinh", dobField));
+        basicForm.add(createFormItem("Ngày đăng ký", registerDateField));
+
+        javax.swing.JPanel basicWrapper = new javax.swing.JPanel(new java.awt.BorderLayout());
+        basicWrapper.setOpaque(false);
+        basicWrapper.add(basicTitle, java.awt.BorderLayout.NORTH);
+        basicWrapper.add(javax.swing.Box.createVerticalStrut(15), java.awt.BorderLayout.CENTER);
+        basicWrapper.add(basicForm, java.awt.BorderLayout.SOUTH);
+        basicSection.add(basicWrapper);
+
+        // 2. Member Info Section
+        javax.swing.JPanel memberSection = createPanelWithShadow();
+        memberSection.setLayout(new java.awt.BorderLayout());
+        memberSection.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 25, 20, 25));
+
+        javax.swing.JLabel memberTitle = new javax.swing.JLabel("Thông tin hội viên");
+        memberTitle.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        memberTitle.setForeground(new java.awt.Color(30, 41, 59));
+
+        javax.swing.JPanel memberForm = new javax.swing.JPanel(new java.awt.GridLayout(3, 2, 15, 10));
+        memberForm.setOpaque(false);
+
+        memberTypeField = createStyledTextField();
+        totalSpentField = createStyledTextField();
+        totalPointsField = createStyledTextField();
+        fineDebtField = createStyledTextField();
+        isBlockedField = createStyledTextField();
+        rankField = createStyledTextField();
+
+        memberForm.add(createFormItem("Loại hội viên", memberTypeField));
+        memberForm.add(createFormItem("Hạng thẻ", rankField));
+        memberForm.add(createFormItem("Tổng chi tiêu", totalSpentField));
+        memberForm.add(createFormItem("Điểm tích lũy", totalPointsField));
+        memberForm.add(createFormItem("Nợ phạt", fineDebtField));
+        memberForm.add(createFormItem("Trạng thái", isBlockedField));
+
+        javax.swing.JPanel memberWrapper = new javax.swing.JPanel(new java.awt.BorderLayout());
+        memberWrapper.setOpaque(false);
+        memberWrapper.add(memberTitle, java.awt.BorderLayout.NORTH);
+        memberWrapper.add(javax.swing.Box.createVerticalStrut(15), java.awt.BorderLayout.CENTER);
+        memberWrapper.add(memberForm, java.awt.BorderLayout.SOUTH);
+        memberSection.add(memberWrapper);
+
+        rightPanel.add(basicSection);
+        rightPanel.add(javax.swing.Box.createVerticalStrut(15));
+        rightPanel.add(memberSection);
+
+        // Add to main GridBag
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.0;
+        gbc.weighty = 0.0; // Keep 0.0 to prevent vertical stretching
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL; // Fill horizontally but not vertically
+        gbc.anchor = java.awt.GridBagConstraints.NORTH; // Anchor to top
+        contentPanel.add(leftPanel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0; // Right panel can expand
+        gbc.fill = java.awt.GridBagConstraints.BOTH;
+        gbc.anchor = java.awt.GridBagConstraints.NORTHWEST;
+        contentPanel.add(rightPanel, gbc);
+
+        // ScrollPane Setup
+        javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(contentPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        // Custom Modern ScrollBar UI
+        scrollPane.getVerticalScrollBar().setUI(new ModernScrollBarUI());
+
+        add(scrollPane, java.awt.BorderLayout.CENTER);
+
+        // Bottom Action Bar
+        javax.swing.JPanel actionPanel = new javax.swing.JPanel(
+                new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 15));
+        actionPanel.setBackground(new java.awt.Color(248, 250, 252));
+        actionPanel
+                .setBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 0, 0, new java.awt.Color(226, 232, 240))); // Top
+                                                                                                                        // border
+                                                                                                                        // separator
+
+        editButton = createModernButton("Chỉnh sửa thông tin", new java.awt.Color(255, 255, 255),
+                new java.awt.Color(37, 99, 235));
+        editButton.setBackground(new java.awt.Color(37, 99, 235));
+        editButton.setForeground(java.awt.Color.WHITE);
         editButton.addActionListener(this::editButtonActionPerformed);
 
-        // Nút lưu
-        saveButton.setBackground(new java.awt.Color(0, 120, 215));
-        saveButton.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        saveButton.setForeground(new java.awt.Color(255, 255, 255));
-        saveButton.setText("💾 Lưu thông tin");
-        saveButton.setBorderPainted(false);
-        saveButton.setFocusPainted(false);
-        saveButton.setPreferredSize(new java.awt.Dimension(160, 40));
+        saveButton = createModernButton("Lưu thay đổi", new java.awt.Color(255, 255, 255),
+                new java.awt.Color(22, 163, 74));
+        saveButton.setBackground(new java.awt.Color(22, 163, 74));
+        saveButton.setForeground(java.awt.Color.WHITE);
         saveButton.setEnabled(false);
         saveButton.addActionListener(this::saveButtonActionPerformed);
-        saveButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (saveButton.isEnabled()) {
-                    saveButton.setBackground(new java.awt.Color(0, 100, 180));
-                }
+
+        actionPanel.add(editButton);
+        actionPanel.add(saveButton);
+
+        add(actionPanel, java.awt.BorderLayout.SOUTH);
+    }
+
+    // Helpers for styling
+    private javax.swing.JPanel createPanelWithShadow() {
+        javax.swing.JPanel p = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(java.awt.Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15); // Smaller radius
+                g2.setColor(new java.awt.Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+                g2.dispose();
             }
+        };
+        p.setOpaque(false);
+        return p;
+    }
 
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                saveButton.setBackground(new java.awt.Color(0, 120, 215));
-            }
-        });
+    private javax.swing.JPanel createFormItem(String label, javax.swing.JComponent field) {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout(0, 4)); // Reduced gap
+        p.setOpaque(false);
+        javax.swing.JLabel l = new javax.swing.JLabel(label);
+        l.setFont(new java.awt.Font("Segoe UI", 1, 12)); // Smaller font for label
+        l.setForeground(new java.awt.Color(100, 116, 139));
+        p.add(l, java.awt.BorderLayout.NORTH);
+        p.add(field, java.awt.BorderLayout.CENTER);
+        return p;
+    }
 
-        // Tạo panel chứa thông tin cơ bản
-        basicInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
-        basicInfoPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createTitledBorder(
-                        null, "Thông tin cơ bản",
-                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                        new java.awt.Font("Segoe UI", 1, 16),
-                        new java.awt.Color(60, 60, 60)),
-                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+    private javax.swing.JTextField createStyledTextField() {
+        javax.swing.JTextField f = new javax.swing.JTextField();
+        f.setFont(new java.awt.Font("Segoe UI", 0, 13)); // Smaller font
+        f.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 10, 8, 10) // Reduced padding
+        ));
+        f.setBackground(new java.awt.Color(248, 250, 252));
+        return f;
+    }
 
-        // Sử dụng GroupLayout để sắp xếp các component - Thông tin cơ bản
-        javax.swing.GroupLayout basicInfoLayout = new javax.swing.GroupLayout(basicInfoPanel);
-        basicInfoPanel.setLayout(basicInfoLayout);
+    private javax.swing.JButton createModernButton(String text, java.awt.Color fg, java.awt.Color bg) {
+        javax.swing.JButton b = new javax.swing.JButton(text);
+        b.setFont(new java.awt.Font("Segoe UI", 1, 13)); // Smaller font
+        b.setForeground(fg);
+        b.setBackground(bg);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        b.setPreferredSize(new java.awt.Dimension(160, 35)); // Compact size
+        return b;
+    }
 
-        basicInfoLayout.setHorizontalGroup(
-                basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(basicInfoLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(cardIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(nameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(phoneLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(addressLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(dobLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(registerDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, 10)
-                                .addGroup(basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(cardIdField)
-                                        .addComponent(nameField)
-                                        .addComponent(phoneField)
-                                        .addComponent(addressField)
-                                        .addComponent(dobField)
-                                        .addComponent(registerDateField))
-                                .addContainerGap()));
+    /**
+     * Modern Custom ScrollBar UI
+     */
+    private static class ModernScrollBarUI extends javax.swing.plaf.basic.BasicScrollBarUI {
+        @Override
+        protected void configureScrollBarColors() {
+            this.thumbColor = new java.awt.Color(203, 213, 225); // Slate 300
+            this.trackColor = new java.awt.Color(248, 250, 252); // Match bg
+        }
 
-        basicInfoLayout.setVerticalGroup(
-                basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(basicInfoLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addGroup(
-                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(cardIdLabel)
-                                                .addComponent(cardIdField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(nameLabel)
-                                                .addComponent(nameField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(phoneLabel)
-                                                .addComponent(phoneField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(addressLabel)
-                                                .addComponent(addressField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(dobLabel)
-                                                .addComponent(dobField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        basicInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(registerDateLabel)
-                                                .addComponent(registerDateField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addContainerGap()));
+        @Override
+        protected javax.swing.JButton createDecreaseButton(int orientation) {
+            return createZeroButton();
+        }
 
-        // Tạo panel chứa thông tin hội viên
-        memberInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
-        memberInfoPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createTitledBorder(
-                        null, "Thông tin hội viên",
-                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                        new java.awt.Font("Segoe UI", 1, 16),
-                        new java.awt.Color(60, 60, 60)),
-                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        @Override
+        protected javax.swing.JButton createIncreaseButton(int orientation) {
+            return createZeroButton();
+        }
 
-        javax.swing.GroupLayout memberInfoLayout = new javax.swing.GroupLayout(memberInfoPanel);
-        memberInfoPanel.setLayout(memberInfoLayout);
+        private javax.swing.JButton createZeroButton() {
+            javax.swing.JButton jbutton = new javax.swing.JButton();
+            jbutton.setPreferredSize(new java.awt.Dimension(0, 0));
+            jbutton.setMinimumSize(new java.awt.Dimension(0, 0));
+            jbutton.setMaximumSize(new java.awt.Dimension(0, 0));
+            return jbutton;
+        }
 
-        memberInfoLayout.setHorizontalGroup(
-                memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(memberInfoLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                .addComponent(memberTypeLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(totalSpentLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(totalPointsLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(fineDebtLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(isBlockedLabel, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(rankLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                .addComponent(memberTypeField)
-                                                .addComponent(totalSpentField)
-                                                .addComponent(totalPointsField)
-                                                .addComponent(fineDebtField)
-                                                .addComponent(isBlockedField)
-                                                .addComponent(rankField))
-                                .addContainerGap(20, Short.MAX_VALUE)));
+        @Override
+        protected void paintThumb(java.awt.Graphics g, javax.swing.JComponent c, java.awt.Rectangle thumbBounds) {
+            if (thumbBounds.isEmpty() || !scrollbar.isEnabled())
+                return;
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(thumbColor);
+            // Draw rounded pill
+            g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2, thumbBounds.width - 4, thumbBounds.height - 4, 8, 8);
+            g2.dispose();
+        }
 
-        memberInfoLayout.setVerticalGroup(
-                memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(memberInfoLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(memberTypeLabel)
-                                                .addComponent(memberTypeField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(totalSpentLabel)
-                                                .addComponent(totalSpentField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(totalPointsLabel)
-                                                .addComponent(totalPointsField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(fineDebtLabel)
-                                                .addComponent(fineDebtField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(isBlockedLabel)
-                                                .addComponent(isBlockedField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(
-                                        memberInfoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(rankLabel)
-                                                .addComponent(rankField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addContainerGap()));
-
-        // Layout chính của panel này - dùng BorderLayout với content panel
-        javax.swing.JPanel contentPanel = new javax.swing.JPanel();
-        contentPanel.setBackground(new java.awt.Color(245, 245, 250));
-        contentPanel.setLayout(new java.awt.BorderLayout(0, 0));
-        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 40, 20, 40));
-
-        // Panel chứa 2 info panel nằm ngang
-        javax.swing.JPanel infoPanelsContainer = new javax.swing.JPanel();
-        infoPanelsContainer.setBackground(new java.awt.Color(245, 245, 250));
-        infoPanelsContainer.setLayout(new javax.swing.BoxLayout(infoPanelsContainer, javax.swing.BoxLayout.X_AXIS));
-
-        // Thêm panel ảnh vào đầu tiên
-        imagePanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
-        infoPanelsContainer.add(imagePanel);
-        infoPanelsContainer.add(javax.swing.Box.createHorizontalStrut(20));
-
-        // Đặt kích thước cho các panel để hẹp lại nhưng tự động căn chỉnh
-        basicInfoPanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
-        basicInfoPanel.setPreferredSize(new java.awt.Dimension(400, basicInfoPanel.getPreferredSize().height));
-        basicInfoPanel.setMaximumSize(new java.awt.Dimension(450, Integer.MAX_VALUE));
-        memberInfoPanel.setAlignmentY(javax.swing.JComponent.TOP_ALIGNMENT);
-        memberInfoPanel.setPreferredSize(new java.awt.Dimension(400, memberInfoPanel.getPreferredSize().height));
-        memberInfoPanel.setMaximumSize(new java.awt.Dimension(450, Integer.MAX_VALUE));
-
-        infoPanelsContainer.add(basicInfoPanel);
-        infoPanelsContainer.add(javax.swing.Box.createHorizontalStrut(20));
-        infoPanelsContainer.add(memberInfoPanel);
-
-        contentPanel.add(infoPanelsContainer, java.awt.BorderLayout.CENTER);
-
-        // Button panel ở dưới
-        javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
-        buttonPanel.setBackground(new java.awt.Color(245, 245, 250));
-        buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 0, 10, 0));
-        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 15, 0));
-        editButton.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
-        saveButton.setAlignmentX(javax.swing.JComponent.CENTER_ALIGNMENT);
-        buttonPanel.add(editButton);
-        buttonPanel.add(saveButton);
-        contentPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
-
-        add(contentPanel, java.awt.BorderLayout.CENTER);
+        @Override
+        protected void paintTrack(java.awt.Graphics g, javax.swing.JComponent c, java.awt.Rectangle trackBounds) {
+            g.setColor(trackColor);
+            g.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
+        }
     }
 
     private void editButtonActionPerformed(java.awt.event.ActionEvent evt) {
@@ -994,31 +790,17 @@ public class thongtincanhan extends javax.swing.JPanel {
 
     // Variables declaration
     private javax.swing.JLabel titleLabel;
-    private javax.swing.JPanel basicInfoPanel;
-    private javax.swing.JLabel cardIdLabel;
     private javax.swing.JTextField cardIdField;
-    private javax.swing.JLabel nameLabel;
     private javax.swing.JTextField nameField;
-    private javax.swing.JLabel phoneLabel;
     private javax.swing.JTextField phoneField;
-    private javax.swing.JLabel addressLabel;
     private javax.swing.JTextField addressField;
-    private javax.swing.JLabel dobLabel;
     private javax.swing.JTextField dobField;
-    private javax.swing.JLabel registerDateLabel;
     private javax.swing.JTextField registerDateField;
-    private javax.swing.JPanel memberInfoPanel;
-    private javax.swing.JLabel memberTypeLabel;
     private javax.swing.JTextField memberTypeField;
-    private javax.swing.JLabel totalSpentLabel;
     private javax.swing.JTextField totalSpentField;
-    private javax.swing.JLabel totalPointsLabel;
     private javax.swing.JTextField totalPointsField;
-    private javax.swing.JLabel fineDebtLabel;
     private javax.swing.JTextField fineDebtField;
-    private javax.swing.JLabel isBlockedLabel;
     private javax.swing.JTextField isBlockedField;
-    private javax.swing.JLabel rankLabel;
     private javax.swing.JTextField rankField;
     private javax.swing.JButton editButton;
     private javax.swing.JButton saveButton;

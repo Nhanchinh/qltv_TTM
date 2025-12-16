@@ -13,13 +13,16 @@ import java.text.SimpleDateFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.Component;
+import javax.swing.JLabel;
 
 /**
- *
- * @author admin
+ * Modern History Screen
  */
 public class lichsu extends javax.swing.JPanel {
-    
+
+    // Services
     private BorrowService borrowService;
     private PurchaseService purchaseService;
     private StationeryService stationeryService;
@@ -27,388 +30,374 @@ public class lichsu extends javax.swing.JPanel {
     private BookService bookService;
     private String currentCardId = "CARD001";
 
-    /**
-     * Creates new form lichsu
-     */
+    // Custom Tab System
+    private javax.swing.JPanel tabBar;
+    private javax.swing.JPanel contentPanel; // CardLayout
+    private java.awt.CardLayout cardLayout;
+    private javax.swing.JButton activeTabButton;
+
     public lichsu() {
         borrowService = new BorrowService();
         purchaseService = new PurchaseService();
         stationeryService = new StationeryService();
         transactionService = new TransactionService();
         bookService = new BookService();
+
         initComponents();
         loadAllHistory();
     }
-    
-    /**
-     * Set CardID từ thẻ đăng nhập
-     */
+
     public void setCurrentCardId(String cardId) {
         if (cardId != null && !cardId.isEmpty()) {
             this.currentCardId = cardId;
-            loadAllHistory(); // Reload tất cả lịch sử với CardID mới
+            loadAllHistory();
         }
     }
 
-    /**
-     * Khởi tạo các component của giao diện
-     * Code này được viết thủ công
-     */
-    @SuppressWarnings("unchecked")
     private void initComponents() {
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
+        setLayout(new java.awt.BorderLayout(0, 0));
 
-        titleLabel = new javax.swing.JLabel();
-        
-        // Main container
-        mainContainer = new javax.swing.JPanel();
-        
-        // Filter panel
-        filterPanel = new javax.swing.JPanel();
-        filterTitle = new javax.swing.JLabel();
-        transactionTypeLabel = new javax.swing.JLabel();
-        transactionTypeCombo = new javax.swing.JComboBox<>();
-        dateFromLabel = new javax.swing.JLabel();
-        dateFromField = new javax.swing.JTextField();
-        dateToLabel = new javax.swing.JLabel();
-        dateToField = new javax.swing.JTextField();
-        searchButton = new javax.swing.JButton();
-        refreshButton = new javax.swing.JButton();
-        
-        // Tabbed pane for different history types
-        historyTabbedPane = new javax.swing.JTabbedPane();
-        
-        // Borrow/Return history
-        borrowHistoryPanel = new javax.swing.JPanel();
-        borrowHistoryTable = new javax.swing.JScrollPane();
-        borrowTable = new javax.swing.JTable();
-        
-        // Payment history
-        paymentHistoryPanel = new javax.swing.JPanel();
-        paymentHistoryTable = new javax.swing.JScrollPane();
-        paymentTable = new javax.swing.JTable();
-        
-        // Top up history
-        topUpHistoryPanel = new javax.swing.JPanel();
-        topUpHistoryTable = new javax.swing.JScrollPane();
-        topUpTable = new javax.swing.JTable();
-        
-        // Summary panel
-        summaryPanel = new javax.swing.JPanel();
-        summaryTitle = new javax.swing.JLabel();
-        totalBorrowsLabel = new javax.swing.JLabel();
-        totalBorrowsField = new javax.swing.JTextField();
-        totalPaymentsLabel = new javax.swing.JLabel();
-        totalPaymentsField = new javax.swing.JTextField();
-        totalTopUpsLabel = new javax.swing.JLabel();
-        totalTopUpsField = new javax.swing.JTextField();
+        // 1. Header
+        add(createHeaderPanel(), java.awt.BorderLayout.NORTH);
 
-        setBackground(new java.awt.Color(245, 245, 250));
-        setLayout(new java.awt.BorderLayout(0, 20));
+        // 2. Main Wrapper
+        javax.swing.JPanel mainWrapper = new javax.swing.JPanel(new java.awt.BorderLayout(0, 20));
+        mainWrapper.setOpaque(false);
+        mainWrapper.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 30, 0, 30));
 
-        // Title
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Lịch sử giao dịch");
-        titleLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 10, 40));
-        add(titleLabel, java.awt.BorderLayout.NORTH);
+        // 3. Content (CardLayout) - MUST BE INTIALIZED BEFORE TAB BAR
+        cardLayout = new java.awt.CardLayout();
+        contentPanel = new javax.swing.JPanel(cardLayout);
+        contentPanel.setOpaque(false);
 
-        mainContainer.setLayout(new java.awt.BorderLayout(0, 20));
-        mainContainer.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 40, 30, 40));
-        mainContainer.setBackground(new java.awt.Color(245, 245, 250));
+        // Add Panels
+        contentPanel.add(createBorrowHistoryPanel(), "BORROW");
+        contentPanel.add(createPurchaseHistoryPanel(), "PURCHASE");
+        contentPanel.add(createTransactionHistoryPanel(), "TRANS");
 
-        // ============ FILTER PANEL ============
-        filterPanel.setBackground(new java.awt.Color(255, 255, 255));
-        filterPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Bộ lọc",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 14), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        filterPanel.setLayout(new java.awt.BorderLayout(0, 10));
+        // 4. Custom Tab Bar - USES CARD LAYOUT
+        mainWrapper.add(createCustomTabBar(), java.awt.BorderLayout.NORTH);
 
-        javax.swing.JPanel filterFormPanel = new javax.swing.JPanel();
-        filterFormPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 15, 5));
-        filterFormPanel.setBackground(new java.awt.Color(255, 255, 255));
+        mainWrapper.add(contentPanel, java.awt.BorderLayout.CENTER);
 
-        transactionTypeLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        transactionTypeLabel.setText("Loại giao dịch:");
-        transactionTypeCombo.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        transactionTypeCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{
-            "Tất cả", "Mượn/Trả sách", "Mua sách", "Mua VPP", "Nạp tiền", "Phí hội viên"
-        }));
-
-        dateFromLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        dateFromLabel.setText("Từ ngày:");
-        dateFromField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        dateFromField.setColumns(12);
-        dateFromField.setText("01/01/2024");
-
-        dateToLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        dateToLabel.setText("Đến ngày:");
-        dateToField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        dateToField.setColumns(12);
-        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy");
-        dateToField.setText(dateFormat.format(new java.util.Date()));
-
-        searchButton.setBackground(new java.awt.Color(0, 120, 215));
-        searchButton.setForeground(new java.awt.Color(255, 255, 255));
-        searchButton.setText("🔍 Tìm kiếm");
-        searchButton.setFocusPainted(false);
-        searchButton.addActionListener(e -> searchHistory());
-
-        refreshButton.setBackground(new java.awt.Color(100, 100, 100));
-        refreshButton.setForeground(new java.awt.Color(255, 255, 255));
-        refreshButton.setText("🔄 Làm mới");
-        refreshButton.setFocusPainted(false);
-        refreshButton.addActionListener(e -> refreshHistory());
-
-        filterFormPanel.add(transactionTypeLabel);
-        filterFormPanel.add(transactionTypeCombo);
-        filterFormPanel.add(dateFromLabel);
-        filterFormPanel.add(dateFromField);
-        filterFormPanel.add(dateToLabel);
-        filterFormPanel.add(dateToField);
-        filterFormPanel.add(searchButton);
-        filterFormPanel.add(refreshButton);
-
-        filterPanel.add(filterFormPanel, java.awt.BorderLayout.CENTER);
-
-        // ============ HISTORY TABBED PANE ============
-        
-        // Borrow/Return History
-        borrowHistoryPanel.setLayout(new java.awt.BorderLayout());
-        borrowHistoryPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        // Theo bảng BorrowHistory: ID, CardID, BookID, BorrowDate, DueDate, ReturnDate, Fine, Status
-        String[] borrowColumns = {"ID", "Mã thẻ", "Mã sách", "Ngày mượn", "Ngày trả dự kiến", "Ngày trả thực tế", "Phí phạt", "Trạng thái"};
-        Object[][] borrowData = {
-            {"1", "CARD001", "BK001", "01/01/2024", "15/01/2024", "15/01/2024", "0 đ", "đã trả"},
-            {"2", "CARD001", "BK002", "10/01/2024", "25/01/2024", "", "0 đ", "mượn"},
-            {"3", "CARD002", "BK001", "15/01/2024", "15/01/2024", "15/01/2024", "0 đ", "đã trả"}
-        };
-        borrowTable = new javax.swing.JTable(borrowData, borrowColumns);
-        borrowTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        borrowTable.setRowHeight(25);
-        borrowHistoryTable.setViewportView(borrowTable);
-        borrowHistoryPanel.add(borrowHistoryTable, java.awt.BorderLayout.CENTER);
-
-        // Payment History
-        paymentHistoryPanel.setLayout(new java.awt.BorderLayout());
-        paymentHistoryPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        // Tab này hiển thị PurchaseBookHistory và StationerySales
-        // PurchaseBookHistory: ID, CardID, BookID, Quantity, UnitPrice, DiscountPercent, FinalPrice, PointsEarned, PurchaseDate
-        String[] paymentColumns = {"Loại", "ID", "Mã thẻ", "Mã SP/Sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Tổng tiền", "Điểm", "Ngày"};
-        Object[][] paymentData = {
-            {"Mua sách", "1", "CARD001", "BK001", "1", "200,000 đ", "10%", "180,000 đ", "180", "05/01/2024"},
-            {"Mua sách", "2", "CARD002", "BK002", "2", "300,000 đ", "5%", "570,000 đ", "570", "06/01/2024"},
-            {"Mua VPP", "1", "CARD001", "ITEM001", "5", "5,000 đ", "0%", "25,000 đ", "0", "08/01/2024"},
-            {"Mua VPP", "2", "CARD002", "ITEM002", "3", "20,000 đ", "0%", "60,000 đ", "-10", "09/01/2024"}
-        };
-        paymentTable = new javax.swing.JTable(paymentData, paymentColumns);
-        paymentTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        paymentTable.setRowHeight(25);
-        paymentHistoryTable.setViewportView(paymentTable);
-        paymentHistoryPanel.add(paymentHistoryTable, java.awt.BorderLayout.CENTER);
-
-        // Top Up History
-        topUpHistoryPanel.setLayout(new java.awt.BorderLayout());
-        topUpHistoryPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        // Theo bảng Transactions: TransID, CardID, Type, Amount, PointsChanged, DateTime
-        String[] topUpColumns = {"Mã giao dịch", "Mã thẻ", "Loại", "Số tiền", "Điểm thay đổi", "Ngày giờ"};
-        Object[][] topUpData = {
-            {"TXN001", "CARD001", "Deposit", "500,000 đ", "0", "03/01/2024 10:30:00"},
-            {"TXN002", "CARD001", "Deposit", "1,000,000 đ", "0", "10/01/2024 14:20:00"},
-            {"TXN003", "CARD002", "Payment", "-200,000 đ", "200", "15/01/2024 09:15:00"},
-            {"TXN004", "CARD002", "Deposit", "2,000,000 đ", "0", "20/01/2024 16:45:00"}
-        };
-        topUpTable = new javax.swing.JTable(topUpData, topUpColumns);
-        topUpTable.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        topUpTable.setRowHeight(25);
-        topUpHistoryTable.setViewportView(topUpTable);
-        topUpHistoryPanel.add(topUpHistoryTable, java.awt.BorderLayout.CENTER);
-
-        historyTabbedPane.addTab("Mượn/Trả sách", borrowHistoryPanel);
-        historyTabbedPane.addTab("Mua hàng (Sách/VPP)", paymentHistoryPanel);
-        historyTabbedPane.addTab("Giao dịch", topUpHistoryPanel);
-
-        // ============ SUMMARY PANEL ============
-        summaryPanel.setBackground(new java.awt.Color(255, 255, 255));
-        summaryPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createTitledBorder(null, "Tổng kết",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 14), new java.awt.Color(60, 60, 60)),
-            javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        summaryPanel.setLayout(new java.awt.BorderLayout(0, 10));
-
-        summaryTitle.setFont(new java.awt.Font("Segoe UI", 1, 14));
-        summaryTitle.setText("Thống kê giao dịch");
-
-        javax.swing.JPanel summaryFormPanel = new javax.swing.JPanel();
-        javax.swing.GroupLayout summaryLayout = new javax.swing.GroupLayout(summaryFormPanel);
-        summaryFormPanel.setLayout(summaryLayout);
-        summaryFormPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        summaryLayout.setHorizontalGroup(
-            summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(summaryLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(totalBorrowsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(totalPaymentsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(totalTopUpsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(totalBorrowsField)
-                    .addComponent(totalPaymentsField)
-                    .addComponent(totalTopUpsField))
-                .addContainerGap())
-        );
-
-        summaryLayout.setVerticalGroup(
-            summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(summaryLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(totalBorrowsLabel)
-                    .addComponent(totalBorrowsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(totalPaymentsLabel)
-                    .addComponent(totalPaymentsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(summaryLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(totalTopUpsLabel)
-                    .addComponent(totalTopUpsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
-        );
-
-        totalBorrowsLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        totalBorrowsLabel.setText("Tổng số lượt mượn:");
-        totalPaymentsLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        totalPaymentsLabel.setText("Tổng số thanh toán:");
-        totalTopUpsLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        totalTopUpsLabel.setText("Tổng số nạp tiền:");
-
-        totalBorrowsField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        totalBorrowsField.setText("15");
-        totalBorrowsField.setEditable(false);
-        totalPaymentsField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        totalPaymentsField.setText("3");
-        totalPaymentsField.setEditable(false);
-        totalTopUpsField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        totalTopUpsField.setText("3");
-        totalTopUpsField.setEditable(false);
-
-        summaryPanel.add(summaryTitle, java.awt.BorderLayout.NORTH);
-        summaryPanel.add(summaryFormPanel, java.awt.BorderLayout.CENTER);
-
-        mainContainer.add(filterPanel, java.awt.BorderLayout.NORTH);
-        mainContainer.add(historyTabbedPane, java.awt.BorderLayout.CENTER);
-        mainContainer.add(summaryPanel, java.awt.BorderLayout.SOUTH);
-
-        add(mainContainer, java.awt.BorderLayout.CENTER);
+        add(mainWrapper, java.awt.BorderLayout.CENTER);
     }
+
+    private javax.swing.JPanel createCustomTabBar() {
+        tabBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 10, 0));
+        tabBar.setOpaque(false);
+
+        // Create Tab Buttons
+        javax.swing.JButton tabBorrow = createTabButton("MƯỢN TRẢ", "BORROW");
+        javax.swing.JButton tabPurchase = createTabButton("MUA SẮM", "PURCHASE");
+        javax.swing.JButton tabTrans = createTabButton("GIAO DỊCH", "TRANS");
+
+        tabBar.add(tabBorrow);
+        tabBar.add(tabPurchase);
+        tabBar.add(tabTrans);
+
+        // Activate first tab
+        setActiveTab(tabBorrow, "BORROW");
+
+        return tabBar;
+    }
+
+    private javax.swing.JButton createTabButton(String text, String cardName) {
+        javax.swing.JButton btn = new javax.swing.JButton(text);
+        btn.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        btn.setForeground(new java.awt.Color(100, 116, 139)); // Default gray
+        btn.setBackground(new java.awt.Color(248, 250, 252));
+        btn.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        btn.addActionListener(e -> setActiveTab(btn, cardName));
+        return btn;
+    }
+
+    private void setActiveTab(javax.swing.JButton btn, String cardName) {
+        // Reset old active button
+        if (activeTabButton != null) {
+            activeTabButton.setForeground(new java.awt.Color(100, 116, 139));
+            activeTabButton.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        }
+
+        // Set new active button style
+        activeTabButton = btn;
+        activeTabButton.setForeground(new java.awt.Color(15, 23, 42)); // Darker
+        // Bottom border indicator
+        activeTabButton.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createMatteBorder(0, 0, 3, 0, new java.awt.Color(37, 99, 235)), // Blue line
+                javax.swing.BorderFactory.createEmptyBorder(10, 20, 7, 20)));
+
+        // Switch card
+        if (cardLayout != null) {
+            cardLayout.show(contentPanel, cardName);
+        }
+    }
+
+    // Header only (Removed Summary Panel to declutter as requested)
+    private javax.swing.JPanel createHeaderPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setBackground(java.awt.Color.WHITE);
+        p.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)));
+        p.setPreferredSize(new java.awt.Dimension(0, 70));
+
+        javax.swing.JLabel title = new javax.swing.JLabel("Lịch Sử Hoạt Động");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 24));
+        title.setForeground(new java.awt.Color(15, 23, 42));
+        title.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 30, 0, 0));
+
+        p.add(title, java.awt.BorderLayout.WEST);
+
+        javax.swing.JPanel actions = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 15));
+        actions.setOpaque(false);
+
+        javax.swing.JButton btnRefresh = createModernButton("Làm mới", new java.awt.Color(59, 130, 246),
+                new java.awt.Color(239, 246, 255));
+        btnRefresh.setPreferredSize(new java.awt.Dimension(100, 36));
+        btnRefresh.addActionListener(e -> loadAllHistory());
+        actions.add(btnRefresh);
+
+        p.add(actions, java.awt.BorderLayout.EAST);
+
+        return p;
+    }
+
+    // 1. Borrow Panel
+    private javax.swing.JScrollPane borrowTableScroll;
+    private javax.swing.JTable borrowTable;
+
+    private javax.swing.JPanel createBorrowHistoryPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setOpaque(false);
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 0, 0));
+
+        String[] cols = { "MÃ SÁCH", "TÊN SÁCH", "NGÀY MƯỢN", "HẠN TRẢ", "NGÀY TRẢ", "TRẠNG THÁI" };
+        borrowTableScroll = createStyledTable(new Object[][] {}, cols);
+        borrowTable = (javax.swing.JTable) borrowTableScroll.getViewport().getView();
+
+        // Custom Status Renderer
+        borrowTable.getColumnModel().getColumn(5).setCellRenderer(new StatusCellRenderer());
+
+        p.add(borrowTableScroll, java.awt.BorderLayout.CENTER);
+        return p;
+    }
+
+    // 2. Purchase Panel
+    private javax.swing.JScrollPane purchaseTableScroll;
+    private javax.swing.JTable purchaseTable;
+
+    private javax.swing.JPanel createPurchaseHistoryPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setOpaque(false);
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 0, 0));
+
+        String[] cols = { "LOẠI", "MÃ SP/SÁCH", "SỐ LƯỢNG", "ĐƠN GIÁ", "TỔNG TIỀN", "NGÀY MUA" };
+        purchaseTableScroll = createStyledTable(new Object[][] {}, cols);
+        purchaseTable = (javax.swing.JTable) purchaseTableScroll.getViewport().getView();
+
+        // Right align money columns
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
+        purchaseTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
+        purchaseTable.getColumnModel().getColumn(4).setCellRenderer(rightRenderer);
+
+        p.add(purchaseTableScroll, java.awt.BorderLayout.CENTER);
+        return p;
+    }
+
+    // 3. Transaction Panel
+    private javax.swing.JScrollPane transTableScroll;
+    private javax.swing.JTable transTable;
+
+    private javax.swing.JPanel createTransactionHistoryPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setOpaque(false);
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 0, 0));
+
+        String[] cols = { "MÃ GD", "LOẠI GD", "SỐ TIỀN", "THỜI GIAN" };
+        transTableScroll = createStyledTable(new Object[][] {}, cols);
+        transTable = (javax.swing.JTable) transTableScroll.getViewport().getView();
+
+        // Custom Renderer for Amount (+ Green / - Red)
+        transTable.getColumnModel().getColumn(2).setCellRenderer(new AmountCellRenderer());
+
+        p.add(transTableScroll, java.awt.BorderLayout.CENTER);
+        return p;
+    }
+
+    // --- Data Loading ---
 
     private void loadAllHistory() {
         loadBorrowHistory();
         loadPurchaseHistory();
         loadTransactionHistory();
-        updateSummary();
     }
-    
+
     private void loadBorrowHistory() {
         List<BorrowService.BorrowRecord> records = borrowService.getAllBorrowHistory(currentCardId);
-        String[] columns = {"ID", "Mã sách", "Tên sách", "Ngày mượn", "Ngày trả dự kiến", "Ngày trả thực tế", "Phí phạt", "Trạng thái"};
-        Object[][] data = new Object[records.size()][8];
-        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        for (int i = 0; i < records.size(); i++) {
-            BorrowService.BorrowRecord record = records.get(i);
-            BookService.Book book = bookService.getBookById(record.bookId);
-            data[i][0] = record.id;
-            data[i][1] = record.bookId;
-            data[i][2] = book != null ? book.title : record.bookId;
-            data[i][3] = formatDate(record.borrowDate);
-            data[i][4] = formatDate(record.dueDate);
-            data[i][5] = record.returnDate != null ? formatDate(record.returnDate) : "";
-            data[i][6] = nf.format(record.fine) + " đ";
-            data[i][7] = record.status;
+        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) borrowTable.getModel();
+        model.setRowCount(0);
+
+        for (BorrowService.BorrowRecord r : records) {
+            BookService.Book book = bookService.getBookById(r.bookId);
+            model.addRow(new Object[] {
+                    r.bookId,
+                    book != null ? book.title : "Unknown",
+                    formatDate(r.borrowDate),
+                    formatDate(r.dueDate),
+                    r.returnDate != null ? formatDate(r.returnDate) : "--",
+                    r.status // Renderer will handle visual
+            });
         }
-        borrowTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
     }
-    
+
     private void loadPurchaseHistory() {
-        List<PurchaseService.PurchaseRecord> purchases = purchaseService.getPurchaseHistory(currentCardId);
-        List<StationeryService.SaleRecord> sales = stationeryService.getSaleHistory(currentCardId);
-        
-        String[] columns = {"Loại", "ID", "Mã thẻ", "Mã SP/Sách", "Số lượng", "Đơn giá", "Giảm giá (%)", "Tổng tiền", "Điểm", "Ngày"};
-        Object[][] data = new Object[purchases.size() + sales.size()][10];
+        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) purchaseTable.getModel();
+        model.setRowCount(0);
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        int idx = 0;
-        
+
+        // Books
+        List<PurchaseService.PurchaseRecord> purchases = purchaseService.getPurchaseHistory(currentCardId);
         for (PurchaseService.PurchaseRecord p : purchases) {
-            data[idx][0] = "Mua sách";
-            data[idx][1] = p.id;
-            data[idx][2] = p.cardId;
-            data[idx][3] = p.bookId;
-            data[idx][4] = p.quantity;
-            data[idx][5] = nf.format(p.unitPrice) + " đ";
-            data[idx][6] = String.format("%.0f%%", p.discountPercent);
-            data[idx][7] = nf.format(p.finalPrice) + " đ";
-            data[idx][8] = p.pointsEarned;
-            data[idx][9] = formatDateTime(p.purchaseDate);
-            idx++;
+            model.addRow(new Object[] {
+                    "Sách", p.bookId, p.quantity, nf.format(p.unitPrice), nf.format(p.finalPrice),
+                    formatDateTime(p.purchaseDate)
+            });
         }
-        
-        for (StationeryService.SaleRecord s : sales) {
-            data[idx][0] = "Mua VPP";
-            data[idx][1] = s.id;
-            data[idx][2] = s.cardId;
-            data[idx][3] = s.itemId;
-            data[idx][4] = s.quantity;
-            data[idx][5] = nf.format(s.unitPrice) + " đ";
-            data[idx][6] = "0%";
-            data[idx][7] = nf.format(s.finalPrice) + " đ";
-            data[idx][8] = -s.pointsUsed;
-            data[idx][9] = formatDateTime(s.saleDate);
-            idx++;
-        }
-        
-        paymentTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
-    }
-    
-    private void loadTransactionHistory() {
-        List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
-        String[] columns = {"Mã giao dịch", "Mã thẻ", "Loại", "Số tiền", "Điểm thay đổi", "Ngày giờ"};
-        Object[][] data = new Object[transactions.size()][6];
-        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        for (int i = 0; i < transactions.size(); i++) {
-            TransactionService.Transaction t = transactions.get(i);
-            data[i][0] = t.transId;
-            data[i][1] = t.cardId;
-            data[i][2] = t.type;
-            data[i][3] = nf.format(t.amount) + " đ";
-            data[i][4] = t.pointsChanged;
-            data[i][5] = formatDateTime(t.dateTime);
-        }
-        topUpTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
-    }
-    
-    private void updateSummary() {
-        List<BorrowService.BorrowRecord> borrows = borrowService.getAllBorrowHistory(currentCardId);
-        List<PurchaseService.PurchaseRecord> purchases = purchaseService.getPurchaseHistory(currentCardId);
+
+        // Stationery
         List<StationeryService.SaleRecord> sales = stationeryService.getSaleHistory(currentCardId);
-        List<TransactionService.Transaction> deposits = transactionService.getTransactionsByType(currentCardId, "Deposit");
-        
-        totalBorrowsField.setText(String.valueOf(borrows.size()));
-        totalPaymentsField.setText(String.valueOf(purchases.size() + sales.size()));
-        totalTopUpsField.setText(String.valueOf(deposits.size()));
+        for (StationeryService.SaleRecord s : sales) {
+            model.addRow(new Object[] {
+                    "VPP", s.itemId, s.quantity, nf.format(s.unitPrice), nf.format(s.finalPrice),
+                    formatDateTime(s.saleDate)
+            });
+        }
     }
-    
+
+    private void loadTransactionHistory() {
+        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) transTable.getModel();
+        model.setRowCount(0);
+
+        List<TransactionService.Transaction> trans = transactionService.getTransactionsByCard(currentCardId);
+        for (TransactionService.Transaction t : trans) {
+            String typeDisplay = t.type;
+            if (t.type.equals("Deposit"))
+                typeDisplay = "Nạp tiền";
+            else if (t.type.equals("Payment"))
+                typeDisplay = "Thanh toán";
+            else if (t.type.equals("MembershipFee"))
+                typeDisplay = "Phí hội viên";
+
+            // Raw amount, renderer puts sign
+            model.addRow(new Object[] {
+                    t.transId, typeDisplay, t.amount, formatDateTime(t.dateTime)
+            });
+        }
+    }
+
+    // --- Custom Renderers ---
+
+    class StatusCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(javax.swing.JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
+            JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            String status = (String) value;
+            c.setFont(new java.awt.Font("Segoe UI", 1, 13));
+            if (status != null) {
+                if (status.equalsIgnoreCase("Đang mượn") || status.equalsIgnoreCase("mượn")
+                        || status.equalsIgnoreCase("Borrowed")) {
+                    c.setForeground(new java.awt.Color(245, 158, 11)); // Amber
+                    c.setText("⏳ Đang mượn");
+                } else if (status.equalsIgnoreCase("Đã trả") || status.equalsIgnoreCase("tra")
+                        || status.equalsIgnoreCase("Returned")) {
+                    c.setForeground(new java.awt.Color(16, 185, 129)); // Emerald
+                    c.setText("✔ Đã trả");
+                } else {
+                    c.setForeground(new java.awt.Color(239, 68, 68)); // Red
+                    c.setText("⚠ " + status);
+                }
+            }
+            return c;
+        }
+    }
+
+    class AmountCellRenderer extends DefaultTableCellRenderer {
+        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+
+        @Override
+        public Component getTableCellRendererComponent(javax.swing.JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
+            JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (value instanceof Double) {
+                double amount = (Double) value;
+                String type = (String) table.getModel().getValueAt(row, 1); // Get Type
+
+                if (type.contains("Nạp")) {
+                    c.setForeground(new java.awt.Color(22, 163, 74));
+                    c.setText("+" + nf.format(Math.abs(amount)));
+                } else {
+                    c.setForeground(new java.awt.Color(220, 38, 38));
+                    c.setText("-" + nf.format(Math.abs(amount)));
+                }
+                c.setFont(new java.awt.Font("Segoe UI", 1, 14));
+            }
+            return c;
+        }
+    }
+
+    // --- Helpers ---
+    private javax.swing.JScrollPane createStyledTable(Object[][] data, String[] columns) {
+        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(data, columns) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        javax.swing.JTable table = new javax.swing.JTable(model);
+        table.setRowHeight(45); // Taller rows
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(true);
+        table.setGridColor(new java.awt.Color(241, 245, 249));
+        table.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        table.setSelectionBackground(new java.awt.Color(239, 246, 255));
+        table.setSelectionForeground(new java.awt.Color(30, 58, 138));
+
+        // Header style
+        javax.swing.table.JTableHeader header = table.getTableHeader();
+        header.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        header.setForeground(new java.awt.Color(100, 116, 139));
+        header.setBackground(java.awt.Color.WHITE);
+        header.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 2, 0, new java.awt.Color(226, 232, 240)));
+        header.setPreferredSize(new java.awt.Dimension(0, 40));
+
+        javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(table);
+        scroll.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        scroll.getViewport().setBackground(java.awt.Color.WHITE);
+
+        return scroll;
+    }
+
+    private javax.swing.JButton createModernButton(String text, java.awt.Color fg, java.awt.Color bg) {
+        javax.swing.JButton b = new javax.swing.JButton(text);
+        b.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        b.setForeground(fg);
+        b.setBackground(bg);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        return b;
+    }
+
     private String formatDate(String dateStr) {
-        if (dateStr == null || dateStr.isEmpty()) return "";
+        if (dateStr == null || dateStr.isEmpty())
+            return "";
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
             SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy");
@@ -417,62 +406,20 @@ public class lichsu extends javax.swing.JPanel {
             return dateStr;
         }
     }
-    
-    private String formatDateTime(String dateTimeStr) {
-        if (dateTimeStr == null || dateTimeStr.isEmpty()) return "";
+
+    private String formatDateTime(String dt) {
+        if (dt == null || dt.isEmpty())
+            return "";
         try {
-            String normalized = dateTimeStr.replace("T", " ");
-            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            return outputFormat.format(inputFormat.parse(normalized));
+            String normalized = dt.replace("T", " ");
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); // Adjust if DB format varies
+            try {
+                return new SimpleDateFormat("dd/MM/yyyy HH:mm").format(inputFormat.parse(normalized));
+            } catch (Exception e2) {
+                return new SimpleDateFormat("dd/MM/yyyy HH:mm").format(java.time.LocalDateTime.parse(dt));
+            }
         } catch (Exception e) {
-            return dateTimeStr;
+            return dt;
         }
     }
-
-    private void searchHistory() {
-        String type = (String) transactionTypeCombo.getSelectedItem();
-        loadAllHistory();
-        javax.swing.JOptionPane.showMessageDialog(this, 
-            "Đã tìm kiếm lịch sử theo loại: " + type,
-            "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void refreshHistory() {
-        loadAllHistory();
-        javax.swing.JOptionPane.showMessageDialog(this, "Đã làm mới danh sách lịch sử!", "Thông báo", 
-            javax.swing.JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    // Variables declaration
-    private javax.swing.JLabel titleLabel;
-    private javax.swing.JPanel mainContainer;
-    private javax.swing.JPanel filterPanel;
-    private javax.swing.JLabel filterTitle;
-    private javax.swing.JLabel transactionTypeLabel;
-    private javax.swing.JComboBox<String> transactionTypeCombo;
-    private javax.swing.JLabel dateFromLabel;
-    private javax.swing.JTextField dateFromField;
-    private javax.swing.JLabel dateToLabel;
-    private javax.swing.JTextField dateToField;
-    private javax.swing.JButton searchButton;
-    private javax.swing.JButton refreshButton;
-    private javax.swing.JTabbedPane historyTabbedPane;
-    private javax.swing.JPanel borrowHistoryPanel;
-    private javax.swing.JScrollPane borrowHistoryTable;
-    private javax.swing.JTable borrowTable;
-    private javax.swing.JPanel paymentHistoryPanel;
-    private javax.swing.JScrollPane paymentHistoryTable;
-    private javax.swing.JTable paymentTable;
-    private javax.swing.JPanel topUpHistoryPanel;
-    private javax.swing.JScrollPane topUpHistoryTable;
-    private javax.swing.JTable topUpTable;
-    private javax.swing.JPanel summaryPanel;
-    private javax.swing.JLabel summaryTitle;
-    private javax.swing.JLabel totalBorrowsLabel;
-    private javax.swing.JTextField totalBorrowsField;
-    private javax.swing.JLabel totalPaymentsLabel;
-    private javax.swing.JTextField totalPaymentsField;
-    private javax.swing.JLabel totalTopUpsLabel;
-    private javax.swing.JTextField totalTopUpsField;
 }

@@ -41,12 +41,14 @@ public class vpp extends javax.swing.JPanel {
         String name;
         int quantity;
         double unitPrice;
+        double discountPercent; // Added for consistency if needed, though VPP might not have discounts yet
 
         CartItem(String itemId, String name, int quantity, double unitPrice) {
             this.itemId = itemId;
             this.name = name;
             this.quantity = quantity;
             this.unitPrice = unitPrice;
+            this.discountPercent = 0;
         }
 
         double getTotalPrice() {
@@ -87,7 +89,8 @@ public class vpp extends javax.swing.JPanel {
             cardIdField.setText(card.cardId);
         }
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
-        saleDateField.setText(dateFormat.format(new java.util.Date()));
+        if (saleDateField != null)
+            saleDateField.setText(dateFormat.format(new java.util.Date()));
 
         // Lấy điểm từ thẻ (Smart Card)
         int currentPoints = 0;
@@ -166,139 +169,111 @@ public class vpp extends javax.swing.JPanel {
         if (finalTotal < 0)
             finalTotal = 0;
 
-        cartTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        if (cartTableScroll != null)
+            cartTableScroll.setModel(new javax.swing.table.DefaultTableModel(data, columns));
         NumberFormat nf2 = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-        totalField.setText(nf2.format(finalTotal) + " đ");
+        if (totalField != null)
+            totalField.setText(nf2.format(finalTotal) + " đ");
     }
 
     /**
-     * Khởi tạo các component của giao diện
-     * Code này được viết thủ công
+     * Modern initComponents with Split View
      */
-    @SuppressWarnings("unchecked")
     private void initComponents() {
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
+        setLayout(new java.awt.BorderLayout(0, 0));
 
-        titleLabel = new javax.swing.JLabel();
+        // 1. Header
+        add(createHeaderPanel(), java.awt.BorderLayout.NORTH);
 
-        // Main container
-        mainContainer = new javax.swing.JPanel();
+        // 2. Content
+        javax.swing.JPanel contentPanel = new javax.swing.JPanel(new java.awt.GridBagLayout());
+        contentPanel.setOpaque(false);
+        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Left panel - Danh sách văn phòng phẩm
-        productsPanel = new javax.swing.JPanel();
-        categoryLabel = new javax.swing.JLabel();
-        categoryCombo = new javax.swing.JComboBox<>();
-        searchLabel = new javax.swing.JLabel();
-        searchField = new javax.swing.JTextField();
-        searchButton = new javax.swing.JButton();
-        productsTable = new javax.swing.JScrollPane();
-        productsTableScroll = new javax.swing.JTable();
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
 
-        // Right panel - Chi tiết và giỏ hàng
-        detailsPanel = new javax.swing.JPanel();
+        // Left Side: Search + Product List (60%)
+        gbc.gridx = 0;
+        gbc.weightx = 0.6;
+        gbc.insets = new java.awt.Insets(0, 0, 0, 10);
 
-        // Product details
-        productDetailsPanel = new javax.swing.JPanel();
-        productDetailsTitle = new javax.swing.JLabel();
-        productIdLabel = new javax.swing.JLabel();
-        productIdField = new javax.swing.JTextField();
-        productNameLabel = new javax.swing.JLabel();
-        productNameField = new javax.swing.JTextField();
-        priceLabel = new javax.swing.JLabel();
-        priceField = new javax.swing.JTextField();
-        stockLabel = new javax.swing.JLabel();
-        stockField = new javax.swing.JTextField();
-        quantityLabel = new javax.swing.JLabel();
-        quantitySpinner = new javax.swing.JSpinner();
-        addToCartButton = new javax.swing.JButton();
+        javax.swing.JPanel leftWrapper = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
+        leftWrapper.setOpaque(false);
+        leftWrapper.add(createSearchPanel(), java.awt.BorderLayout.NORTH);
+        leftWrapper.add(createProductListPanel(), java.awt.BorderLayout.CENTER);
 
-        // Cart panel
-        cartPanel = new javax.swing.JPanel();
-        cartTitle = new javax.swing.JLabel();
-        cartTable = new javax.swing.JScrollPane();
-        cartTableScroll = new javax.swing.JTable();
-        cardIdLabel = new javax.swing.JLabel();
-        cardIdField = new javax.swing.JTextField();
-        pointsUsedLabel = new javax.swing.JLabel();
-        pointsUsedField = new javax.swing.JTextField();
-        saleDateLabel = new javax.swing.JLabel();
-        saleDateField = new javax.swing.JTextField();
-        totalLabel = new javax.swing.JLabel();
-        totalField = new javax.swing.JTextField();
-        checkoutButton = new javax.swing.JButton();
-        clearCartButton = new javax.swing.JButton();
+        contentPanel.add(leftWrapper, gbc);
 
-        setBackground(new java.awt.Color(245, 245, 250));
-        setLayout(new java.awt.BorderLayout(0, 20));
+        // Right Side: Details + Cart (40%)
+        gbc.gridx = 1;
+        gbc.weightx = 0.4;
+        gbc.insets = new java.awt.Insets(0, 10, 0, 0);
 
-        // Title
-        titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
-        titleLabel.setForeground(new java.awt.Color(45, 45, 48));
-        titleLabel.setText("Mua đồ dùng văn phòng phẩm");
-        titleLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 10, 40));
-        add(titleLabel, java.awt.BorderLayout.NORTH);
+        javax.swing.JPanel rightWrapper = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
+        rightWrapper.setOpaque(false);
+        rightWrapper.add(createDetailsPanel(), java.awt.BorderLayout.NORTH);
+        rightWrapper.add(createCartPanel(), java.awt.BorderLayout.CENTER);
 
-        mainContainer.setLayout(new java.awt.BorderLayout(20, 0));
-        mainContainer.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 40, 30, 40));
-        mainContainer.setBackground(new java.awt.Color(245, 245, 250));
+        contentPanel.add(rightWrapper, gbc);
 
-        // ============ LEFT PANEL - DANH SÁCH VPP ============
-        productsPanel.setBackground(new java.awt.Color(255, 255, 255));
-        productsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Danh sách văn phòng phẩm",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)));
-        productsPanel.setLayout(new java.awt.BorderLayout(0, 10));
-        productsPanel.setPreferredSize(new java.awt.Dimension(600, 0));
-        productsPanel.setMinimumSize(new java.awt.Dimension(500, 0));
-        productsPanel.setMaximumSize(new java.awt.Dimension(700, Integer.MAX_VALUE));
+        add(contentPanel, java.awt.BorderLayout.CENTER);
+    }
 
-        // Filter panel
-        javax.swing.JPanel filterPanel = new javax.swing.JPanel();
-        filterPanel.setLayout(new java.awt.BorderLayout(10, 10));
-        filterPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        filterPanel.setBackground(new java.awt.Color(255, 255, 255));
+    // --- Component Creators ---
 
-        categoryLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        categoryLabel.setText("Danh mục:");
-        categoryCombo.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        categoryCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Tất cả" }));
-        categoryCombo.addActionListener(e -> filterByCategory());
+    private javax.swing.JPanel createHeaderPanel() {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout());
+        p.setBackground(java.awt.Color.WHITE);
+        p.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)));
+        p.setPreferredSize(new java.awt.Dimension(0, 70));
 
-        searchLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        searchLabel.setText("Tìm kiếm:");
-        searchField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        searchField.setColumns(15);
-        searchButton.setBackground(new java.awt.Color(0, 120, 215));
-        searchButton.setForeground(new java.awt.Color(255, 255, 255));
-        searchButton.setText("🔍 Tìm");
-        searchButton.setFocusPainted(false);
+        javax.swing.JLabel title = new javax.swing.JLabel("Văn Phòng Phẩm");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 24));
+        title.setForeground(new java.awt.Color(15, 23, 42)); // Slate 900
+        title.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 25, 0, 0));
+
+        p.add(title, java.awt.BorderLayout.WEST);
+        return p;
+    }
+
+    private javax.swing.JPanel createSearchPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(15, 0));
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        searchLabel = new javax.swing.JLabel("Tìm kiếm:");
+        searchLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        searchLabel.setForeground(new java.awt.Color(100, 116, 139));
+
+        searchField = createStyledTextField();
+        searchField.putClientProperty("JTextField.placeholderText", "Nhập tên sản phẩm...");
+
+        searchButton = createModernButton("Tìm", java.awt.Color.WHITE, new java.awt.Color(59, 130, 246));
+        searchButton.setPreferredSize(new java.awt.Dimension(80, 40));
         searchButton.addActionListener(e -> searchProducts());
 
-        javax.swing.JPanel categoryPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        categoryPanel.setBackground(new java.awt.Color(255, 255, 255));
-        categoryPanel.add(categoryLabel, java.awt.BorderLayout.WEST);
-        categoryPanel.add(categoryCombo, java.awt.BorderLayout.CENTER);
+        p.add(searchLabel, java.awt.BorderLayout.WEST);
+        p.add(searchField, java.awt.BorderLayout.CENTER);
+        p.add(searchButton, java.awt.BorderLayout.EAST);
 
-        javax.swing.JPanel searchPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        searchPanel.setBackground(new java.awt.Color(255, 255, 255));
-        searchPanel.add(searchLabel, java.awt.BorderLayout.WEST);
-        searchPanel.add(searchField, java.awt.BorderLayout.CENTER);
-        searchPanel.add(searchButton, java.awt.BorderLayout.EAST);
+        return p;
+    }
 
-        javax.swing.JPanel filterTopPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        filterTopPanel.setBackground(new java.awt.Color(255, 255, 255));
-        filterTopPanel.add(categoryPanel, java.awt.BorderLayout.CENTER);
-        filterTopPanel.add(searchPanel, java.awt.BorderLayout.EAST);
+    private javax.swing.JPanel createProductListPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(0, 10));
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        filterPanel.add(filterTopPanel, java.awt.BorderLayout.CENTER);
+        javax.swing.JLabel header = new javax.swing.JLabel("Danh sách sản phẩm");
+        header.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        header.setForeground(new java.awt.Color(30, 41, 59));
+        p.add(header, java.awt.BorderLayout.NORTH);
 
-        // Products table - se duoc load tu database
         String[] columns = { "Mã SP", "Tên sản phẩm", "Giá", "Tồn kho" };
-        Object[][] data = {};
-        productsTableScroll = new javax.swing.JTable(data, columns);
-        productsTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        productsTableScroll.setRowHeight(25);
-        productsTableScroll.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        productsTableScroll = createStyledTable(new Object[][] {}, columns);
         productsTableScroll.getSelectionModel().addListSelectionListener(e -> {
             int selectedRow = productsTableScroll.getSelectedRow();
             if (selectedRow >= 0) {
@@ -313,266 +288,306 @@ public class vpp extends javax.swing.JPanel {
                 }
             }
         });
-        productsTable.setViewportView(productsTableScroll);
 
-        productsPanel.add(filterPanel, java.awt.BorderLayout.NORTH);
-        productsPanel.add(productsTable, java.awt.BorderLayout.CENTER);
+        productsTable = new javax.swing.JScrollPane(productsTableScroll);
+        productsTable.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(241, 245, 249)));
+        productsTable.getVerticalScrollBar().setUI(new ModernScrollBarUI());
+        p.add(productsTable, java.awt.BorderLayout.CENTER);
 
-        // ============ RIGHT PANEL ============
-        detailsPanel.setLayout(new java.awt.BorderLayout(0, 15));
-        detailsPanel.setBackground(new java.awt.Color(245, 245, 250));
+        return p;
+    }
 
-        // Product details panel
-        productDetailsPanel.setBackground(new java.awt.Color(255, 255, 255));
-        productDetailsPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createTitledBorder(null, "Thông tin sản phẩm",
-                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+    private javax.swing.JPanel createDetailsPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.GridBagLayout());
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 15, 10, 15)); // Compact padding
 
-        javax.swing.GroupLayout detailsLayout = new javax.swing.GroupLayout(productDetailsPanel);
-        productDetailsPanel.setLayout(detailsLayout);
+        javax.swing.JLabel header = new javax.swing.JLabel("Thông tin sản phẩm");
+        header.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        header.setForeground(new java.awt.Color(30, 41, 59));
 
-        detailsLayout.setHorizontalGroup(
-                detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(detailsLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(productIdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(productNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(priceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(stockLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(quantityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(productIdField)
-                                        .addComponent(productNameField)
-                                        .addComponent(priceField)
-                                        .addComponent(stockField)
-                                        .addGroup(detailsLayout.createSequentialGroup()
-                                                .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                        100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(addToCartButton, javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                        javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                                .addContainerGap()));
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gbc.insets = new java.awt.Insets(2, 5, 2, 5); // Tighter insets
 
-        detailsLayout.setVerticalGroup(
-                detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(detailsLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(productIdLabel)
-                                        .addComponent(productIdField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(productNameLabel)
-                                        .addComponent(productNameField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(priceLabel)
-                                        .addComponent(priceField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(stockLabel)
-                                        .addComponent(stockField, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(detailsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(quantityLabel)
-                                        .addComponent(quantitySpinner, javax.swing.GroupLayout.PREFERRED_SIZE,
-                                                javax.swing.GroupLayout.DEFAULT_SIZE,
-                                                javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(addToCartButton))
-                                .addContainerGap()));
+        // Header
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.insets = new java.awt.Insets(0, 0, 10, 0);
+        p.add(header, gbc);
 
-        // Labels
-        productIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        productIdLabel.setText("Mã SP:");
-        productNameLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        productNameLabel.setText("Tên SP:");
-        priceLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        priceLabel.setText("Giá:");
-        stockLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        stockLabel.setText("Tồn kho:");
-        quantityLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        quantityLabel.setText("Số lượng:");
+        // Reset
+        gbc.gridwidth = 1;
+        gbc.insets = new java.awt.Insets(2, 0, 2, 10);
 
         // Fields
-        productIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        productIdField.setEditable(false);
-        productNameField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        productNameField.setEditable(false);
-        priceField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        priceField.setEditable(false);
-        stockField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        stockField.setEditable(false);
-        quantitySpinner.setModel(new javax.swing.SpinnerNumberModel(1, 1, 1000, 1));
+        addDetailRow(p, gbc, 1, "Mã SP:", productIdLabel = createLabel(""), productIdField = createStyledTextField());
+        addDetailRow(p, gbc, 2, "Tên SP:", productNameLabel = createLabel(""),
+                productNameField = createStyledTextField());
+        addDetailRow(p, gbc, 3, "Giá:", priceLabel = createLabel(""), priceField = createStyledTextField());
+        addDetailRow(p, gbc, 4, "Tồn kho:", stockLabel = createLabel(""), stockField = createStyledTextField());
 
-        addToCartButton.setBackground(new java.awt.Color(50, 150, 50));
-        addToCartButton.setForeground(new java.awt.Color(255, 255, 255));
-        addToCartButton.setText("🛒 Thêm vào giỏ");
-        addToCartButton.setFocusPainted(false);
+        // Read-only
+        productIdField.setEditable(false);
+        productNameField.setEditable(false);
+        priceField.setEditable(false);
+        stockField.setEditable(false);
+
+        // Quantity & Button
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        quantityLabel = createLabel("Số lượng:");
+        p.add(quantityLabel, gbc);
+
+        gbc.gridx = 1;
+        javax.swing.JPanel actionPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
+        actionPanel.setOpaque(false);
+
+        quantitySpinner = new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(1, 1, 100, 1));
+        quantitySpinner.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        quantitySpinner.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        quantitySpinner.setPreferredSize(new java.awt.Dimension(80, 36)); // Compact height
+
+        addToCartButton = createModernButton("Thêm vào giỏ", java.awt.Color.WHITE, new java.awt.Color(22, 163, 74));
+        addToCartButton.setPreferredSize(new java.awt.Dimension(120, 36));
         addToCartButton.addActionListener(e -> addToCart());
 
-        // Cart panel
-        cartPanel.setBackground(new java.awt.Color(255, 255, 255));
-        cartPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createTitledBorder(null, "Giỏ hàng",
-                        javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                        javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                        new java.awt.Font("Segoe UI", 1, 16), new java.awt.Color(60, 60, 60)),
-                javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        cartPanel.setLayout(new java.awt.BorderLayout(0, 10));
+        actionPanel.add(quantitySpinner, java.awt.BorderLayout.WEST);
+        actionPanel.add(addToCartButton, java.awt.BorderLayout.CENTER);
 
+        p.add(actionPanel, gbc);
+
+        return p;
+    }
+
+    private void addDetailRow(javax.swing.JPanel p, java.awt.GridBagConstraints gbc, int row, String label,
+            javax.swing.JLabel lblComp, javax.swing.JTextField txtComp) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0.0;
+        lblComp.setText(label);
+        lblComp.setFont(new java.awt.Font("Segoe UI", 1, 13));
+        p.add(lblComp, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        txtComp.setPreferredSize(new java.awt.Dimension(0, 34));
+        p.add(txtComp, gbc);
+    }
+
+    private javax.swing.JPanel createCartPanel() {
+        javax.swing.JPanel p = createPanelWithShadow();
+        p.setLayout(new java.awt.BorderLayout(0, 5)); // Reduced vertical gap
+        p.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 15, 10, 15)); // Compact padding
+
+        // Header
+        javax.swing.JPanel header = new javax.swing.JPanel(new java.awt.BorderLayout());
+        header.setOpaque(false);
+        javax.swing.JLabel title = new javax.swing.JLabel("Giỏ hàng");
+        title.setFont(new java.awt.Font("Segoe UI", 1, 16));
+        title.setForeground(new java.awt.Color(30, 41, 59));
+
+        totalLabel = new javax.swing.JLabel("Tổng tiền:");
+        header.add(title, java.awt.BorderLayout.WEST);
+        p.add(header, java.awt.BorderLayout.NORTH);
+
+        // Table
         String[] cartColumns = { "Mã SP", "Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền" };
-        Object[][] cartData = {};
-        cartTableScroll = new javax.swing.JTable(cartData, cartColumns);
-        cartTableScroll.setFont(new java.awt.Font("Segoe UI", 0, 12));
-        cartTableScroll.setRowHeight(25);
-        cartTable.setViewportView(cartTableScroll);
+        cartTableScroll = createStyledTable(new Object[][] {}, cartColumns);
+        cartTableScroll.setRowHeight(30); // Compact row
+        cartTable = new javax.swing.JScrollPane(cartTableScroll);
+        cartTable.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(241, 245, 249)));
+        cartTable.getVerticalScrollBar().setUI(new ModernScrollBarUI());
 
-        javax.swing.JPanel cartInfoPanel = new javax.swing.JPanel();
-        cartInfoPanel.setLayout(new javax.swing.BoxLayout(cartInfoPanel, javax.swing.BoxLayout.Y_AXIS));
-        cartInfoPanel.setBackground(new java.awt.Color(255, 255, 255));
-        cartInfoPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        p.add(cartTable, java.awt.BorderLayout.CENTER);
 
-        javax.swing.JPanel cardIdPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        cardIdPanel.setBackground(new java.awt.Color(255, 255, 255));
-        cardIdLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        cardIdLabel.setText("Mã thẻ:");
-        cardIdField.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        // Bottom Info
+        javax.swing.JPanel botPanel = new javax.swing.JPanel();
+        botPanel.setLayout(new javax.swing.BoxLayout(botPanel, javax.swing.BoxLayout.Y_AXIS));
+        botPanel.setOpaque(false);
+        botPanel.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 0, 0, 0, new java.awt.Color(241, 245, 249)));
+
+        // Info Grid
+        javax.swing.JPanel infoGrid = new javax.swing.JPanel(new java.awt.GridLayout(3, 2, 5, 5));
+        infoGrid.setOpaque(false);
+        infoGrid.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 0, 5, 0));
+
+        infoGrid.add(createCompactInfoPanel("Mã thẻ:", cardIdField = createStyledTextField()));
         cardIdField.setText(currentCardId);
         cardIdField.setEditable(false);
-        cardIdPanel.add(cardIdLabel, java.awt.BorderLayout.WEST);
-        cardIdPanel.add(cardIdField, java.awt.BorderLayout.CENTER);
 
-        javax.swing.JPanel pointsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        pointsPanel.setBackground(new java.awt.Color(255, 255, 255));
-        pointsUsedLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        pointsUsedLabel.setText("Điểm sử dụng:");
-        pointsUsedField.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        infoGrid.add(createCompactInfoPanel("Ngày bán:", saleDateField = createStyledTextField()));
+        saleDateField.setEditable(false);
+
+        pointsUsedField = createStyledTextField();
         pointsUsedField.setText("0");
-        pointsUsedField.setEditable(true);
-        // Cập nhật tổng tiền khi nhấn Enter
         pointsUsedField.addActionListener(e -> updateCartTable());
-        // Cập nhật tổng tiền khi rời khỏi field (focus lost)
         pointsUsedField.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
             public void focusLost(java.awt.event.FocusEvent e) {
                 updateCartTable();
             }
         });
-        // Cập nhật tổng tiền khi thay đổi nội dung (với delay để tránh cập nhật quá
-        // nhiều)
-        javax.swing.Timer updateTimer = new javax.swing.Timer(500, e -> updateCartTable());
-        updateTimer.setRepeats(false); // Chỉ chạy một lần sau khi dừng gõ
-        pointsUsedField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                updateTimer.restart();
-            }
+        infoGrid.add(createCompactInfoPanel("Điểm dùng:", pointsUsedField));
 
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                updateTimer.restart();
-            }
+        botPanel.add(infoGrid);
 
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                updateTimer.restart();
-            }
-        });
-        pointsPanel.add(pointsUsedLabel, java.awt.BorderLayout.WEST);
-        pointsPanel.add(pointsUsedField, java.awt.BorderLayout.CENTER);
+        // Total and Actions
+        javax.swing.JPanel totalActionPanel = new javax.swing.JPanel(new java.awt.BorderLayout());
+        totalActionPanel.setOpaque(false);
+        totalActionPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 0, 0, 0));
 
-        javax.swing.JPanel saleDatePanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        saleDatePanel.setBackground(new java.awt.Color(255, 255, 255));
-        saleDateLabel.setFont(new java.awt.Font("Segoe UI", 1, 13));
-        saleDateLabel.setText("Ngày bán:");
-        saleDateField.setFont(new java.awt.Font("Segoe UI", 0, 13));
-        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
-        saleDateField.setText(dateFormat.format(new java.util.Date()));
-        saleDateField.setEditable(false);
-        saleDatePanel.add(saleDateLabel, java.awt.BorderLayout.WEST);
-        saleDatePanel.add(saleDateField, java.awt.BorderLayout.CENTER);
-
-        cartInfoPanel.add(cardIdPanel);
-        cartInfoPanel.add(javax.swing.Box.createVerticalStrut(5));
-        cartInfoPanel.add(pointsPanel);
-        cartInfoPanel.add(javax.swing.Box.createVerticalStrut(5));
-        cartInfoPanel.add(saleDatePanel);
-
-        javax.swing.JPanel cartBottomPanel = new javax.swing.JPanel();
-        cartBottomPanel.setLayout(new java.awt.BorderLayout(10, 10));
-        cartBottomPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        totalLabel.setFont(new java.awt.Font("Segoe UI", 1, 16));
-        totalLabel.setText("Tổng tiền:");
-        totalField.setFont(new java.awt.Font("Segoe UI", 1, 16));
-        totalField.setText("0 đ");
+        totalField = new javax.swing.JTextField("0 đ");
+        totalField.setFont(new java.awt.Font("Segoe UI", 1, 18));
+        totalField.setForeground(new java.awt.Color(22, 163, 74));
+        totalField.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        totalField.setBorder(null);
+        totalField.setOpaque(false);
         totalField.setEditable(false);
-        totalField.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
 
-        checkoutButton.setBackground(new java.awt.Color(0, 120, 215));
-        checkoutButton.setForeground(new java.awt.Color(255, 255, 255));
-        checkoutButton.setText("💳 Thanh toán");
-        checkoutButton.setFocusPainted(false);
-        checkoutButton.setPreferredSize(new java.awt.Dimension(150, 40));
-        checkoutButton.addActionListener(e -> checkout());
+        totalActionPanel.add(totalField, java.awt.BorderLayout.CENTER);
 
-        clearCartButton.setBackground(new java.awt.Color(200, 50, 50));
-        clearCartButton.setForeground(new java.awt.Color(255, 255, 255));
-        clearCartButton.setText("🗑️ Xóa giỏ");
-        clearCartButton.setFocusPainted(false);
-        clearCartButton.setPreferredSize(new java.awt.Dimension(120, 40));
+        javax.swing.JPanel btnPanel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 5, 0));
+        btnPanel.setOpaque(false);
+
+        clearCartButton = createModernButton("Xóa", java.awt.Color.WHITE, new java.awt.Color(239, 68, 68));
+        clearCartButton.setPreferredSize(new java.awt.Dimension(70, 36));
         clearCartButton.addActionListener(e -> clearCart());
 
-        javax.swing.JPanel totalPanel = new javax.swing.JPanel(new java.awt.BorderLayout(10, 0));
-        totalPanel.setBackground(new java.awt.Color(255, 255, 255));
-        totalPanel.add(totalLabel, java.awt.BorderLayout.WEST);
-        totalPanel.add(totalField, java.awt.BorderLayout.CENTER);
+        checkoutButton = createModernButton("Thanh toán", java.awt.Color.WHITE, new java.awt.Color(59, 130, 246));
+        checkoutButton.setPreferredSize(new java.awt.Dimension(110, 36));
+        checkoutButton.addActionListener(e -> checkout());
 
-        javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
-        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 0));
-        buttonPanel.setBackground(new java.awt.Color(255, 255, 255));
-        buttonPanel.add(clearCartButton);
-        buttonPanel.add(checkoutButton);
+        btnPanel.add(clearCartButton);
+        btnPanel.add(checkoutButton);
 
-        cartBottomPanel.add(totalPanel, java.awt.BorderLayout.CENTER);
-        cartBottomPanel.add(buttonPanel, java.awt.BorderLayout.EAST);
+        totalActionPanel.add(btnPanel, java.awt.BorderLayout.SOUTH);
 
-        // Tạo container cho info và bottom panel
-        javax.swing.JPanel cartBottomContainer = new javax.swing.JPanel();
-        cartBottomContainer.setLayout(new java.awt.BorderLayout(0, 10));
-        cartBottomContainer.setBackground(new java.awt.Color(255, 255, 255));
-        cartBottomContainer.add(cartInfoPanel, java.awt.BorderLayout.CENTER);
-        cartBottomContainer.add(cartBottomPanel, java.awt.BorderLayout.SOUTH);
+        botPanel.add(totalActionPanel);
 
-        cartPanel.add(cartTable, java.awt.BorderLayout.CENTER);
-        cartPanel.add(cartBottomContainer, java.awt.BorderLayout.SOUTH);
+        p.add(botPanel, java.awt.BorderLayout.SOUTH);
+        return p;
+    }
 
-        detailsPanel.add(productDetailsPanel, java.awt.BorderLayout.NORTH);
-        detailsPanel.add(cartPanel, java.awt.BorderLayout.CENTER);
+    private javax.swing.JPanel createCompactInfoPanel(String label, javax.swing.JComponent field) {
+        javax.swing.JPanel p = new javax.swing.JPanel(new java.awt.BorderLayout(5, 0));
+        p.setOpaque(false);
+        javax.swing.JLabel lbl = new javax.swing.JLabel(label);
+        lbl.setFont(new java.awt.Font("Segoe UI", 0, 11));
+        lbl.setForeground(new java.awt.Color(100, 116, 139));
+        p.add(lbl, java.awt.BorderLayout.NORTH);
+        field.setFont(new java.awt.Font("Segoe UI", 0, 13));
+        field.setPreferredSize(new java.awt.Dimension(0, 28));
+        p.add(field, java.awt.BorderLayout.CENTER);
+        return p;
+    }
 
-        mainContainer.add(productsPanel, java.awt.BorderLayout.WEST);
-        mainContainer.add(detailsPanel, java.awt.BorderLayout.CENTER);
+    // --- Helpers ---
 
-        add(mainContainer, java.awt.BorderLayout.CENTER);
+    private javax.swing.JPanel createPanelWithShadow() {
+        javax.swing.JPanel p = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(java.awt.Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+                g2.setColor(new java.awt.Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+                g2.dispose();
+            }
+        };
+        p.setOpaque(false);
+        return p;
+    }
+
+    private javax.swing.JLabel createLabel(String text) {
+        javax.swing.JLabel l = new javax.swing.JLabel(text);
+        l.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        l.setForeground(new java.awt.Color(100, 116, 139));
+        return l;
+    }
+
+    private javax.swing.JTextField createStyledTextField() {
+        javax.swing.JTextField f = new javax.swing.JTextField();
+        f.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        f.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)),
+                javax.swing.BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        f.setBackground(new java.awt.Color(248, 250, 252));
+        return f;
+    }
+
+    private javax.swing.JButton createModernButton(String text, java.awt.Color fg, java.awt.Color bg) {
+        javax.swing.JButton b = new javax.swing.JButton(text);
+        b.setFont(new java.awt.Font("Segoe UI", 1, 14));
+        b.setForeground(fg);
+        b.setBackground(bg);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        return b;
+    }
+
+    private javax.swing.JTable createStyledTable(Object[][] data, String[] columns) {
+        javax.swing.JTable t = new javax.swing.JTable(new javax.swing.table.DefaultTableModel(data, columns));
+        t.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        t.setRowHeight(35);
+        t.setSelectionBackground(new java.awt.Color(239, 246, 255));
+        t.setSelectionForeground(new java.awt.Color(15, 23, 42));
+        t.setShowVerticalLines(false);
+        t.setShowHorizontalLines(true);
+        t.setGridColor(new java.awt.Color(241, 245, 249));
+        t.getTableHeader().setFont(new java.awt.Font("Segoe UI", 1, 14));
+        t.getTableHeader().setBackground(new java.awt.Color(248, 250, 252));
+        t.getTableHeader().setForeground(new java.awt.Color(100, 116, 139));
+        t.getTableHeader()
+                .setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)));
+        return t;
+    }
+
+    // Modern ScrollBar
+    private static class ModernScrollBarUI extends javax.swing.plaf.basic.BasicScrollBarUI {
+        @Override
+        protected void configureScrollBarColors() {
+            this.thumbColor = new java.awt.Color(203, 213, 225);
+            this.trackColor = new java.awt.Color(248, 250, 252);
+        }
+
+        @Override
+        protected javax.swing.JButton createDecreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        @Override
+        protected javax.swing.JButton createIncreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        private javax.swing.JButton createZeroButton() {
+            javax.swing.JButton b = new javax.swing.JButton();
+            b.setPreferredSize(new java.awt.Dimension(0, 0));
+            return b;
+        }
+
+        @Override
+        protected void paintThumb(java.awt.Graphics g, javax.swing.JComponent c, java.awt.Rectangle r) {
+            if (r.isEmpty() || !scrollbar.isEnabled())
+                return;
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(thumbColor);
+            g2.fillRoundRect(r.x + 2, r.y + 2, r.width - 4, r.height - 4, 8, 8);
+            g2.dispose();
+        }
+
+        @Override
+        protected void paintTrack(java.awt.Graphics g, javax.swing.JComponent c, java.awt.Rectangle r) {
+            g.setColor(trackColor);
+            g.fillRect(r.x, r.y, r.width, r.height);
+        }
     }
 
     private void filterByCategory() {

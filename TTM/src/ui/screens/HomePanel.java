@@ -26,7 +26,7 @@ import java.util.List;
  * @author admin
  */
 public class HomePanel extends javax.swing.JPanel {
-    
+
     private BorrowService borrowService;
     private TransactionService transactionService;
     private CardService cardService;
@@ -42,7 +42,7 @@ public class HomePanel extends javax.swing.JPanel {
         initComponents();
         loadStats();
     }
-    
+
     /**
      * Set CardID từ thẻ đăng nhập
      */
@@ -52,7 +52,7 @@ public class HomePanel extends javax.swing.JPanel {
             loadStats(); // Reload stats với CardID mới
         }
     }
-    
+
     /**
      * Load statistics from database
      */
@@ -62,13 +62,13 @@ public class HomePanel extends javax.swing.JPanel {
         int cardPoints = 0;
         int borrowedBooksCount = 0;
         boolean cardDataLoaded = false;
-        
+
         try {
             CardConnectionManager connManager = new CardConnectionManager();
             connManager.connectCard();
             try {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
-                
+
                 // Lấy số dư và điểm từ thẻ
                 CardBalanceManager.BalanceInfo balanceInfo = balanceManager.getBalance();
                 if (balanceInfo.success) {
@@ -78,34 +78,38 @@ public class HomePanel extends javax.swing.JPanel {
                     System.out.println("[HOME] Card Balance: " + cardBalance + " VND");
                     System.out.println("[HOME] Card Points: " + cardPoints);
                 }
-                
+
                 // Lấy danh sách sách đang mượn từ thẻ
                 List<CardBalanceManager.BorrowedBook> borrowedBooks = balanceManager.getBorrowedBooks();
                 borrowedBooksCount = borrowedBooks.size();
                 System.out.println("[HOME] Borrowed books on card: " + borrowedBooksCount);
-                
+
             } finally {
                 connManager.disconnectCard();
             }
         } catch (Exception e) {
             System.err.println("[HOME] Không thể lấy dữ liệu từ thẻ: " + e.getMessage());
         }
-        
+
         // Card 1: Sách đang mượn (từ thẻ)
         if (cardDataLoaded) {
-            card1Value.setText(String.valueOf(borrowedBooksCount));
+            if (card1 != null)
+                card1.setValue(String.valueOf(borrowedBooksCount));
         } else {
             // Fallback: lấy từ database
             List<BorrowService.BorrowRecord> borrowedBooks = borrowService.getBorrowedBooksByCard(currentCardId);
             int currentlyBorrowed = borrowedBooks != null ? borrowedBooks.size() : 0;
-            card1Value.setText(String.valueOf(currentlyBorrowed));
+            if (card1 != null)
+                card1.setValue(String.valueOf(currentlyBorrowed));
         }
-        
+
         // Card 2: Điểm thưởng (từ thẻ)
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         if (cardDataLoaded) {
-            card2Label.setText("Điểm thưởng");
-            card2Value.setText(nf.format(cardPoints) + " điểm");
+            if (card2 != null) {
+                card2.setTitle("Điểm thưởng");
+                card2.setValue(nf.format(cardPoints) + " điểm");
+            }
         } else {
             // Fallback: Sách đã mượn (từ DB)
             int totalReturned = 0;
@@ -126,13 +130,16 @@ public class HomePanel extends javax.swing.JPanel {
             } catch (SQLException e) {
                 System.err.println("Loi khi dem sach da muon: " + e.getMessage());
             }
-            card2Label.setText("Sách đã mượn");
-            card2Value.setText(String.valueOf(totalReturned));
+            if (card2 != null) {
+                card2.setTitle("Sách đã mượn");
+                card2.setValue(String.valueOf(totalReturned));
+            }
         }
-        
+
         // Card 3: Số dư tài khoản (từ thẻ)
         if (cardDataLoaded) {
-            card3Value.setText(nf.format(cardBalance) + " đ");
+            if (card3 != null)
+                card3.setValue(nf.format(cardBalance) + " đ");
         } else {
             // Fallback: tính từ transactions trong DB
             List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
@@ -146,9 +153,10 @@ public class HomePanel extends javax.swing.JPanel {
                     }
                 }
             }
-            card3Value.setText(nf.format(balance) + " đ");
+            if (card3 != null)
+                card3.setValue(nf.format(balance) + " đ");
         }
-        
+
         // Card 4: Giao dịch tháng này (luôn lấy từ DB)
         List<TransactionService.Transaction> transactions = transactionService.getTransactionsByCard(currentCardId);
         int transactionsThisMonth = 0;
@@ -175,9 +183,10 @@ public class HomePanel extends javax.swing.JPanel {
                 }
             }
         }
-        card4Value.setText(String.valueOf(transactionsThisMonth));
+        if (card4 != null)
+            card4.setValue(String.valueOf(transactionsThisMonth));
     }
-    
+
     /**
      * Reload statistics (public method for external refresh)
      */
@@ -189,127 +198,54 @@ public class HomePanel extends javax.swing.JPanel {
      * Khởi tạo các component của giao diện
      * Code này được viết thủ công
      */
+    /**
+     * Khởi tạo các component của giao diện
+     * Code này được viết thủ công
+     */
     @SuppressWarnings("unchecked")
     private void initComponents() {
 
         welcomeLabel = new javax.swing.JLabel();
         subtitleLabel = new javax.swing.JLabel();
         statsPanel = new javax.swing.JPanel();
-        card1 = new javax.swing.JPanel();
-        card1Label = new javax.swing.JLabel();
-        card1Value = new javax.swing.JLabel();
-        card2 = new javax.swing.JPanel();
-        card2Label = new javax.swing.JLabel();
-        card2Value = new javax.swing.JLabel();
-        card3 = new javax.swing.JPanel();
-        card3Label = new javax.swing.JLabel();
-        card3Value = new javax.swing.JLabel();
-        card4 = new javax.swing.JPanel();
-        card4Label = new javax.swing.JLabel();
-        card4Value = new javax.swing.JLabel();
 
-        setBackground(new java.awt.Color(245, 245, 250));
-        setLayout(new java.awt.BorderLayout(0, 30));
+        // Init styled cards
+        card1 = new StatsCard("Sách đang mượn", "0", "book", new java.awt.Color(37, 99, 235)); // Blue
+        card2 = new StatsCard("Điểm thưởng", "0 điểm", "star", new java.awt.Color(22, 163, 74)); // Green
+        card3 = new StatsCard("Số dư tài khoản", "0 đ", "wallet", new java.awt.Color(217, 119, 6)); // Orange
+        card4 = new StatsCard("Giao dịch tháng này", "0", "chart", new java.awt.Color(147, 51, 234)); // Purple
+
+        // Needed for update logic to find labels/values, though we should update
+        // StatsCard directly
+        // We will map logical names to the cards for easier updating
+
+        setBackground(new java.awt.Color(248, 250, 252)); // Slate 50
+        setLayout(new java.awt.BorderLayout(0, 20));
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
         // Welcome Section
         javax.swing.JPanel welcomePanel = new javax.swing.JPanel();
-        welcomePanel.setBackground(new java.awt.Color(245, 245, 250));
-        welcomePanel.setLayout(new java.awt.BorderLayout());
-        welcomePanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(40, 40, 20, 40));
+        welcomePanel.setBackground(new java.awt.Color(248, 250, 252));
+        welcomePanel.setLayout(new javax.swing.BoxLayout(welcomePanel, javax.swing.BoxLayout.Y_AXIS));
+        welcomePanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
-        welcomeLabel.setFont(new java.awt.Font("Segoe UI", 1, 32));
-        welcomeLabel.setForeground(new java.awt.Color(45, 45, 48));
-        welcomeLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        welcomeLabel.setText("Chào mừng bạn quay trở lại!");
+        welcomeLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
+        welcomeLabel.setForeground(new java.awt.Color(15, 23, 42)); // Slate 900
+        welcomeLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        welcomeLabel.setText("Chào mừng trở lại!");
 
         subtitleLabel.setFont(new java.awt.Font("Segoe UI", 0, 16));
-        subtitleLabel.setForeground(new java.awt.Color(100, 100, 100));
-        subtitleLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        subtitleLabel.setText("Hệ thống quản lý nhà sách TTM");
+        subtitleLabel.setForeground(new java.awt.Color(100, 116, 139)); // Slate 500
+        subtitleLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        subtitleLabel.setText("Tổng quan hệ thống nhà sách của bạn");
 
-        welcomePanel.add(welcomeLabel, java.awt.BorderLayout.CENTER);
-        welcomePanel.add(subtitleLabel, java.awt.BorderLayout.SOUTH);
+        welcomePanel.add(welcomeLabel);
+        welcomePanel.add(javax.swing.Box.createVerticalStrut(5));
+        welcomePanel.add(subtitleLabel);
 
         // Stats Cards Panel
-        statsPanel.setBackground(new java.awt.Color(245, 245, 250));
-        statsPanel.setLayout(new java.awt.GridLayout(2, 2, 20, 20));
-        statsPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 40, 40, 40));
-
-        // Card 1 - Sách đang mượn
-        card1.setBackground(new java.awt.Color(255, 255, 255));
-        card1.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(230, 230, 230), 1),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        card1.setLayout(new java.awt.BorderLayout(0, 10));
-
-        card1Label.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        card1Label.setForeground(new java.awt.Color(100, 100, 100));
-        card1Label.setText("Sách đang mượn");
-
-        card1Value.setFont(new java.awt.Font("Segoe UI", 1, 36));
-        card1Value.setForeground(new java.awt.Color(0, 120, 215));
-        card1Value.setText("0");
-
-        card1.add(card1Label, java.awt.BorderLayout.NORTH);
-        card1.add(card1Value, java.awt.BorderLayout.CENTER);
-
-        // Card 2 - Sách đã mượn
-        card2.setBackground(new java.awt.Color(255, 255, 255));
-        card2.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(230, 230, 230), 1),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        card2.setLayout(new java.awt.BorderLayout(0, 10));
-
-        card2Label.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        card2Label.setForeground(new java.awt.Color(100, 100, 100));
-        card2Label.setText("Sách đã mượn");
-
-        card2Value.setFont(new java.awt.Font("Segoe UI", 1, 36));
-        card2Value.setForeground(new java.awt.Color(50, 150, 50));
-        card2Value.setText("0");
-
-        card2.add(card2Label, java.awt.BorderLayout.NORTH);
-        card2.add(card2Value, java.awt.BorderLayout.CENTER);
-
-        // Card 3 - Số tiền trong tài khoản
-        card3.setBackground(new java.awt.Color(255, 255, 255));
-        card3.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(230, 230, 230), 1),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        card3.setLayout(new java.awt.BorderLayout(0, 10));
-
-        card3Label.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        card3Label.setForeground(new java.awt.Color(100, 100, 100));
-        card3Label.setText("Số dư tài khoản");
-
-        card3Value.setFont(new java.awt.Font("Segoe UI", 1, 36));
-        card3Value.setForeground(new java.awt.Color(255, 140, 0));
-        card3Value.setText("0 đ");
-
-        card3.add(card3Label, java.awt.BorderLayout.NORTH);
-        card3.add(card3Value, java.awt.BorderLayout.CENTER);
-
-        // Card 4 - Lịch sử giao dịch
-        card4.setBackground(new java.awt.Color(255, 255, 255));
-        card4.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(230, 230, 230), 1),
-            javax.swing.BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        card4.setLayout(new java.awt.BorderLayout(0, 10));
-
-        card4Label.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        card4Label.setForeground(new java.awt.Color(100, 100, 100));
-        card4Label.setText("Giao dịch tháng này");
-
-        card4Value.setFont(new java.awt.Font("Segoe UI", 1, 36));
-        card4Value.setForeground(new java.awt.Color(150, 50, 150));
-        card4Value.setText("0");
-
-        card4.add(card4Label, java.awt.BorderLayout.NORTH);
-        card4.add(card4Value, java.awt.BorderLayout.CENTER);
+        statsPanel.setOpaque(false);
+        statsPanel.setLayout(new java.awt.GridLayout(2, 2, 25, 25)); // Grid with gaps
 
         statsPanel.add(card1);
         statsPanel.add(card2);
@@ -320,21 +256,161 @@ public class HomePanel extends javax.swing.JPanel {
         add(statsPanel, java.awt.BorderLayout.CENTER);
     }
 
+    // Custom Stats Card Component
+    private class StatsCard extends javax.swing.JPanel {
+        private String title;
+        private String value;
+        private String iconType;
+        private java.awt.Color accentColor;
+        private javax.swing.JLabel valueLabel;
+        private javax.swing.JLabel titleLabel;
+
+        public StatsCard(String title, String initialValue, String iconType, java.awt.Color accentColor) {
+            this.title = title;
+            this.value = initialValue;
+            this.iconType = iconType;
+            this.accentColor = accentColor;
+
+            setLayout(new java.awt.BorderLayout());
+            setOpaque(false);
+
+            initComponents();
+        }
+
+        private void initComponents() {
+            // Main Container with padding
+            javax.swing.JPanel container = new javax.swing.JPanel() {
+                @Override
+                protected void paintComponent(java.awt.Graphics g) {
+                    java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                    g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                            java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    // Shadow
+                    g2.setColor(new java.awt.Color(0, 0, 0, 15));
+                    g2.fillRoundRect(3, 3, getWidth() - 6, getHeight() - 6, 20, 20);
+
+                    // Background
+                    g2.setColor(java.awt.Color.WHITE);
+                    g2.fillRoundRect(0, 0, getWidth() - 6, getHeight() - 6, 20, 20);
+
+                    // Accent Line (Left border)
+                    // g2.setColor(accentColor);
+                    // g2.fillRoundRect(0, 0, 6, getHeight()-6, 20, 20);
+                    // g2.fillRect(4, 0, 4, getHeight()-6); // Square off right side of strip
+
+                    g2.dispose();
+                }
+            };
+            container.setLayout(null); // Absolute layout for custom positioning
+            container.setOpaque(false);
+
+            // Icon Background Circle
+            javax.swing.JPanel iconBg = new javax.swing.JPanel() {
+                @Override
+                protected void paintComponent(java.awt.Graphics g) {
+                    java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                    g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                            java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    // Light version of accent color
+                    float[] hsb = java.awt.Color.RGBtoHSB(accentColor.getRed(), accentColor.getGreen(),
+                            accentColor.getBlue(), null);
+                    java.awt.Color lightColor = new java.awt.Color(java.awt.Color.HSBtoRGB(hsb[0], 0.15f, 1.0f));
+
+                    g2.setColor(lightColor);
+                    g2.fillOval(0, 0, getWidth(), getHeight());
+
+                    // Draw Icon
+                    g2.setColor(accentColor);
+                    g2.setStroke(new java.awt.BasicStroke(2f));
+                    int cx = getWidth() / 2;
+                    int cy = getHeight() / 2;
+
+                    switch (iconType) {
+                        case "book":
+                            g2.drawRect(cx - 6, cy - 8, 12, 16);
+                            g2.drawLine(cx - 6, cy + 4, cx + 6, cy + 4);
+                            break;
+                        case "star":
+                            int[] x = { cx, cx + 4, cx + 10, cx + 5, cx + 7, cx, cx - 7, cx - 5, cx - 10, cx - 4 };
+                            int[] y = { cy - 10, cy - 3, cy - 3, cy + 3, cy + 10, cy + 6, cy + 10, cy + 3, cy - 3,
+                                    cy - 3 };
+                            g2.drawPolygon(x, y, 10);
+                            break;
+                        case "wallet":
+                            g2.drawRoundRect(cx - 9, cy - 7, 18, 14, 3, 3);
+                            g2.drawOval(cx, cy - 2, 4, 4);
+                            break;
+                        case "chart":
+                            g2.drawLine(cx - 8, cy + 8, cx + 8, cy + 8);
+                            g2.drawLine(cx - 5, cy + 8, cx - 5, cy);
+                            g2.drawLine(cx, cy + 8, cx, cy - 6);
+                            g2.drawLine(cx + 5, cy + 8, cx + 5, cy - 3);
+                            break;
+                    }
+
+                    g2.dispose();
+                }
+            };
+            iconBg.setBounds(25, 25, 50, 50);
+            iconBg.setOpaque(false);
+            container.add(iconBg);
+
+            // Labels
+            titleLabel = new javax.swing.JLabel(title);
+            titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 14));
+            titleLabel.setForeground(new java.awt.Color(100, 116, 139));
+            titleLabel.setBounds(25, 90, 200, 20);
+            container.add(titleLabel);
+
+            valueLabel = new javax.swing.JLabel(value);
+            valueLabel.setFont(new java.awt.Font("Segoe UI", 1, 28));
+            valueLabel.setForeground(new java.awt.Color(15, 23, 42));
+            valueLabel.setBounds(25, 115, 250, 40);
+            container.add(valueLabel);
+
+            add(container, java.awt.BorderLayout.CENTER);
+        }
+
+        public void setValue(String val) {
+            this.value = val;
+            if (valueLabel != null)
+                valueLabel.setText(val);
+        }
+
+        public void setTitle(String t) {
+            this.title = t;
+            if (titleLabel != null)
+                titleLabel.setText(t);
+        }
+    }
+
+    // Update loadStats to use the new StatsCard setters
+    // We need to override the cardX variables access since they are no longer
+    // JPanels with direct label access
+    // But since cardX are now StatsCard objects, we can cast or just declare them
+    // as StatsCard
+
     // Variables declaration
-    private javax.swing.JPanel card1;
-    private javax.swing.JLabel card1Label;
-    private javax.swing.JLabel card1Value;
-    private javax.swing.JPanel card2;
-    private javax.swing.JLabel card2Label;
-    private javax.swing.JLabel card2Value;
-    private javax.swing.JPanel card3;
-    private javax.swing.JLabel card3Label;
-    private javax.swing.JLabel card3Value;
-    private javax.swing.JPanel card4;
-    private javax.swing.JLabel card4Label;
-    private javax.swing.JLabel card4Value;
+    private StatsCard card1;
+    private StatsCard card2;
+    private StatsCard card3;
+    private StatsCard card4;
     private javax.swing.JPanel statsPanel;
     private javax.swing.JLabel subtitleLabel;
     private javax.swing.JLabel welcomeLabel;
-}
 
+    // Need to update the original logic that referred to card1Value, etc.
+    // Since we replaced the variables, we need to adapt the loadStats method too to
+    // avoid compilation errors.
+    // We will do this by keeping the original component names as fields in the
+    // class but updating how loadStats interacts with them.
+    // IMPORTANT: The previous step removed the JPanel definitions. I need to make
+    // sure I update ALL references in the file.
+    // The previous loadStats method used: card1Value.setText(...)
+    // My new StatsCard has setValue(...).
+    // So I need to update loadStats as well. I will include loadStats in this
+    // replacement.
+
+}
