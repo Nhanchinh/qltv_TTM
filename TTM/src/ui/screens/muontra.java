@@ -23,8 +23,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- * Panel Mượn/Trả sách với tích hợp Smart Card
- * Hỗ trợ mượn nhiều sách cùng lúc
+ * Panel Thuê/Trả sách với tích hợp Smart Card
+ * Hỗ trợ thuê nhiều sách cùng lúc
  * 
  * @author admin
  */
@@ -35,7 +35,7 @@ public class muontra extends javax.swing.JPanel {
     private CardService cardService;
     private String currentCardId = "CARD001";
 
-    // Giỏ mượn sách (để mượn nhiều quyển cùng lúc)
+    // Giỏ thuê sách (để thuê nhiều quyển cùng lúc)
     private List<BorrowCartItem> borrowCart = new ArrayList<>();
 
     // Hằng số theo hạng thành viên
@@ -50,9 +50,9 @@ public class muontra extends javax.swing.JPanel {
     private static final int FREE_BORROWS_DIAMOND = 10;
 
     // Phí thuê và phạt
-    private static final int RENTAL_FEE_PER_DAY = 1000; // 1k/ngày
-    private static final int LATE_FEE_PER_DAY = 5000; // 5k/ngày trễ
-    private static final int FREE_DURATION_DAYS = 14; // 14 ngày đầu miễn phí
+    private static final int RENTAL_FEE_PER_DAY = 1000; // 1,000đ/ngày
+    private static final int LATE_FEE_PER_DAY = 5000; // 5,000đ/ngày trễ hạn
+    private static final int FREE_DURATION_DAYS = 14; // Lượt FREE: 14 ngày đầu miễn phí
 
     // Biến lưu thông tin thành viên
     private String currentMemberType = "Normal";
@@ -77,11 +77,24 @@ public class muontra extends javax.swing.JPanel {
             this.useFreeSlot = useFreeSlot;
         }
 
+        /**
+         * Tính phí thuê dựa trên lượt FREE:
+         * - CÓ lượt FREE + ≤14 ngày: phí = 0đ
+         * - CÓ lượt FREE + >14 ngày: phí = (ngày - 14) × 1,000đ
+         * - HẾT lượt FREE: phí = ngày × 1,000đ
+         */
         int getRentalFee() {
-            if (useFreeSlot || days <= FREE_DURATION_DAYS) {
-                return 0;
+            if (useFreeSlot) {
+                // Có lượt FREE: 14 ngày đầu miễn phí
+                if (days <= FREE_DURATION_DAYS) {
+                    return 0;
+                } else {
+                    return (days - FREE_DURATION_DAYS) * RENTAL_FEE_PER_DAY;
+                }
+            } else {
+                // Hết lượt FREE: tính phí từ ngày 1
+                return days * RENTAL_FEE_PER_DAY;
             }
-            return (days - FREE_DURATION_DAYS) * RENTAL_FEE_PER_DAY;
         }
 
         int getTotalCost() {
@@ -179,8 +192,8 @@ public class muontra extends javax.swing.JPanel {
     }
 
     /**
-     * Đếm số lượt mượn free đã sử dụng trong tháng hiện tại
-     * Dùng SQLite syntax (julianday thay vì DATEDIFF)
+     * Đếm số lượt mượn FREE đã sử dụng trong tháng hiện tại
+     * Dựa trên cột UsedFreeSlot = 1
      */
     private int countFreeBorrowsThisMonth() {
         // Lấy ngày đầu và cuối tháng hiện tại
@@ -190,11 +203,10 @@ public class muontra extends javax.swing.JPanel {
         cal.add(Calendar.MONTH, 1);
         String startOfNextMonth = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
 
-        // SQLite: dùng julianday() để tính số ngày giữa 2 ngày
-        // Hoặc đơn giản hơn: đếm các bản ghi có thời gian mượn <= 14 ngày
+        // Đếm số lượt đã dùng FREE trong tháng này (UsedFreeSlot = 1)
         String sql = "SELECT COUNT(*) FROM BorrowHistory WHERE CardID = ? " +
                 "AND BorrowDate >= ? AND BorrowDate < ? " +
-                "AND (julianday(DueDate) - julianday(BorrowDate)) <= 14";
+                "AND UsedFreeSlot = 1";
         try (Connection conn = DBConnect.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, currentCardId);
@@ -206,7 +218,6 @@ public class muontra extends javax.swing.JPanel {
                 }
             }
         } catch (SQLException e) {
-            // Nếu vẫn lỗi, fallback về 0
             System.err.println("[MUONTRA] Error counting free borrows: " + e.getMessage());
         }
         return 0;
@@ -409,7 +420,34 @@ public class muontra extends javax.swing.JPanel {
         int row = cartTable.getSelectedRow();
         if (row >= 0 && row < borrowCart.size()) {
             borrowCart.remove(row);
+            // Tính lại FREE slots cho các item còn lại
+            recalculateFreeSlots();
             updateCartTable();
+        }
+    }
+
+    /**
+     * Tính lại FREE slots cho toàn bộ giỏ hàng
+     * Đảm bảo các item đầu tiên được ưu tiên dùng FREE
+     */
+    private void recalculateFreeSlots() {
+        // Tính số lượt FREE còn lại
+        int freeRemaining = freeBorrowsPerMonth - usedFreeBorrowsThisMonth;
+
+        // Reset tất cả về không FREE
+        for (BorrowCartItem item : borrowCart) {
+            item.useFreeSlot = false;
+        }
+
+        // Gán FREE cho các item đầu tiên (trong giới hạn còn lại)
+        int freeAssigned = 0;
+        for (BorrowCartItem item : borrowCart) {
+            if (freeAssigned < freeRemaining) {
+                item.useFreeSlot = true;
+                freeAssigned++;
+            } else {
+                break;
+            }
         }
     }
 
@@ -423,6 +461,7 @@ public class muontra extends javax.swing.JPanel {
 
     /**
      * Cập nhật bảng giỏ mượn
+     * Hiển thị rõ lượt FREE và phí thuê
      */
     private void updateCartTable() {
         String[] columns = { "Mã sách", "Tên sách", "Số ngày", "Tiền cọc", "Phí thuê", "Tổng" };
@@ -434,9 +473,28 @@ public class muontra extends javax.swing.JPanel {
             BorrowCartItem item = borrowCart.get(i);
             data[i][0] = item.bookId;
             data[i][1] = item.title;
-            data[i][2] = item.days + " ngày" + (item.useFreeSlot ? " (Free)" : "");
-            data[i][3] = nf.format(item.price) + " đ";
-            data[i][4] = item.getRentalFee() > 0 ? nf.format(item.getRentalFee()) + " đ" : "Miễn phí";
+
+            // Hiển thị số ngày và trạng thái FREE
+            if (item.useFreeSlot) {
+                data[i][2] = item.days + " ngày FREE";
+            } else {
+                data[i][2] = item.days + " ngày";
+            }
+
+            data[i][3] = nf.format(item.price) + " đ"; // Tiền cọc
+
+            // Hiển thị phí thuê
+            int rentalFee = item.getRentalFee();
+            if (rentalFee == 0) {
+                if (item.useFreeSlot) {
+                    data[i][4] = "FREE (14 ngày)";
+                } else {
+                    data[i][4] = "0 đ";
+                }
+            } else {
+                data[i][4] = nf.format(rentalFee) + " đ";
+            }
+
             data[i][5] = nf.format(item.getTotalCost()) + " đ";
             grandTotal += item.getTotalCost();
         }
@@ -446,11 +504,11 @@ public class muontra extends javax.swing.JPanel {
     }
 
     /**
-     * Mượn tất cả sách trong giỏ
+     * Thuê tất cả sách trong giỏ
      */
     private void borrowAllBooks() {
         if (borrowCart.isEmpty()) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Giỏ mượn trống!", "Thông báo",
+            javax.swing.JOptionPane.showMessageDialog(this, "Giỏ thuê trống!", "Thông báo",
                     javax.swing.JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -464,7 +522,7 @@ public class muontra extends javax.swing.JPanel {
         // Kiểm tra số dư thẻ
         int cardBalance = 0;
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 CardBalanceManager.BalanceInfo info = balanceManager.getBalance();
@@ -487,66 +545,164 @@ public class muontra extends javax.swing.JPanel {
         }
 
         // Xác nhận
-        StringBuilder sb = new StringBuilder("Xác nhận mượn " + borrowCart.size() + " quyển sách?\n\n");
+        StringBuilder sb = new StringBuilder("Xác nhận thuê " + borrowCart.size() + " quyển sách?\n\n");
         for (BorrowCartItem item : borrowCart) {
-            sb.append("• ").append(item.title).append(" (").append(item.days).append(" ngày)\n");
+            sb.append("• ").append(item.title).append(" (").append(item.days).append(" ngày)");
+            if (item.useFreeSlot) {
+                sb.append(" ✓FREE");
+            }
+            sb.append("\n");
         }
         sb.append("\nTổng tiền: ").append(nf.format(totalAmount)).append(" đ");
 
-        int option = javax.swing.JOptionPane.showConfirmDialog(this, sb.toString(), "Xác nhận mượn sách",
+        int option = javax.swing.JOptionPane.showConfirmDialog(this, sb.toString(), "Xác nhận thuê sách",
                 javax.swing.JOptionPane.YES_NO_OPTION);
         if (option != javax.swing.JOptionPane.YES_OPTION) {
             return;
         }
 
-        // Thực hiện thanh toán và mượn
+        // Thực hiện thuê sách TRƯỚC (không thanh toán trước)
+        // Chỉ thanh toán khi thuê thành công
         boolean success = false;
+        int successCount = 0;
+        int paidAmount = 0;
+        List<BorrowCartItem> successItems = new ArrayList<>();
+
         CardConnectionManager connManager = null;
         try {
-            connManager = new CardConnectionManager();
-            if (connManager.connectCard()) {
-                CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+            connManager = CardConnectionManager.getInstance();
+            if (!connManager.connectCard()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Không thể kết nối thẻ!", "Lỗi",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-                // 1. Thanh toán
-                boolean paymentOk = balanceManager.payment(totalAmount);
-                if (!paymentOk) {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Thanh toán thất bại!", "Lỗi",
-                            javax.swing.JOptionPane.ERROR_MESSAGE);
-                    return;
+            CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
+
+            // 1. Thử mượn từng sách vào thẻ trước
+            boolean needAutoUpgrade = false;
+            int booksOnCardCount = 0;
+
+            for (BorrowCartItem item : borrowCart) {
+                int bookType = item.useFreeSlot ? 1 : 0;
+                System.out.println("[MUONTRA] Trying to borrow: " + item.bookId + " (days=" + item.days + ", type="
+                        + bookType + ")");
+
+                boolean borrowOk = balanceManager.borrowBook(item.bookId, item.days, bookType);
+
+                if (borrowOk) {
+                    successItems.add(item);
+                    successCount++;
+                    System.out.println("[MUONTRA] Borrow OK: " + item.bookId);
+                } else {
+                    System.err.println("[MUONTRA] Borrow FAILED: " + item.bookId);
+
+                    // Log danh sách sách đang có trong thẻ để debug
+                    System.out.println("[MUONTRA] === DEBUG: Books currently on card ===");
+                    try {
+                        List<CardBalanceManager.BorrowedBook> booksOnCard = balanceManager.getBorrowedBooks();
+                        booksOnCardCount = booksOnCard.size();
+                        if (booksOnCard.isEmpty()) {
+                            System.out.println("[MUONTRA] Card is empty (no borrowed books)");
+                        } else {
+                            System.out.println("[MUONTRA] Total books on card: " + booksOnCard.size());
+                            for (int i = 0; i < booksOnCard.size(); i++) {
+                                CardBalanceManager.BorrowedBook book = booksOnCard.get(i);
+                                System.out.println("[MUONTRA]   " + (i + 1) + ". BookID: " + book.bookId +
+                                        ", BorrowDate: " + book.borrowDate +
+                                        ", Duration: " + book.duration + " days");
+                            }
+                        }
+
+                        // Kiểm tra xem có phải thẻ cần upgrade không
+                        // Nếu số sách hiện tại < giới hạn theo hạng DB thì có thể thẻ chưa được upgrade
+                        if (booksOnCardCount < maxBooksAllowed) {
+                            System.out.println("[MUONTRA] Card has " + booksOnCardCount + " books but DB says max is "
+                                    + maxBooksAllowed);
+                            System.out.println("[MUONTRA] Card rank may not be updated! Will try to auto-upgrade...");
+                            needAutoUpgrade = true;
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("[MUONTRA] Cannot get books from card: " + ex.getMessage());
+                    }
+                    System.out.println("[MUONTRA] ===================================");
+
+                    // Nếu cần auto-upgrade, thực hiện ngay
+                    if (needAutoUpgrade && successCount == 0) {
+                        System.out.println("[MUONTRA] === AUTO-UPGRADE MODE ===");
+                        String cardRank = "Normal";
+                        if (currentMemberType.equals("Silver")) {
+                            cardRank = "Silver";
+                        } else if (currentMemberType.equals("Gold")) {
+                            cardRank = "Gold";
+                        } else if (currentMemberType.equals("Diamond")) {
+                            cardRank = "Diamond";
+                        }
+
+                        if (!cardRank.equals("Normal")) {
+                            System.out.println("[MUONTRA] Attempting to upgrade card to: " + cardRank);
+                            boolean upgraded = balanceManager.upgradeRank(cardRank);
+
+                            if (upgraded) {
+                                System.out.println("[MUONTRA] Auto-upgrade SUCCESS! Retrying borrow...");
+
+                                // Retry borrow after upgrade
+                                borrowOk = balanceManager.borrowBook(item.bookId, item.days, bookType);
+                                if (borrowOk) {
+                                    successItems.add(item);
+                                    successCount++;
+                                    System.out.println("[MUONTRA] Retry borrow OK: " + item.bookId);
+                                    needAutoUpgrade = false; // Đã fix, không cần upgrade tiếp
+                                } else {
+                                    System.err.println("[MUONTRA] Retry borrow still FAILED: " + item.bookId);
+                                }
+                            } else {
+                                System.err.println("[MUONTRA] Auto-upgrade FAILED for rank: " + cardRank);
+                            }
+                        }
+                        System.out.println("[MUONTRA] ===========================");
+                    }
+                }
+            }
+
+            // 2. Nếu có sách mượn được, tính tiền và thanh toán
+            if (successCount > 0) {
+                // Tính tiền cho các sách đã mượn được
+                for (BorrowCartItem item : successItems) {
+                    paidAmount += item.getTotalCost();
                 }
 
-                // 2. Lưu từng sách vào thẻ và DB
-                int successCount = 0;
-                for (BorrowCartItem item : borrowCart) {
-                    int bookType = item.useFreeSlot ? 1 : 0;
-                    boolean borrowOk = balanceManager.borrowBook(item.bookId, item.days, bookType);
-
-                    if (borrowOk) {
-                        // Lưu vào DB
-                        borrowService.borrowBook(currentCardId, item.bookId, item.days);
+                // Thanh toán
+                boolean paymentOk = balanceManager.payment(paidAmount);
+                if (paymentOk) {
+                    // Lưu vào DB
+                    for (BorrowCartItem item : successItems) {
+                        borrowService.borrowBook(currentCardId, item.bookId, item.days, item.useFreeSlot);
 
                         // Cập nhật BorrowStock trong DB (tăng lên 1)
                         BookService.Book book = bookService.getBookById(item.bookId);
                         if (book != null) {
                             bookService.updateBorrowStock(item.bookId, book.borrowStock + 1);
                         }
-                        successCount++;
                     }
-                }
-
-                if (successCount == borrowCart.size()) {
                     success = true;
-                } else if (successCount > 0) {
+                } else {
+                    // Thanh toán thất bại - cần rollback các sách đã mượn trên thẻ
+                    System.err.println("[MUONTRA] Payment failed! Books borrowed on card but not in DB.");
                     javax.swing.JOptionPane.showMessageDialog(this,
-                            "Mượn thành công " + successCount + "/" + borrowCart.size() + " quyển!",
-                            "Thông báo", javax.swing.JOptionPane.WARNING_MESSAGE);
-                    success = true;
+                            "Thanh toán thất bại! Có thể có lỗi với thẻ.\nVui lòng liên hệ quản trị viên.",
+                            "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
                 }
-
-                connManager.disconnectCard();
             }
+
+            connManager.disconnectCard();
+
         } catch (Exception e) {
             System.err.println("[MUONTRA] Error borrowing: " + e.getMessage());
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Lỗi khi mượn sách: " + e.getMessage(),
+                    "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
         } finally {
             try {
                 if (connManager != null)
@@ -555,13 +711,32 @@ public class muontra extends javax.swing.JPanel {
             }
         }
 
+        // Hiển thị kết quả
         if (success) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Mượn sách thành công!",
-                    "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            if (successCount == borrowCart.size()) {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Thuê sách thành công!\nĐã thanh toán: " + nf.format(paidAmount) + " đ",
+                        "Thông báo", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Thuê thành công " + successCount + "/" + borrowCart.size() + " quyển!\n" +
+                                "Đã thanh toán: " + nf.format(paidAmount) + " đ\n\n" +
+                                "Lưu ý: Một số sách không thuê được, có thể do thẻ đã đầy.",
+                        "Thông báo", javax.swing.JOptionPane.WARNING_MESSAGE);
+            }
             borrowCart.clear();
             updateCartTable();
             loadMemberInfo();
             loadAvailableBooks();
+            loadBorrowedBooks();
+        } else if (successCount == 0) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Không thể thuê sách!\n\n" +
+                            "Nguyên nhân có thể:\n" +
+                            "• Thẻ đã thuê tối đa số sách cho phép\n" +
+                            "• Lỗi kết nối với thẻ\n" +
+                            "• Thẻ đã bị khóa",
+                    "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -711,7 +886,7 @@ public class muontra extends javax.swing.JPanel {
         long actualRefunded = 0;
 
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
 
@@ -813,7 +988,7 @@ public class muontra extends javax.swing.JPanel {
 
         // Xóa khỏi thẻ, không hoàn tiền, giảm BorrowStock
         try {
-            CardConnectionManager connManager = new CardConnectionManager();
+            CardConnectionManager connManager = CardConnectionManager.getInstance();
             if (connManager.connectCard()) {
                 CardBalanceManager balanceManager = new CardBalanceManager(connManager.getChannel());
                 balanceManager.returnBook(bookId);
@@ -899,7 +1074,7 @@ public class muontra extends javax.swing.JPanel {
         bottomWrapper.add(borrowAllButton, java.awt.BorderLayout.CENTER);
         borrowPanel.add(bottomWrapper, java.awt.BorderLayout.SOUTH);
 
-        tabbedPane.addTab("  Mượn Sách  ", borrowPanel);
+        tabbedPane.addTab("  Thuê Sách  ", borrowPanel);
 
         // --- Return Tab ---
         returnPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
@@ -928,7 +1103,7 @@ public class muontra extends javax.swing.JPanel {
                 javax.swing.BorderFactory.createMatteBorder(0, 0, 1, 0, new java.awt.Color(226, 232, 240)),
                 javax.swing.BorderFactory.createEmptyBorder(20, 30, 20, 30)));
 
-        titleLabel = new javax.swing.JLabel("Mượn / Trả Sách");
+        titleLabel = new javax.swing.JLabel("Thuê / Trả Sách");
         titleLabel.setFont(new java.awt.Font("Segoe UI", 1, 24));
         titleLabel.setForeground(new java.awt.Color(30, 41, 59));
 
@@ -1043,7 +1218,7 @@ public class muontra extends javax.swing.JPanel {
 
         javax.swing.JPanel header = new javax.swing.JPanel(new java.awt.BorderLayout());
         header.setOpaque(false);
-        javax.swing.JLabel title = new javax.swing.JLabel("Giỏ mượn");
+        javax.swing.JLabel title = new javax.swing.JLabel("Giỏ thuê");
         title.setFont(new java.awt.Font("Segoe UI", 1, 16));
         title.setForeground(new java.awt.Color(30, 41, 59));
 
@@ -1093,7 +1268,7 @@ public class muontra extends javax.swing.JPanel {
         javax.swing.JPanel header = new javax.swing.JPanel(new java.awt.BorderLayout());
         header.setOpaque(false);
 
-        javax.swing.JLabel title = new javax.swing.JLabel("Sách đang mượn");
+        javax.swing.JLabel title = new javax.swing.JLabel("Sách đang thuê");
         title.setFont(new java.awt.Font("Segoe UI", 1, 16));
         title.setForeground(new java.awt.Color(30, 41, 59));
 
@@ -1118,7 +1293,7 @@ public class muontra extends javax.swing.JPanel {
         p.add(header, java.awt.BorderLayout.NORTH);
 
         // Table
-        String[] returnColumns = { "Chọn", "ID", "Mã sách", "Tên sách", "Ngày mượn", "Hạn trả", "Số ngày", "Phí thuê",
+        String[] returnColumns = { "Chọn", "ID", "Mã sách", "Tên sách", "Ngày thuê", "Hạn trả", "Số ngày", "Phí thuê",
                 "Trạng thái", "Tiền cọc", "Phí phạt" };
         javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(new Object[][] {},
                 returnColumns) {

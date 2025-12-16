@@ -87,7 +87,7 @@ public class thongtincanhan extends javax.swing.JPanel {
 
                 // 1. Thử lấy thông tin trực tiếp từ thẻ
                 try {
-                    CardConnectionManager connManager = new CardConnectionManager();
+                    CardConnectionManager connManager = CardConnectionManager.getInstance();
                     if (connManager.connectCard()) {
                         try {
                             CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
@@ -765,7 +765,7 @@ public class thongtincanhan extends javax.swing.JPanel {
         if (dbUpdateSuccess) {
             try {
                 System.out.println("[CARD] Đang cập nhật thông tin lên thẻ...");
-                CardConnectionManager connManager = new CardConnectionManager();
+                CardConnectionManager connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
                 try {
                     CardUpdateManager updateManager = new CardUpdateManager(connManager.getChannel());
@@ -835,7 +835,7 @@ public class thongtincanhan extends javax.swing.JPanel {
             // Upload image to card
             try {
                 System.out.println("[UPLOAD_IMAGE] Connecting to card...");
-                CardConnectionManager connManager = new CardConnectionManager();
+                CardConnectionManager connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 try {

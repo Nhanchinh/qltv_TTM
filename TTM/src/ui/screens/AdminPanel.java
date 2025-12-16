@@ -453,7 +453,7 @@ public class AdminPanel extends JPanel {
         new Thread(() -> {
             try {
                 Thread.sleep(500); // Give UI time to render
-                connManager = new CardConnectionManager();
+                connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
@@ -518,7 +518,7 @@ public class AdminPanel extends JPanel {
 
         new Thread(() -> {
             try {
-                connManager = new CardConnectionManager();
+                connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 // Gửi lệnh UNBLOCK (0x26) dạng PLAINTEXT giống
@@ -1470,7 +1470,7 @@ public class AdminPanel extends JPanel {
                     String formattedDob = convertDateFormat(dob);
                     String regDate = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy"));
 
-                    connManager = new CardConnectionManager();
+                    connManager = CardConnectionManager.getInstance();
                     connManager.connectCard();
 
                     CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
@@ -1694,7 +1694,7 @@ public class AdminPanel extends JPanel {
                 });
 
                 // Connect to card (like other functions)
-                connManager = new CardConnectionManager();
+                connManager = CardConnectionManager.getInstance();
                 connManager.connectCard();
 
                 SwingUtilities.invokeLater(() -> {
@@ -2223,7 +2223,7 @@ public class AdminPanel extends JPanel {
                         iconLabel.setVisible(true);
                     });
 
-                    connManager = new CardConnectionManager();
+                    connManager = CardConnectionManager.getInstance();
                     connManager.connectCard();
 
                     SwingUtilities.invokeLater(() -> {

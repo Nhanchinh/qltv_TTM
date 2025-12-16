@@ -158,7 +158,7 @@ public class MainFrame extends javax.swing.JFrame {
         welcomeLabel = new javax.swing.JLabel();
         btnHome = createSidebarButton("Trang chủ", "home"); // House icon
         btnPersonal = createSidebarButton("Thông tin cá nhân", "user"); // Person icon
-        btnBorrow = createSidebarButton("Mượn/ Trả", "book"); // Book icon
+        btnBorrow = createSidebarButton("Thuê/ Trả", "book"); // Book icon
         btnBuy = createSidebarButton("Mua sách", "cart"); // Cart icon
         btnOffice = createSidebarButton("Mua VPP", "pen"); // Pen icon
         btnMembership = createSidebarButton("Phí hội viên", "badge"); // Badge icon

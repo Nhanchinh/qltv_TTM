@@ -32,7 +32,15 @@ public class BorrowService {
         }
     }
 
-    public boolean borrowBook(String cardId, String bookId, int days) {
+    /**
+     * Mượn sách với đánh dấu sử dụng lượt FREE
+     * 
+     * @param cardId       ID thẻ
+     * @param bookId       ID sách
+     * @param days         Số ngày mượn
+     * @param usedFreeSlot true nếu sử dụng lượt FREE, false nếu không
+     */
+    public boolean borrowBook(String cardId, String bookId, int days, boolean usedFreeSlot) {
         // Su dung cung mot connection cho toan bo transaction
         try (Connection conn = DBConnect.getConnection()) {
             if (conn == null) {
@@ -42,11 +50,11 @@ public class BorrowService {
             conn.setAutoCommit(false); // Bat dau transaction
 
             try {
-                // Insert BorrowHistory
-                String sql = "INSERT INTO BorrowHistory (CardID, BookID, BorrowDate, DueDate, ReturnDate, Fine, Status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                // Insert BorrowHistory với UsedFreeSlot
+                String sql = "INSERT INTO BorrowHistory (CardID, BookID, BorrowDate, DueDate, ReturnDate, Fine, Status, UsedFreeSlot) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    LocalDate borrowDate = LocalDate.now();
-                    LocalDate dueDate = borrowDate.plusDays(days);
+                    java.time.LocalDate borrowDate = java.time.LocalDate.now();
+                    java.time.LocalDate dueDate = borrowDate.plusDays(days);
 
                     pstmt.setString(1, cardId);
                     pstmt.setString(2, bookId);
@@ -55,6 +63,7 @@ public class BorrowService {
                     pstmt.setString(5, null);
                     pstmt.setDouble(6, 0.0);
                     pstmt.setString(7, "mượn");
+                    pstmt.setInt(8, usedFreeSlot ? 1 : 0);
                     pstmt.executeUpdate();
                 }
 
@@ -76,6 +85,7 @@ public class BorrowService {
                 }
 
                 conn.commit(); // Commit transaction
+                System.out.println("[BORROW] Success: " + bookId + " (" + days + " days, FREE=" + usedFreeSlot + ")");
                 return true;
 
             } catch (SQLException e) {
@@ -89,6 +99,13 @@ public class BorrowService {
             e.printStackTrace();
         }
         return false;
+    }
+
+    /**
+     * Mượn sách (backward compatible, không dùng FREE slot)
+     */
+    public boolean borrowBook(String cardId, String bookId, int days) {
+        return borrowBook(cardId, bookId, days, false);
     }
 
     public boolean returnBook(int borrowId, String cardId) {

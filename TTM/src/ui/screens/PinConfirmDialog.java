@@ -132,7 +132,7 @@ public class PinConfirmDialog extends JDialog {
 
             @Override
             protected Boolean doInBackground() throws Exception {
-                CardConnectionManager connManager = new CardConnectionManager();
+                CardConnectionManager connManager = CardConnectionManager.getInstance();
                 try {
                     // Try to connect
                     if (!connManager.connectCard()) {
