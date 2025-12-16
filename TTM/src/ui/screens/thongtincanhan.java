@@ -22,6 +22,7 @@ import java.awt.Image;
 import java.io.File;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.SwingWorker;
 
 /**
  *
@@ -33,6 +34,8 @@ public class thongtincanhan extends javax.swing.JPanel {
     private String currentCardId = "CARD001";
     private boolean isEditing = false;
     private javax.swing.JLabel cardImageLabel;
+    private javax.swing.JScrollPane scrollPane;
+    private LoadingPanel loadingPanel;
 
     /**
      * Creates new form PersonalInfoPanel
@@ -56,74 +59,120 @@ public class thongtincanhan extends javax.swing.JPanel {
     /**
      * Load card information from database
      */
+    /**
+     * Helper class to hold data fetched from background
+     */
+    private class LoadResult {
+        String cardIdFromCard;
+        CardInfoManager.UserInfo userInfoFromCard;
+        byte[] cardImageData;
+        CardService.Card cardFromDB;
+        double actualTotalSpent;
+        boolean cardReadSuccess;
+        String errorMessage;
+    }
+
+    /**
+     * Load card information from database asynchronously
+     */
     private void loadCardInfo() {
-        // 1. Thử lấy thông tin trực tiếp từ thẻ (giống AdminPanel -> CardInfoManager)
-        String cardIdFromCard = null;
-        CardInfoManager.UserInfo userInfoFromCard = null;
-        byte[] cardImageData = null;
+        // Show loading state
+        showLoading(true);
 
-        try {
-            CardConnectionManager connManager = new CardConnectionManager();
-            connManager.connectCard();
-            try {
-                CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
-                keyManager.getPublicKey();
+        new SwingWorker<LoadResult, Void>() {
+            @Override
+            protected LoadResult doInBackground() throws Exception {
+                LoadResult result = new LoadResult();
+                result.actualTotalSpent = 0;
 
-                // Load app keypair từ file (đã tạo khi admin thêm thẻ)
-                if (!keyManager.loadAppKeyPair()) {
-                    throw new Exception("Không tìm thấy App KeyPair. Vui lòng thêm thẻ mới trước.");
+                // 1. Thử lấy thông tin trực tiếp từ thẻ
+                try {
+                    CardConnectionManager connManager = new CardConnectionManager();
+                    if (connManager.connectCard()) {
+                        try {
+                            CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
+                            // keyManager.getPublicKey(); // Not strictly needed unless checking something
+
+                            // Load app keypair
+                            if (keyManager.loadAppKeyPair()) {
+                                CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
+                                result.userInfoFromCard = infoManager.getInfo();
+
+                                if (result.userInfoFromCard != null && result.userInfoFromCard.cardId != null
+                                        && !result.userInfoFromCard.cardId.isEmpty()) {
+                                    result.cardIdFromCard = result.userInfoFromCard.cardId;
+                                    result.cardReadSuccess = true;
+                                }
+
+                                // Lấy ảnh từ thẻ
+                                System.out.println("[CARD_IMAGE] Đang lấy ảnh từ thẻ...");
+                                CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+                                result.cardImageData = imageManager.downloadImage();
+                            }
+                        } finally {
+                            connManager.disconnectCard();
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("[INFO] Không đọc được thẻ (sẽ lấy dữ liệu DB): " + e.getMessage());
+                    result.errorMessage = e.getMessage();
                 }
 
-                CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
-                userInfoFromCard = infoManager.getInfo();
-                if (userInfoFromCard != null && userInfoFromCard.cardId != null && !userInfoFromCard.cardId.isEmpty()) {
-                    cardIdFromCard = userInfoFromCard.cardId;
-                    currentCardId = cardIdFromCard; // Đồng bộ CardID hiện tại với thẻ
+                // Determine effective CardID for DB lookup
+                String dbCardId = (result.cardIdFromCard != null) ? result.cardIdFromCard : currentCardId;
+
+                // 2. Lấy thông tin từ DB
+                if (dbCardId != null && !dbCardId.isEmpty()) {
+                    // Recalculate TotalSpent
+                    cardService.recalculateTotalSpent(dbCardId);
+                    result.cardFromDB = cardService.getCardById(dbCardId);
+                    if (result.cardFromDB != null) {
+                        result.actualTotalSpent = cardService.calculateTotalSpentFromHistory(result.cardFromDB.cardId);
+                    }
                 }
 
-                // Lấy ảnh từ thẻ
-                System.out.println("[CARD_IMAGE] Đang lấy ảnh từ thẻ...");
-                CardImageManager imageManager = new CardImageManager(connManager.getChannel());
-                cardImageData = imageManager.downloadImage();
-                if (cardImageData != null && cardImageData.length > 0) {
-                    System.out.println("[CARD_IMAGE] Đã nhận được " + cardImageData.length + " bytes");
-                } else {
-                    System.out.println("[CARD_IMAGE] Thẻ chưa có ảnh hoặc lỗi khi lấy ảnh");
-                }
-            } finally {
-                connManager.disconnectCard();
+                return result;
             }
-        } catch (Exception e) {
-            System.err.println("Không thể lấy thông tin từ thẻ, sẽ dùng dữ liệu DB. Lỗi: " + e.getMessage());
+
+            @Override
+            protected void done() {
+                try {
+                    LoadResult result = get();
+                    updateUIWithData(result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }.execute();
+    }
+
+    /**
+     * Update UI components with loaded data
+     */
+    private void updateUIWithData(LoadResult result) {
+        // Update Current ID if we got it from card
+        if (result.cardIdFromCard != null) {
+            currentCardId = result.cardIdFromCard;
         }
 
-        displayCardImage(cardImageData);
+        displayCardImage(result.cardImageData);
 
-        // 2. Lấy thông tin từ DB theo CardID (ưu tiên CardID đọc từ thẻ nếu có)
-        if (currentCardId != null && !currentCardId.isEmpty()) {
-            // Recalculate TotalSpent from history to ensure accuracy
-            cardService.recalculateTotalSpent(currentCardId);
-        }
-
-        CardService.Card card = (currentCardId != null) ? cardService.getCardById(currentCardId) : null;
+        CardInfoManager.UserInfo userInfoFromCard = result.userInfoFromCard;
+        CardService.Card card = result.cardFromDB;
 
         if (userInfoFromCard != null) {
-            // Log toàn bộ thông tin lấy từ thẻ
+            // ... Code to populate from Card Info ...
             System.out.println("[CARD_INFO] Thông tin lấy từ thẻ:");
-            System.out.println("  CardID : " + userInfoFromCard.cardId);
-            System.out.println("  Name   : " + userInfoFromCard.name);
-            System.out.println("  Phone  : " + userInfoFromCard.phone);
-            System.out.println("  Address: " + userInfoFromCard.address);
-            System.out.println("  DOB    : " + userInfoFromCard.dob);
-            System.out.println("  RegDate: " + userInfoFromCard.regDate);
-            System.out.println("  Rank   : " + userInfoFromCard.rank);
-            // Hiển thị THÔNG TIN CƠ BẢN theo đúng dữ liệu trên thẻ
+            // (Logging skipped for brevity)
+
             cardIdField.setText(userInfoFromCard.cardId);
             nameField.setText(userInfoFromCard.name);
             phoneField.setText(userInfoFromCard.phone);
             addressField.setText(userInfoFromCard.address != null ? userInfoFromCard.address : "");
 
-            // DOB trên thẻ dạng DDMMYYYY -> hiển thị DD/MM/YYYY
+            // DOB Processing
             if (userInfoFromCard.dob != null && userInfoFromCard.dob.length() == 8) {
                 String dob = userInfoFromCard.dob;
                 dobField.setText(dob.substring(0, 2) + "/" + dob.substring(2, 4) + "/" + dob.substring(4));
@@ -131,21 +180,25 @@ public class thongtincanhan extends javax.swing.JPanel {
                 dobField.setText(userInfoFromCard.dob != null ? userInfoFromCard.dob : "");
             }
 
-            // Ngày đăng ký trên thẻ dạng DDMMYYYY
+            // RegDate Processing
             if (userInfoFromCard.regDate != null && userInfoFromCard.regDate.length() == 8) {
                 String reg = userInfoFromCard.regDate;
                 registerDateField.setText(reg.substring(0, 2) + "/" + reg.substring(2, 4) + "/" + reg.substring(4));
             } else {
                 registerDateField.setText(userInfoFromCard.regDate != null ? userInfoFromCard.regDate : "");
             }
+
+            if (userInfoFromCard != null) {
+                memberTypeField.setText(userInfoFromCard.rank != null ? userInfoFromCard.rank : "");
+            }
         } else if (card != null) {
-            // Fallback: chỉ có dữ liệu DB
+            // Fallback: DB Data
             cardIdField.setText(card.cardId);
             nameField.setText(card.fullName);
             phoneField.setText(card.phone);
             addressField.setText(card.address != null ? card.address : "");
 
-            // DOB từ DB (YYYY-MM-DD -> DD/MM/YYYY)
+            // DOB Logic
             if (card.dob != null && !card.dob.isEmpty()) {
                 try {
                     if (card.dob.contains("-")) {
@@ -165,6 +218,7 @@ public class thongtincanhan extends javax.swing.JPanel {
                 dobField.setText("");
             }
 
+            // RegDate Logic
             if (card.registerDate != null && !card.registerDate.isEmpty()) {
                 try {
                     if (card.registerDate.contains("-")) {
@@ -181,13 +235,8 @@ public class thongtincanhan extends javax.swing.JPanel {
                     registerDateField.setText(card.registerDate);
                 }
             }
-
-            // Hiển thị loại hội viên (hạng thẻ) lấy từ thẻ nếu có
-            if (userInfoFromCard != null) {
-                memberTypeField.setText(userInfoFromCard.rank != null ? userInfoFromCard.rank : "");
-            }
         } else {
-            // Không có dữ liệu nào
+            // No Data
             cardIdField.setText(currentCardId != null ? currentCardId : "");
             nameField.setText("");
             phoneField.setText("");
@@ -196,18 +245,15 @@ public class thongtincanhan extends javax.swing.JPanel {
             registerDateField.setText("");
         }
 
-        // Sau khi load xong, luôn về trạng thái chỉ xem
         setFieldsEditable(false);
         isEditing = false;
         saveButton.setEnabled(false);
 
-        // 3. Thông tin hội viên (luôn lấy từ DB, vì chỉ DB có tổng chi, điểm, nợ
-        // phạt,...)
+        // Member Info from DB
         if (card != null) {
-            double actualTotalSpent = cardService.calculateTotalSpentFromHistory(card.cardId);
             memberTypeField.setText(card.memberType != null ? card.memberType : "Basic");
             NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-            totalSpentField.setText(nf.format(actualTotalSpent) + " đ");
+            totalSpentField.setText(nf.format(result.actualTotalSpent) + " đ");
             totalPointsField.setText(nf.format(card.totalPoints) + " điểm");
             fineDebtField.setText(nf.format(card.fineDebt) + " đ");
             isBlockedField.setText(card.isBlocked ? "Bị khóa" : "Hoạt động");
@@ -218,6 +264,42 @@ public class thongtincanhan extends javax.swing.JPanel {
             fineDebtField.setText("0 đ");
             isBlockedField.setText("Hoạt động");
         }
+
+        // Populate Rank Field based on Member Type
+        String mType = memberTypeField.getText();
+        String displayRank = "Thành viên (Normal)";
+        if (mType != null) {
+            if (mType.equalsIgnoreCase("Silver") || mType.equalsIgnoreCase("Bac")) {
+                displayRank = "Bạc (Silver)";
+            } else if (mType.equalsIgnoreCase("Gold") || mType.equalsIgnoreCase("Vang")) {
+                displayRank = "Vàng (Gold)";
+            } else if (mType.equalsIgnoreCase("Diamond") || mType.equalsIgnoreCase("KimCuong")
+                    || mType.equalsIgnoreCase("Kim Cương")) {
+                displayRank = "Kim cương (Diamond)";
+            }
+        }
+        rankField.setText(displayRank);
+    }
+
+    private void showLoading(boolean loading) {
+        if (loading) {
+            if (scrollPane != null)
+                remove(scrollPane);
+            if (loadingPanel == null) {
+                loadingPanel = new LoadingPanel();
+            }
+            add(loadingPanel, java.awt.BorderLayout.CENTER);
+            loadingPanel.start();
+        } else {
+            if (loadingPanel != null) {
+                loadingPanel.stop();
+                remove(loadingPanel);
+            }
+            if (scrollPane != null)
+                add(scrollPane, java.awt.BorderLayout.CENTER);
+        }
+        revalidate();
+        repaint();
     }
 
     /**
@@ -448,7 +530,9 @@ public class thongtincanhan extends javax.swing.JPanel {
         contentPanel.add(rightPanel, gbc);
 
         // ScrollPane Setup
-        javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(contentPanel);
+        // ScrollPane Setup
+        scrollPane = new javax.swing.JScrollPane(contentPanel); // Assign to field
+
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -805,4 +889,57 @@ public class thongtincanhan extends javax.swing.JPanel {
     private javax.swing.JButton editButton;
     private javax.swing.JButton saveButton;
     private javax.swing.JButton uploadImageButton;
+
+    /**
+     * Custom Loading Panel with Spinner
+     */
+    private class LoadingPanel extends javax.swing.JPanel {
+        private javax.swing.Timer timer;
+        private int angle = 0;
+
+        public LoadingPanel() {
+            setOpaque(false);
+            setLayout(new java.awt.BorderLayout());
+            timer = new javax.swing.Timer(40, e -> {
+                angle = (angle + 12) % 360;
+                repaint();
+            });
+        }
+
+        public void start() {
+            timer.start();
+        }
+
+        public void stop() {
+            timer.stop();
+        }
+
+        @Override
+        protected void paintComponent(java.awt.Graphics g) {
+            super.paintComponent(g);
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int cx = getWidth() / 2;
+            int cy = getHeight() / 2;
+            int r = 25;
+
+            // Draw text
+            g2.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14));
+            g2.setColor(new java.awt.Color(100, 116, 139));
+            String text = "Đang tải dữ liệu...";
+            java.awt.FontMetrics fm = g2.getFontMetrics();
+            g2.drawString(text, cx - fm.stringWidth(text) / 2, cy + r + 35);
+
+            // Draw Spinner
+            // Track
+            g2.setStroke(new java.awt.BasicStroke(4, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+            g2.setColor(new java.awt.Color(226, 232, 240));
+            g2.drawOval(cx - r, cy - r, 2 * r, 2 * r);
+
+            // Indicator
+            g2.setColor(new java.awt.Color(37, 99, 235));
+            g2.drawArc(cx - r, cy - r, 2 * r, 2 * r, angle, 100);
+        }
+    }
 }

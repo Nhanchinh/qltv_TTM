@@ -738,6 +738,17 @@ public class bansach extends javax.swing.JPanel {
             return;
         }
 
+        // Yêu cầu xác nhận mã PIN
+        java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this);
+        if (parentWindow instanceof java.awt.Frame) {
+            PinConfirmDialog pinDialog = new PinConfirmDialog((java.awt.Frame) parentWindow);
+            pinDialog.setVisible(true);
+
+            if (!pinDialog.isConfirmed()) {
+                return; // Người dùng hủy hoặc nhập sai PIN
+            }
+        }
+
         // Recompute final total and points to award
         double grandTotal = 0;
         for (CartItem item : cartItems) {

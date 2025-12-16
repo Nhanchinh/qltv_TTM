@@ -414,6 +414,17 @@ public class naptien extends javax.swing.JPanel {
                     javax.swing.JOptionPane.YES_NO_OPTION);
 
             if (option == javax.swing.JOptionPane.YES_OPTION) {
+                // Yêu cầu xác nhận mã PIN
+                java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this);
+                if (parentWindow instanceof java.awt.Frame) {
+                    PinConfirmDialog pinDialog = new PinConfirmDialog((java.awt.Frame) parentWindow);
+                    pinDialog.setVisible(true);
+
+                    if (!pinDialog.isConfirmed()) {
+                        return; // Người dùng hủy hoặc nhập sai PIN
+                    }
+                }
+
                 boolean cardSuccess = depositToCard((int) amount);
                 if (!cardSuccess) {
                     javax.swing.JOptionPane.showMessageDialog(this,

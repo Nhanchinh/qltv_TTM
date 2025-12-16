@@ -156,7 +156,7 @@ public class phihv extends javax.swing.JPanel {
 
         // LEFT: Package Selection (65%)
         gbc.gridx = 0;
-        gbc.weightx = 0.65;
+        gbc.weightx = 0.6; // Reduced from 0.65
         gbc.insets = new java.awt.Insets(0, 0, 0, 15);
 
         javax.swing.JPanel packagesWrapper = new javax.swing.JPanel(new java.awt.BorderLayout(0, 15));
@@ -171,9 +171,9 @@ public class phihv extends javax.swing.JPanel {
 
         contentPanel.add(packagesWrapper, gbc);
 
-        // RIGHT: Payment Info (35%)
+        // RIGHT: Payment Info (35%) -> Increased to 40%
         gbc.gridx = 1;
-        gbc.weightx = 0.35;
+        gbc.weightx = 0.4; // Increased from 0.35
         gbc.insets = new java.awt.Insets(0, 0, 0, 0);
 
         contentPanel.add(createPaymentPanel(), gbc);
@@ -444,7 +444,7 @@ public class phihv extends javax.swing.JPanel {
         gbc.gridx = 1;
         gbc.weightx = 0.7;
         comp.setPreferredSize(new java.awt.Dimension(0, 38)); // Slightly taller fields
-        comp.setMinimumSize(new java.awt.Dimension(150, 38)); // Ensure minimum width so text isn't hidden
+        comp.setMinimumSize(new java.awt.Dimension(180, 38)); // Ensure minimum width so text isn't hidden
         p.add(comp, gbc);
     }
 
@@ -678,6 +678,17 @@ public class phihv extends javax.swing.JPanel {
                 javax.swing.JOptionPane.YES_NO_OPTION);
         if (option != javax.swing.JOptionPane.YES_OPTION) {
             return;
+        }
+
+        // Yêu cầu xác nhận mã PIN
+        java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this);
+        if (parentWindow instanceof java.awt.Frame) {
+            PinConfirmDialog pinDialog = new PinConfirmDialog((java.awt.Frame) parentWindow);
+            pinDialog.setVisible(true);
+
+            if (!pinDialog.isConfirmed()) {
+                return; // Người dùng hủy hoặc nhập sai PIN
+            }
         }
 
         performUpgrade();

@@ -266,7 +266,6 @@ public class AdminPanel extends JPanel {
 
         // Tab icons and labels - custom styled buttons as tab components
         String[] tabNames = { "Đổi Mã PIN", "Nạp Dữ Liệu", "Lấy Thông Tin", "Thêm Sách", "Thêm VPP" };
-        String[] tabIcons = { "🔐", "💳", "📋", "📚", "✏️" };
 
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             final int tabIndex = i;
@@ -296,12 +295,22 @@ public class AdminPanel extends JPanel {
             };
             tabComponent.setOpaque(false);
             tabComponent.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            tabComponent.setBorder(new EmptyBorder(6, 15, 6, 15));
+            tabComponent.setBorder(new EmptyBorder(8, 15, 8, 15)); // Increased vertical padding
 
-            // Icon
-            JLabel tabIconLabel = new JLabel(tabIcons[i]);
-            tabIconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
-            tabComponent.add(tabIconLabel);
+            // Icon - Custom Vector Icon
+            JPanel iconPanel = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    drawTabIcon(g2d, tabIndex, getWidth() / 2, getHeight() / 2);
+                    g2d.dispose();
+                }
+            };
+            iconPanel.setOpaque(false);
+            iconPanel.setPreferredSize(new Dimension(24, 24)); // Fixed size to prevent cutting
+            tabComponent.add(iconPanel);
 
             // Text
             JLabel textLabel = new JLabel(tabNames[i]);
@@ -343,6 +352,46 @@ public class AdminPanel extends JPanel {
 
         // Check card status after UI initialized
         checkCardStatusOnStartup();
+    }
+
+    /**
+     * Draw custom tab icons
+     */
+    private void drawTabIcon(Graphics2D g2, int index, int x, int y) {
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
+
+        switch (index) {
+            case 0: // Change PIN (Lock)
+                g2.drawRoundRect(x - 7, y - 2, 14, 10, 2, 2); // Body
+                g2.drawArc(x - 5, y - 9, 10, 14, 0, 180); // Shackle
+                g2.fillOval(x - 1, y + 2, 2, 2); // Keyhole
+                break;
+            case 1: // Import Data (Card)
+                g2.drawRoundRect(x - 10, y - 7, 20, 14, 2, 2); // Card
+                g2.drawRect(x - 7, y - 3, 5, 4); // Chip
+                g2.drawLine(x, y - 3, x + 7, y - 3); // Lines
+                break;
+            case 2: // Get Info (Clipboard)
+                g2.drawRoundRect(x - 8, y - 10, 16, 20, 2, 2); // Board
+                g2.fillRect(x - 5, y - 10, 10, 4); // Clip
+                g2.drawLine(x - 4, y - 2, x + 4, y - 2); // Lines
+                g2.drawLine(x - 4, y + 2, x + 4, y + 2);
+                g2.drawLine(x - 4, y + 6, x + 4, y + 6);
+                break;
+            case 3: // Add Book (Book)
+                g2.drawRoundRect(x - 9, y - 8, 7, 16, 3, 3); // Left page
+                g2.drawRoundRect(x, y - 8, 7, 16, 3, 3); // Right page
+                break;
+            case 4: // Add VPP (Pen)
+                    // Pen rotated
+                java.awt.geom.AffineTransform old = g2.getTransform();
+                g2.rotate(Math.toRadians(45), x, y);
+                g2.drawRoundRect(x - 2, y - 8, 4, 14, 2, 2);
+                g2.drawPolygon(new int[] { x - 2, x + 2, x }, new int[] { y + 6, y + 6, y + 9 }, 3);
+                g2.setTransform(old);
+                break;
+        }
     }
 
     /**

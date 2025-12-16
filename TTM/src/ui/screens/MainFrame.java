@@ -182,33 +182,30 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
 
-        // Thiết lập Sidebar Panel - Light Theme
-        sidebarPanel.setBackground(new java.awt.Color(255, 255, 255)); // White background
-        sidebarPanel.setPreferredSize(new java.awt.Dimension(260, 0));
+        // Thiết lập Sidebar Panel - Dark Theme
+        sidebarPanel.setBackground(new java.awt.Color(15, 23, 42)); // Slate 900
+        sidebarPanel.setPreferredSize(new java.awt.Dimension(280, 0)); // Slightly wider
         sidebarPanel.setLayout(new java.awt.BorderLayout(0, 0));
-        // Add subtle border to right
-        sidebarPanel
-                .setBorder(javax.swing.BorderFactory.createMatteBorder(0, 0, 0, 1, new java.awt.Color(230, 230, 230)));
 
         // Header Panel
         javax.swing.JPanel headerPanel = new javax.swing.JPanel();
-        headerPanel.setBackground(new java.awt.Color(255, 255, 255));
+        headerPanel.setBackground(new java.awt.Color(15, 23, 42)); // Slate 900
         headerPanel.setLayout(new javax.swing.BoxLayout(headerPanel, javax.swing.BoxLayout.Y_AXIS));
-        headerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(30, 20, 20, 20));
+        headerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(35, 25, 25, 25));
 
         // Brand logo/text
-        headerLabel.setFont(new java.awt.Font("Segoe UI", 1, 24));
-        headerLabel.setForeground(new java.awt.Color(30, 64, 175)); // Dark Blue
+        headerLabel.setFont(new java.awt.Font("Segoe UI", 1, 26));
+        headerLabel.setForeground(java.awt.Color.WHITE);
         headerLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         headerLabel.setText("Nhà Sách TTM");
         headerLabel.setAlignmentX(javax.swing.JComponent.LEFT_ALIGNMENT);
         headerPanel.add(headerLabel);
 
-        headerPanel.add(javax.swing.Box.createVerticalStrut(5));
+        headerPanel.add(javax.swing.Box.createVerticalStrut(8));
 
         // Welcome Label
         welcomeLabel.setFont(new java.awt.Font("Segoe UI", 0, 14));
-        welcomeLabel.setForeground(new java.awt.Color(100, 116, 139)); // Slate 500
+        welcomeLabel.setForeground(new java.awt.Color(148, 163, 184)); // Slate 400
         welcomeLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         welcomeLabel.setText("Xin chào bạn trở lại");
         welcomeLabel.setAlignmentX(javax.swing.JComponent.LEFT_ALIGNMENT);
@@ -216,14 +213,14 @@ public class MainFrame extends javax.swing.JFrame {
 
         // Menu Panel
         javax.swing.JPanel menuPanel = new javax.swing.JPanel();
-        menuPanel.setBackground(new java.awt.Color(255, 255, 255)); // White
+        menuPanel.setBackground(new java.awt.Color(15, 23, 42)); // Slate 900
         menuPanel.setLayout(new java.awt.BorderLayout(0, 0));
 
         // Buttons Panel
         javax.swing.JPanel buttonsPanel = new javax.swing.JPanel();
-        buttonsPanel.setBackground(new java.awt.Color(255, 255, 255));
+        buttonsPanel.setBackground(new java.awt.Color(15, 23, 42)); // Slate 900
         buttonsPanel.setLayout(new java.awt.BorderLayout(0, 0));
-        buttonsPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        buttonsPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         // Setup actions and listeners for generated buttons
         configureButton(btnHome, this::btnHomeActionPerformed);
@@ -234,26 +231,26 @@ public class MainFrame extends javax.swing.JFrame {
         configureButton(btnMembership, this::btnMembershipActionPerformed);
         configureButton(btnTopUp, this::btnTopUpActionPerformed);
         configureButton(btnHistory, this::btnHistoryActionPerformed);
-        configureButton(btnHistory, this::btnHistoryActionPerformed);
-        // btnCard removed
+
         configureButton(btnChangePin, this::btnChangePinActionPerformed);
 
         currentActiveButton = btnHome;
         // Styles are handled inside SidebarButton repaint
 
         // Separator
-        separator.setBackground(new java.awt.Color(241, 245, 249));
-        separator.setForeground(new java.awt.Color(241, 245, 249));
+        separator.setBackground(new java.awt.Color(51, 65, 85)); // Slate 700
+        separator.setForeground(new java.awt.Color(51, 65, 85));
 
         // Footer Actions (Logout/Exit)
-        javax.swing.JButton btnLogout = createFooterButton("Đăng xuất", new java.awt.Color(100, 116, 139));
+        // Redesigned Logout Button to look like Sidebar Button but different color
+        javax.swing.JButton btnLogout = createSidebarButton("Đăng xuất", "logout");
         btnLogout.addActionListener(this::handleLogout);
 
         btnExit.setText("Thoát");
         btnExit.setFont(new java.awt.Font("Segoe UI", 1, 14));
         btnExit.setForeground(new java.awt.Color(239, 68, 68)); // Red text
-        btnExit.setBackground(new java.awt.Color(254, 242, 242)); // Red bg light
-        btnExit.setBorderPainted(false);
+        btnExit.setBackground(new java.awt.Color(15, 23, 42)); // Dark bg
+        btnExit.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(51, 65, 85)));
         btnExit.setFocusPainted(false);
         btnExit.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnExit.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 40));
@@ -261,42 +258,42 @@ public class MainFrame extends javax.swing.JFrame {
         btnExit.addActionListener(this::btnExitActionPerformed);
         btnExit.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btnExit.setBackground(new java.awt.Color(254, 226, 226));
+                btnExit.setBackground(new java.awt.Color(30, 41, 59));
             }
 
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                btnExit.setBackground(new java.awt.Color(254, 242, 242));
+                btnExit.setBackground(new java.awt.Color(15, 23, 42));
             }
         });
 
         // Layout Buttons
         javax.swing.Box buttonsBox = javax.swing.Box.createVerticalBox();
         buttonsBox.add(btnHome);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnPersonal);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnBorrow);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnBuy);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnOffice);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnMembership);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnTopUp);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
         buttonsBox.add(btnHistory);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(5));
-        // btnCard removed
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(8));
+
         buttonsBox.add(btnChangePin);
 
         buttonsBox.add(javax.swing.Box.createVerticalGlue());
         buttonsBox.add(separator);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
-        buttonsBox.add(btnLogout);
-        buttonsBox.add(javax.swing.Box.createVerticalStrut(10));
-        buttonsBox.add(btnExit);
         buttonsBox.add(javax.swing.Box.createVerticalStrut(20));
+        buttonsBox.add(btnLogout);
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(15));
+        buttonsBox.add(btnExit);
+        buttonsBox.add(javax.swing.Box.createVerticalStrut(25));
 
         buttonsPanel.add(buttonsBox, java.awt.BorderLayout.CENTER);
         menuPanel.add(buttonsPanel, java.awt.BorderLayout.CENTER);
@@ -325,23 +322,26 @@ public class MainFrame extends javax.swing.JFrame {
      */
     private class SidebarButton extends javax.swing.JButton {
         private String iconType;
-        private java.awt.Color hoverColor = new java.awt.Color(241, 245, 249); // Slate 100
-        private java.awt.Color activeColor = new java.awt.Color(224, 242, 254); // Sky 100
-        private java.awt.Color activeTextColor = new java.awt.Color(2, 132, 199); // Sky 600
-        private java.awt.Color normalTextColor = new java.awt.Color(100, 116, 139); // Slate 500
+        private java.awt.Color hoverColor = new java.awt.Color(30, 41, 59); // Slate 800
+        private java.awt.Color activeColor = new java.awt.Color(51, 65, 85); // Slate 700
+        // private java.awt.Color activeColor = new java.awt.Color(37, 99, 235); // Blue
+        // 600 - Alternative
+
+        private java.awt.Color activeTextColor = java.awt.Color.WHITE;
+        private java.awt.Color normalTextColor = new java.awt.Color(148, 163, 184); // Slate 400
 
         public SidebarButton(String text, String iconType) {
             super(text);
             this.iconType = iconType;
             setFont(new java.awt.Font("Segoe UI", 1, 14));
             setForeground(normalTextColor);
-            setBackground(java.awt.Color.WHITE);
-            setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 50, 10, 20)); // Left padding for icon
+            setBackground(new java.awt.Color(15, 23, 42)); // Slate 900
+            setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 55, 12, 20)); // Left padding for icon
             setFocusPainted(false);
             setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
             setContentAreaFilled(false);
             setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-            setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 48));
+            setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 50));
 
             addMouseListener(new java.awt.event.MouseAdapter() {
                 public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -353,7 +353,7 @@ public class MainFrame extends javax.swing.JFrame {
 
                 public void mouseExited(java.awt.event.MouseEvent evt) {
                     if (SidebarButton.this != currentActiveButton) {
-                        setBackground(java.awt.Color.WHITE);
+                        setBackground(new java.awt.Color(15, 23, 42));
                         repaint();
                     }
                 }
@@ -367,13 +367,18 @@ public class MainFrame extends javax.swing.JFrame {
 
             // 1. Draw Background
             if (this == currentActiveButton) {
-                g2d.setColor(activeColor);
-                g2d.fillRoundRect(8, 2, getWidth() - 16, getHeight() - 4, 12, 12); // Pill shape
-                setForeground(activeTextColor);
+                // Gradient for active state
+                java.awt.GradientPaint gp = new java.awt.GradientPaint(
+                        0, 0, new java.awt.Color(59, 130, 246), // Blue 500
+                        getWidth(), 0, new java.awt.Color(37, 99, 235) // Blue 600
+                );
+                g2d.setPaint(gp);
+                g2d.fillRoundRect(0, 2, getWidth(), getHeight() - 4, 15, 15);
+                setForeground(java.awt.Color.WHITE);
             } else if (getModel().isRollover()) {
                 g2d.setColor(hoverColor);
-                g2d.fillRoundRect(8, 2, getWidth() - 16, getHeight() - 4, 12, 12);
-                setForeground(normalTextColor);
+                g2d.fillRoundRect(0, 2, getWidth(), getHeight() - 4, 15, 15);
+                setForeground(java.awt.Color.WHITE);
             } else {
                 setForeground(normalTextColor);
             }
@@ -463,6 +468,17 @@ public class MainFrame extends javax.swing.JFrame {
                     g2.drawRoundRect(x - 7, y - 2, 14, 10, 2, 2); // Body
                     g2.drawArc(x - 5, y - 9, 10, 14, 0, 180); // Shackle
                     g2.fillOval(x - 1, y + 2, 2, 2); // Keyhole
+                    break;
+                case "logout":
+                    // Logout - Arrow exiting door
+                    g2.drawLine(x, y - 6, x, y + 6); // Door line
+                    g2.drawLine(x, y - 6, x + 6, y - 6); // Top
+                    g2.drawLine(x + 6, y - 6, x + 6, y + 6); // Right
+                    g2.drawLine(x + 6, y + 6, x, y + 6); // Bottom
+
+                    g2.drawLine(x - 8, y, x - 2, y); // Arrow shaft
+                    g2.drawLine(x - 4, y - 2, x - 2, y); // Arrow head top
+                    g2.drawLine(x - 4, y + 2, x - 2, y); // Arrow head bot
                     break;
                 default:
                     g2.drawOval(x - 5, y - 5, 10, 10);
