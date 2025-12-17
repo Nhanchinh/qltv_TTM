@@ -262,10 +262,13 @@ public class AdminPanel extends JPanel {
         tabbedPane.addTab("", createImportCardDataPanel());
         tabbedPane.addTab("", createGetInfoPanel());
         tabbedPane.addTab("", createAddBookPanel());
+        tabbedPane.addTab("", createManageBooksPanel());
         tabbedPane.addTab("", createAddStationeryPanel());
+        tabbedPane.addTab("", createManageStationeryPanel());
 
         // Tab icons and labels - custom styled buttons as tab components
-        String[] tabNames = { "Đổi Mã PIN", "Nạp Dữ Liệu", "Lấy Thông Tin", "Thêm Sách", "Thêm VPP" };
+        String[] tabNames = { "Đổi Mã PIN", "Nạp Dữ Liệu", "Lấy Thông Tin", "Thêm Sách", "QL Sách", "Thêm VPP",
+                "QL VPP" };
 
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             final int tabIndex = i;
@@ -383,13 +386,28 @@ public class AdminPanel extends JPanel {
                 g2.drawRoundRect(x - 9, y - 8, 7, 16, 3, 3); // Left page
                 g2.drawRoundRect(x, y - 8, 7, 16, 3, 3); // Right page
                 break;
-            case 4: // Add VPP (Pen)
-                    // Pen rotated
+            case 4: // Manage Books (List icon)
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawLine(x - 7, y - 6, x + 7, y - 6);
+                g2.drawLine(x - 7, y, x + 7, y);
+                g2.drawLine(x - 7, y + 6, x + 7, y + 6);
+                g2.fillOval(x - 9, y - 8, 4, 4);
+                g2.fillOval(x - 9, y - 2, 4, 4);
+                g2.fillOval(x - 9, y + 4, 4, 4);
+                break;
+            case 5: // Add VPP (Pen)
                 java.awt.geom.AffineTransform old = g2.getTransform();
                 g2.rotate(Math.toRadians(45), x, y);
                 g2.drawRoundRect(x - 2, y - 8, 4, 14, 2, 2);
                 g2.drawPolygon(new int[] { x - 2, x + 2, x }, new int[] { y + 6, y + 6, y + 9 }, 3);
                 g2.setTransform(old);
+                break;
+            case 6: // Manage VPP (Grid icon)
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRect(x - 8, y - 8, 6, 6);
+                g2.drawRect(x + 2, y - 8, 6, 6);
+                g2.drawRect(x - 8, y + 2, 6, 6);
+                g2.drawRect(x + 2, y + 2, 6, 6);
                 break;
         }
     }
@@ -3628,6 +3646,945 @@ public class AdminPanel extends JPanel {
         public boolean stopCellEditing() {
             isPushed = false;
             return super.stopCellEditing();
+        }
+    }
+
+    /**
+     * Create Manage Books Panel (Quản Lý Sách)
+     */
+    private JPanel createManageBooksPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(20, 30, 20, 30));
+
+        // Card wrapper for glassmorphism
+        JPanel cardWrapper = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(new Color(24, 24, 27, 240));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2d.setColor(new Color(63, 63, 70));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+                g2d.dispose();
+            }
+        };
+        cardWrapper.setOpaque(false);
+        cardWrapper.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Header panel with title and refresh button
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
+
+        JLabel titleLabel = new JLabel("QUẢN LÝ SÁCH");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Table model
+        String[] columns = { "Mã Sách", "Tên Sách", "Tác Giả", "NXB", "Giá", "SL", "Thể Loại", "Hành Động" };
+        DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 7;
+            }
+        };
+
+        // Refresh button
+        JButton refreshButton = new JButton("LÀM MỚI") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        refreshButton.setPreferredSize(new Dimension(100, 36));
+        refreshButton.setBorderPainted(false);
+        refreshButton.setContentAreaFilled(false);
+        refreshButton.setFocusPainted(false);
+        refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        refreshButton.addActionListener(e -> loadBooksToTable(tableModel));
+
+        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonWrapper.setOpaque(false);
+        buttonWrapper.add(refreshButton);
+        headerPanel.add(buttonWrapper, BorderLayout.EAST);
+
+        cardWrapper.add(headerPanel, BorderLayout.NORTH);
+
+        // Table with modern styling - matching import tab
+        JTable table = new JTable(tableModel);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setRowHeight(42);
+        table.setBackground(new Color(24, 24, 27));
+        table.setForeground(new Color(250, 250, 250));
+        table.setGridColor(new Color(63, 63, 70));
+        table.setShowGrid(true);
+        table.setIntercellSpacing(new Dimension(0, 1));
+        table.setSelectionBackground(new Color(99, 102, 241, 100));
+        table.setSelectionForeground(Color.WHITE);
+        table.setFillsViewportHeight(true);
+
+        // Header styling - Green scheme matching import tab
+        table.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
+                label.setOpaque(true);
+                label.setBackground(new Color(16, 150, 100));
+                label.setForeground(Color.WHITE);
+                label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                label.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(6, 78, 59)),
+                        BorderFactory.createEmptyBorder(0, 5, 0, 5)));
+                return label;
+            }
+        });
+        table.getTableHeader().setPreferredSize(new Dimension(0, 45));
+
+        // Action column with buttons
+        table.getColumnModel().getColumn(7).setCellRenderer(new ActionButtonRenderer());
+        table.getColumnModel().getColumn(7)
+                .setCellEditor(new BookActionButtonEditor(new JCheckBox(), tableModel, table));
+
+        // Column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(80);
+        table.getColumnModel().getColumn(1).setPreferredWidth(180);
+        table.getColumnModel().getColumn(2).setPreferredWidth(130);
+        table.getColumnModel().getColumn(3).setPreferredWidth(100);
+        table.getColumnModel().getColumn(4).setPreferredWidth(70);
+        table.getColumnModel().getColumn(5).setPreferredWidth(50);
+        table.getColumnModel().getColumn(6).setPreferredWidth(90);
+        table.getColumnModel().getColumn(7).setPreferredWidth(130);
+
+        // Scroll pane with dark styling
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(new Color(24, 24, 27));
+        scrollPane.setBackground(new Color(24, 24, 27));
+        scrollPane.getVerticalScrollBar().setBackground(new Color(39, 39, 42));
+        scrollPane.getHorizontalScrollBar().setBackground(new Color(39, 39, 42));
+        scrollPane.getVerticalScrollBar().setUI(new ModernDarkScrollBarUI());
+        scrollPane.getHorizontalScrollBar().setUI(new ModernDarkScrollBarUI());
+
+        cardWrapper.add(scrollPane, BorderLayout.CENTER);
+
+        // Load data
+        loadBooksToTable(tableModel);
+
+        panel.add(cardWrapper, BorderLayout.CENTER);
+        return panel;
+    }
+
+    /**
+     * Create Manage Stationery Panel (Quản Lý VPP)
+     */
+    private JPanel createManageStationeryPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(20, 30, 20, 30));
+
+        // Card wrapper for glassmorphism
+        JPanel cardWrapper = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(new Color(24, 24, 27, 240));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2d.setColor(new Color(63, 63, 70));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+                g2d.dispose();
+            }
+        };
+        cardWrapper.setOpaque(false);
+        cardWrapper.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Header panel with title and refresh button
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
+
+        JLabel titleLabel = new JLabel("QUẢN LÝ VĂN PHÒNG PHẨM");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Table model
+        String[] columns = { "Mã VPP", "Tên VPP", "Giá", "Số Lượng", "Hành Động" };
+        DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 4;
+            }
+        };
+
+        // Refresh button
+        JButton refreshButton = new JButton("LÀM MỚI") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, SUCCESS_COLOR, getWidth(), 0, new Color(16, 150, 100));
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        refreshButton.setPreferredSize(new Dimension(100, 36));
+        refreshButton.setBorderPainted(false);
+        refreshButton.setContentAreaFilled(false);
+        refreshButton.setFocusPainted(false);
+        refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        refreshButton.addActionListener(e -> loadStationeryToTable(tableModel));
+
+        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonWrapper.setOpaque(false);
+        buttonWrapper.add(refreshButton);
+        headerPanel.add(buttonWrapper, BorderLayout.EAST);
+
+        cardWrapper.add(headerPanel, BorderLayout.NORTH);
+
+        // Table with modern styling - matching import tab
+        JTable table = new JTable(tableModel);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setRowHeight(42);
+        table.setBackground(new Color(24, 24, 27));
+        table.setForeground(new Color(250, 250, 250));
+        table.setGridColor(new Color(63, 63, 70));
+        table.setShowGrid(true);
+        table.setIntercellSpacing(new Dimension(0, 1));
+        table.setSelectionBackground(new Color(99, 102, 241, 100));
+        table.setSelectionForeground(Color.WHITE);
+        table.setFillsViewportHeight(true);
+
+        // Header styling - Green scheme matching import tab
+        table.getTableHeader().setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
+                label.setOpaque(true);
+                label.setBackground(new Color(16, 150, 100));
+                label.setForeground(Color.WHITE);
+                label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                label.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(6, 78, 59)),
+                        BorderFactory.createEmptyBorder(0, 5, 0, 5)));
+                return label;
+            }
+        });
+        table.getTableHeader().setPreferredSize(new Dimension(0, 45));
+
+        // Action column with buttons
+        table.getColumnModel().getColumn(4).setCellRenderer(new ActionButtonRenderer());
+        table.getColumnModel().getColumn(4)
+                .setCellEditor(new StationeryActionButtonEditor(new JCheckBox(), tableModel, table));
+
+        // Column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(100);
+        table.getColumnModel().getColumn(1).setPreferredWidth(350);
+        table.getColumnModel().getColumn(2).setPreferredWidth(100);
+        table.getColumnModel().getColumn(3).setPreferredWidth(80);
+        table.getColumnModel().getColumn(4).setPreferredWidth(130);
+
+        // Scroll pane with dark styling
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(new Color(24, 24, 27));
+        scrollPane.setBackground(new Color(24, 24, 27));
+        scrollPane.getVerticalScrollBar().setBackground(new Color(39, 39, 42));
+        scrollPane.getHorizontalScrollBar().setBackground(new Color(39, 39, 42));
+        scrollPane.getVerticalScrollBar().setUI(new ModernDarkScrollBarUI());
+        scrollPane.getHorizontalScrollBar().setUI(new ModernDarkScrollBarUI());
+
+        cardWrapper.add(scrollPane, BorderLayout.CENTER);
+
+        // Load data
+        loadStationeryToTable(tableModel);
+
+        panel.add(cardWrapper, BorderLayout.CENTER);
+        return panel;
+    }
+
+    /**
+     * Create a gradient button helper
+     */
+    private JButton createGradientButton(String text, Color color1, Color color2) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient;
+                if (getModel().isPressed()) {
+                    gradient = new GradientPaint(0, 0, color2, getWidth(), 0, color1);
+                } else if (getModel().isRollover()) {
+                    gradient = new GradientPaint(0, 0, color1.brighter(), getWidth(), 0, color1);
+                } else {
+                    gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+                }
+
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+
+                g2d.dispose();
+            }
+        };
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setForeground(Color.WHITE);
+        button.setPreferredSize(new Dimension(110, 38));
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    /**
+     * Load books to table
+     */
+    private void loadBooksToTable(DefaultTableModel tableModel) {
+        tableModel.setRowCount(0);
+        String sql = "SELECT BookID, Title, Author, Publisher, Price, Stock, Category FROM Books ORDER BY BookID";
+        try (Connection conn = DBConnect.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                tableModel.addRow(new Object[] {
+                        rs.getString("BookID"),
+                        rs.getString("Title"),
+                        rs.getString("Author"),
+                        rs.getString("Publisher"),
+                        String.format("%,.0f", rs.getDouble("Price")),
+                        rs.getInt("Stock"),
+                        rs.getString("Category"),
+                        "Sửa / Xóa"
+                });
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi load sách: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Load stationery to table
+     */
+    private void loadStationeryToTable(DefaultTableModel tableModel) {
+        tableModel.setRowCount(0);
+        String sql = "SELECT ItemID, Name, Price, Stock FROM Stationery ORDER BY ItemID";
+        try (Connection conn = DBConnect.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                tableModel.addRow(new Object[] {
+                        rs.getString("ItemID"),
+                        rs.getString("Name"),
+                        String.format("%,.0f", rs.getDouble("Price")),
+                        rs.getInt("Stock"),
+                        "Sửa / Xóa"
+                });
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi load VPP: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update book in database
+     */
+    private boolean updateBook(String bookId, String title, String author, String publisher,
+            double price, int stock, String category) {
+        String sql = "UPDATE Books SET Title = ?, Author = ?, Publisher = ?, Price = ?, Stock = ?, Category = ? WHERE BookID = ?";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, title);
+            pstmt.setString(2, author);
+            pstmt.setString(3, publisher);
+            pstmt.setDouble(4, price);
+            pstmt.setInt(5, stock);
+            pstmt.setString(6, category);
+            pstmt.setString(7, bookId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi cập nhật sách: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete book from database
+     */
+    private boolean deleteBook(String bookId) {
+        String sql = "DELETE FROM Books WHERE BookID = ?";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, bookId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi xóa sách: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Update stationery in database
+     */
+    private boolean updateStationery(String itemId, String name, double price, int stock) {
+        String sql = "UPDATE Stationery SET Name = ?, Price = ?, Stock = ? WHERE ItemID = ?";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setDouble(2, price);
+            pstmt.setInt(3, stock);
+            pstmt.setString(4, itemId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi cập nhật VPP: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete stationery from database
+     */
+    private boolean deleteStationery(String itemId) {
+        String sql = "DELETE FROM Stationery WHERE ItemID = ?";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, itemId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi xóa VPP: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Show edit book dialog
+     */
+    private void showEditBookDialog(String bookId, DefaultTableModel tableModel) {
+        // Get book details
+        String sql = "SELECT * FROM Books WHERE BookID = ?";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, bookId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sửa Thông Tin Sách",
+                            true);
+                    dialog.setSize(500, 560);
+                    dialog.setLocationRelativeTo(null);
+                    dialog.setResizable(false);
+
+                    JPanel contentPanel = new JPanel();
+                    contentPanel.setLayout(new GridBagLayout());
+                    contentPanel.setBorder(new EmptyBorder(20, 30, 20, 30));
+                    contentPanel.setBackground(BACKGROUND_DARK);
+
+                    GridBagConstraints gbc = new GridBagConstraints();
+                    gbc.fill = GridBagConstraints.HORIZONTAL;
+                    gbc.insets = new Insets(8, 5, 8, 5);
+
+                    // Title
+                    JLabel dialogTitle = new JLabel("SỬA THÔNG TIN SÁCH");
+                    dialogTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                    dialogTitle.setForeground(TEXT_PRIMARY);
+                    gbc.gridx = 0;
+                    gbc.gridy = 0;
+                    gbc.gridwidth = 2;
+                    contentPanel.add(dialogTitle, gbc);
+
+                    gbc.gridwidth = 1;
+
+                    // Book ID (read-only)
+                    gbc.gridx = 0;
+                    gbc.gridy = 1;
+                    gbc.weightx = 0.3;
+                    contentPanel.add(createDarkLabel("Mã Sách:"), gbc);
+                    gbc.gridx = 1;
+                    gbc.weightx = 0.7;
+                    JTextField idField = createDarkTextField("");
+                    idField.setText(bookId);
+                    idField.setEditable(false);
+                    idField.setBackground(new Color(39, 39, 42));
+                    contentPanel.add(idField, gbc);
+
+                    // Title
+                    gbc.gridx = 0;
+                    gbc.gridy = 2;
+                    gbc.weightx = 0.3;
+                    contentPanel.add(createDarkLabel("Tên Sách:"), gbc);
+                    gbc.gridx = 1;
+                    gbc.weightx = 0.7;
+                    JTextField titleField = createDarkTextField("");
+                    titleField.setText(rs.getString("Title"));
+                    contentPanel.add(titleField, gbc);
+
+                    // Author
+                    gbc.gridx = 0;
+                    gbc.gridy = 3;
+                    contentPanel.add(createDarkLabel("Tác Giả:"), gbc);
+                    gbc.gridx = 1;
+                    JTextField authorField = createDarkTextField("");
+                    authorField.setText(rs.getString("Author"));
+                    contentPanel.add(authorField, gbc);
+
+                    // Publisher
+                    gbc.gridx = 0;
+                    gbc.gridy = 4;
+                    contentPanel.add(createDarkLabel("Nhà Xuất Bản:"), gbc);
+                    gbc.gridx = 1;
+                    JTextField publisherField = createDarkTextField("");
+                    publisherField.setText(rs.getString("Publisher"));
+                    contentPanel.add(publisherField, gbc);
+
+                    // Price
+                    gbc.gridx = 0;
+                    gbc.gridy = 5;
+                    contentPanel.add(createDarkLabel("Giá (VNĐ):"), gbc);
+                    gbc.gridx = 1;
+                    JTextField priceField = createDarkTextField("");
+                    priceField.setText(String.valueOf((int) rs.getDouble("Price")));
+                    contentPanel.add(priceField, gbc);
+
+                    // Stock
+                    gbc.gridx = 0;
+                    gbc.gridy = 6;
+                    contentPanel.add(createDarkLabel("Số Lượng:"), gbc);
+                    gbc.gridx = 1;
+                    JTextField stockField = createDarkTextField("");
+                    stockField.setText(String.valueOf(rs.getInt("Stock")));
+                    contentPanel.add(stockField, gbc);
+
+                    // Category
+                    gbc.gridx = 0;
+                    gbc.gridy = 7;
+                    contentPanel.add(createDarkLabel("Thể Loại:"), gbc);
+                    gbc.gridx = 1;
+                    String[] categories = { "Văn học", "Khoa học", "Thiếu nhi", "Manga", "Self-help", "Lập trình",
+                            "Kinh tế", "Tâm lý", "Lịch sử", "Khác" };
+                    JComboBox<String> categoryCombo = new JComboBox<>(categories);
+                    categoryCombo.setSelectedItem(rs.getString("Category"));
+                    categoryCombo.setBackground(INPUT_BG);
+                    categoryCombo.setForeground(TEXT_PRIMARY);
+                    contentPanel.add(categoryCombo, gbc);
+
+                    // Buttons
+                    gbc.gridx = 0;
+                    gbc.gridy = 8;
+                    gbc.gridwidth = 2;
+                    gbc.insets = new Insets(20, 5, 8, 5);
+                    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+                    buttonPanel.setOpaque(false);
+
+                    JButton saveButton = createGradientButton("LƯU", SUCCESS_COLOR, new Color(16, 150, 100));
+                    saveButton.addActionListener(e -> {
+                        try {
+                            double price = Double.parseDouble(priceField.getText().trim());
+                            int stock = Integer.parseInt(stockField.getText().trim());
+                            if (updateBook(bookId, titleField.getText().trim(), authorField.getText().trim(),
+                                    publisherField.getText().trim(), price, stock,
+                                    (String) categoryCombo.getSelectedItem())) {
+                                JOptionPane.showMessageDialog(dialog, "Cập nhật thành công!", "Thành công",
+                                        JOptionPane.INFORMATION_MESSAGE);
+                                dialog.dispose();
+                                loadBooksToTable(tableModel);
+                            } else {
+                                JOptionPane.showMessageDialog(dialog, "Lỗi khi cập nhật!", "Lỗi",
+                                        JOptionPane.ERROR_MESSAGE);
+                            }
+                        } catch (NumberFormatException ex) {
+                            JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi",
+                                    JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    buttonPanel.add(saveButton);
+
+                    JButton cancelButton = createGradientButton("HỦY", new Color(100, 116, 139),
+                            new Color(71, 85, 105));
+                    cancelButton.addActionListener(e -> dialog.dispose());
+                    buttonPanel.add(cancelButton);
+
+                    contentPanel.add(buttonPanel, gbc);
+
+                    dialog.add(contentPanel);
+                    dialog.setVisible(true);
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lấy thông tin sách: " + e.getMessage(), "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Show edit stationery dialog
+     */
+    private void showEditStationeryDialog(String itemId, DefaultTableModel tableModel) {
+        String sql = "SELECT * FROM Stationery WHERE ItemID = ?";
+        try (Connection conn = DBConnect.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, itemId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sửa Thông Tin VPP",
+                            true);
+                    dialog.setSize(450, 420);
+                    dialog.setLocationRelativeTo(null);
+                    dialog.setResizable(false);
+
+                    JPanel contentPanel = new JPanel();
+                    contentPanel.setLayout(new GridBagLayout());
+                    contentPanel.setBorder(new EmptyBorder(20, 30, 20, 30));
+                    contentPanel.setBackground(BACKGROUND_DARK);
+
+                    GridBagConstraints gbc = new GridBagConstraints();
+                    gbc.fill = GridBagConstraints.HORIZONTAL;
+                    gbc.insets = new Insets(8, 5, 8, 5);
+
+                    // Title
+                    JLabel dialogTitle = new JLabel("SỬA THÔNG TIN VPP");
+                    dialogTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+                    dialogTitle.setForeground(TEXT_PRIMARY);
+                    gbc.gridx = 0;
+                    gbc.gridy = 0;
+                    gbc.gridwidth = 2;
+                    contentPanel.add(dialogTitle, gbc);
+
+                    gbc.gridwidth = 1;
+
+                    // Item ID (read-only)
+                    gbc.gridx = 0;
+                    gbc.gridy = 1;
+                    gbc.weightx = 0.3;
+                    contentPanel.add(createDarkLabel("Mã VPP:"), gbc);
+                    gbc.gridx = 1;
+                    gbc.weightx = 0.7;
+                    JTextField idField = createDarkTextField("");
+                    idField.setText(itemId);
+                    idField.setEditable(false);
+                    idField.setBackground(new Color(39, 39, 42));
+                    contentPanel.add(idField, gbc);
+
+                    // Name
+                    gbc.gridx = 0;
+                    gbc.gridy = 2;
+                    contentPanel.add(createDarkLabel("Tên VPP:"), gbc);
+                    gbc.gridx = 1;
+                    JTextField nameField = createDarkTextField("");
+                    nameField.setText(rs.getString("Name"));
+                    contentPanel.add(nameField, gbc);
+
+                    // Price
+                    gbc.gridx = 0;
+                    gbc.gridy = 3;
+                    contentPanel.add(createDarkLabel("Giá (VNĐ):"), gbc);
+                    gbc.gridx = 1;
+                    JTextField priceField = createDarkTextField("");
+                    priceField.setText(String.valueOf((int) rs.getDouble("Price")));
+                    contentPanel.add(priceField, gbc);
+
+                    // Stock
+                    gbc.gridx = 0;
+                    gbc.gridy = 4;
+                    contentPanel.add(createDarkLabel("Số Lượng:"), gbc);
+                    gbc.gridx = 1;
+                    JTextField stockField = createDarkTextField("");
+                    stockField.setText(String.valueOf(rs.getInt("Stock")));
+                    contentPanel.add(stockField, gbc);
+
+                    // Buttons
+                    gbc.gridx = 0;
+                    gbc.gridy = 5;
+                    gbc.gridwidth = 2;
+                    gbc.insets = new Insets(20, 5, 8, 5);
+                    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+                    buttonPanel.setOpaque(false);
+
+                    JButton saveButton = createGradientButton("LƯU", SUCCESS_COLOR, new Color(16, 150, 100));
+                    saveButton.addActionListener(e -> {
+                        try {
+                            double price = Double.parseDouble(priceField.getText().trim());
+                            int stock = Integer.parseInt(stockField.getText().trim());
+                            if (updateStationery(itemId, nameField.getText().trim(), price, stock)) {
+                                JOptionPane.showMessageDialog(dialog, "Cập nhật thành công!", "Thành công",
+                                        JOptionPane.INFORMATION_MESSAGE);
+                                dialog.dispose();
+                                loadStationeryToTable(tableModel);
+                            } else {
+                                JOptionPane.showMessageDialog(dialog, "Lỗi khi cập nhật!", "Lỗi",
+                                        JOptionPane.ERROR_MESSAGE);
+                            }
+                        } catch (NumberFormatException ex) {
+                            JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi",
+                                    JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    buttonPanel.add(saveButton);
+
+                    JButton cancelButton = createGradientButton("HỦY", new Color(100, 116, 139),
+                            new Color(71, 85, 105));
+                    cancelButton.addActionListener(e -> dialog.dispose());
+                    buttonPanel.add(cancelButton);
+
+                    contentPanel.add(buttonPanel, gbc);
+
+                    dialog.add(contentPanel);
+                    dialog.setVisible(true);
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lấy thông tin VPP: " + e.getMessage(), "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Action Button Renderer for Edit/Delete
+    class ActionButtonRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
+        private JButton editBtn, deleteBtn;
+
+        public ActionButtonRenderer() {
+            setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            setOpaque(true);
+            setBackground(new Color(30, 41, 59));
+
+            editBtn = new JButton("Sửa");
+            editBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            editBtn.setBackground(new Color(59, 130, 246));
+            editBtn.setForeground(Color.WHITE);
+            editBtn.setPreferredSize(new Dimension(50, 28));
+            editBtn.setBorderPainted(false);
+
+            deleteBtn = new JButton("Xóa");
+            deleteBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            deleteBtn.setBackground(ADMIN_COLOR);
+            deleteBtn.setForeground(Color.WHITE);
+            deleteBtn.setPreferredSize(new Dimension(50, 28));
+            deleteBtn.setBorderPainted(false);
+
+            add(editBtn);
+            add(deleteBtn);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            if (isSelected) {
+                setBackground(new Color(51, 65, 85));
+            } else {
+                setBackground(new Color(30, 41, 59));
+            }
+            return this;
+        }
+    }
+
+    // Book Action Button Editor
+    class BookActionButtonEditor extends DefaultCellEditor {
+        private JPanel panel;
+        private JButton editBtn, deleteBtn;
+        private String bookId;
+        private DefaultTableModel tableModel;
+        private JTable table;
+
+        public BookActionButtonEditor(JCheckBox checkBox, DefaultTableModel model, JTable table) {
+            super(checkBox);
+            this.tableModel = model;
+            this.table = table;
+
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            panel.setBackground(new Color(30, 41, 59));
+
+            editBtn = new JButton("Sửa");
+            editBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            editBtn.setBackground(new Color(59, 130, 246));
+            editBtn.setForeground(Color.WHITE);
+            editBtn.setPreferredSize(new Dimension(50, 28));
+            editBtn.setBorderPainted(false);
+            editBtn.addActionListener(e -> {
+                fireEditingStopped();
+                showEditBookDialog(bookId, tableModel);
+            });
+
+            deleteBtn = new JButton("Xóa");
+            deleteBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            deleteBtn.setBackground(ADMIN_COLOR);
+            deleteBtn.setForeground(Color.WHITE);
+            deleteBtn.setPreferredSize(new Dimension(50, 28));
+            deleteBtn.setBorderPainted(false);
+            deleteBtn.addActionListener(e -> {
+                fireEditingStopped();
+                Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(table);
+                int confirm = JOptionPane.showConfirmDialog(
+                        parentFrame, "Bạn có chắc chắn muốn xóa sách này?", "Xác nhận xóa",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (deleteBook(bookId)) {
+                        JOptionPane.showMessageDialog(parentFrame, "Xóa sách thành công!", "Thành công",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        loadBooksToTable(tableModel);
+                    } else {
+                        JOptionPane.showMessageDialog(parentFrame, "Lỗi khi xóa sách!", "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+
+            panel.add(editBtn);
+            panel.add(deleteBtn);
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            bookId = (String) table.getValueAt(row, 0);
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return "Sửa / Xóa";
+        }
+    }
+
+    // Stationery Action Button Editor
+    class StationeryActionButtonEditor extends DefaultCellEditor {
+        private JPanel panel;
+        private JButton editBtn, deleteBtn;
+        private String itemId;
+        private DefaultTableModel tableModel;
+        private JTable table;
+
+        public StationeryActionButtonEditor(JCheckBox checkBox, DefaultTableModel model, JTable table) {
+            super(checkBox);
+            this.tableModel = model;
+            this.table = table;
+
+            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            panel.setBackground(new Color(30, 41, 59));
+
+            editBtn = new JButton("Sửa");
+            editBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            editBtn.setBackground(new Color(59, 130, 246));
+            editBtn.setForeground(Color.WHITE);
+            editBtn.setPreferredSize(new Dimension(50, 28));
+            editBtn.setBorderPainted(false);
+            editBtn.addActionListener(e -> {
+                fireEditingStopped();
+                showEditStationeryDialog(itemId, tableModel);
+            });
+
+            deleteBtn = new JButton("Xóa");
+            deleteBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            deleteBtn.setBackground(ADMIN_COLOR);
+            deleteBtn.setForeground(Color.WHITE);
+            deleteBtn.setPreferredSize(new Dimension(50, 28));
+            deleteBtn.setBorderPainted(false);
+            deleteBtn.addActionListener(e -> {
+                fireEditingStopped();
+                Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(table);
+                int confirm = JOptionPane.showConfirmDialog(
+                        parentFrame, "Bạn có chắc chắn muốn xóa VPP này?", "Xác nhận xóa",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (deleteStationery(itemId)) {
+                        JOptionPane.showMessageDialog(parentFrame, "Xóa VPP thành công!", "Thành công",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        loadStationeryToTable(tableModel);
+                    } else {
+                        JOptionPane.showMessageDialog(parentFrame, "Lỗi khi xóa VPP!", "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+
+            panel.add(editBtn);
+            panel.add(deleteBtn);
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            itemId = (String) table.getValueAt(row, 0);
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return "Sửa / Xóa";
+        }
+    }
+
+    // Modern Dark ScrollBar UI for dark theme tables
+    private static class ModernDarkScrollBarUI extends javax.swing.plaf.basic.BasicScrollBarUI {
+        @Override
+        protected void configureScrollBarColors() {
+            this.thumbColor = new Color(71, 85, 105); // Slate 600
+            this.trackColor = new Color(30, 41, 59); // Slate 800
+        }
+
+        @Override
+        protected JButton createDecreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        @Override
+        protected JButton createIncreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        private JButton createZeroButton() {
+            JButton b = new JButton();
+            b.setPreferredSize(new Dimension(0, 0));
+            return b;
+        }
+
+        @Override
+        protected void paintThumb(Graphics g, JComponent c, Rectangle r) {
+            if (r.isEmpty() || !scrollbar.isEnabled())
+                return;
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(thumbColor);
+            g2.fillRoundRect(r.x + 2, r.y + 2, r.width - 4, r.height - 4, 8, 8);
+            g2.dispose();
+        }
+
+        @Override
+        protected void paintTrack(Graphics g, JComponent c, Rectangle r) {
+            g.setColor(trackColor);
+            g.fillRect(r.x, r.y, r.width, r.height);
         }
     }
 }
