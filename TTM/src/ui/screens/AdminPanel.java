@@ -2317,7 +2317,171 @@ public class AdminPanel extends JPanel {
             }).start();
         });
 
-        bottomSection.add(getInfoButton);
+        // Edit button - initially hidden, shown after successful load
+        JButton editInfoButton = new JButton("SỬA THÔNG TIN") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, new Color(59, 130, 246),
+                        getWidth(), 0, new Color(37, 99, 235));
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                String text = "SỬA THÔNG TIN";
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(text)) / 2;
+                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(text, textX, textY);
+
+                g2d.dispose();
+            }
+        };
+        editInfoButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        editInfoButton.setForeground(Color.WHITE);
+        editInfoButton.setPreferredSize(new Dimension(220, 48));
+        editInfoButton.setMaximumSize(new Dimension(220, 48));
+        editInfoButton.setBorderPainted(false);
+        editInfoButton.setContentAreaFilled(false);
+        editInfoButton.setFocusPainted(false);
+        editInfoButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        editInfoButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        editInfoButton.setVisible(false); // Hidden initially
+
+        // Store loaded data for editing
+        final CardInfoManager.UserInfo[] loadedUserInfo = new CardInfoManager.UserInfo[1];
+        final byte[][] loadedImageData = new byte[1][];
+
+        // Modify getInfoButton action to also store data and show edit button
+        ActionListener originalListener = getInfoButton.getActionListeners()[0];
+        getInfoButton.removeActionListener(originalListener);
+        getInfoButton.addActionListener(e -> {
+            editInfoButton.setVisible(false); // Hide while loading
+            new Thread(() -> {
+                try {
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText("Đang kết nối đến thẻ...\n");
+                        infoArea.setForeground(TEXT_SECONDARY);
+                        imageLabel.setIcon(null);
+                        imageLabel.setText("Đang tải...");
+                        iconLabel.setVisible(true);
+                    });
+
+                    connManager = CardConnectionManager.getInstance();
+                    connManager.connectCard();
+
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.append("✓ Kết nối thành công\nĐang lấy thông tin...\n");
+                    });
+
+                    CardKeyManager keyManager = new CardKeyManager(connManager.getChannel());
+                    keyManager.getPublicKey();
+
+                    if (!keyManager.loadAppKeyPair()) {
+                        throw new Exception("Không tìm thấy app keypair. Vui lòng thêm thẻ mới trước.");
+                    }
+
+                    CardInfoManager infoManager = new CardInfoManager(connManager.getChannel(), keyManager);
+                    CardInfoManager.UserInfo userInfo = infoManager.getInfo();
+                    loadedUserInfo[0] = userInfo; // Store for editing
+
+                    try {
+                        byte[] pubBytes = keyManager.getCardPublicKeyEncoded();
+                        if (pubBytes != null && userInfo != null && userInfo.cardId != null
+                                && !userInfo.cardId.isEmpty()) {
+                            cardService.updateCardPublicKey(userInfo.cardId, pubBytes);
+                        }
+                    } catch (Exception _e) {
+                        System.err.println("Warning: failed to save card public key to DB: " + _e.getMessage());
+                    }
+
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.append("✓ Thông tin đã nhận\nĐang tải ảnh từ thẻ...\n");
+                    });
+
+                    CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+                    byte[] imageData = imageManager.downloadImage();
+                    loadedImageData[0] = imageData; // Store for editing
+
+                    connManager.disconnectCard();
+
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText(" Hoàn tất lấy thông tin\n\n" + userInfo.toString());
+                        infoArea.setForeground(TEXT_PRIMARY);
+
+                        if (imageData != null && imageManager.isValidJpeg(imageData)) {
+                            try {
+                                BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageData));
+                                if (img != null) {
+                                    int maxW = 200;
+                                    int maxH = 220;
+                                    int w = img.getWidth();
+                                    int h = img.getHeight();
+                                    double scale = Math.min((double) maxW / w, (double) maxH / h);
+                                    int newW = (int) (w * scale);
+                                    int newH = (int) (h * scale);
+
+                                    Image scaled = img.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
+                                    imageLabel.setIcon(new ImageIcon(scaled));
+                                    imageLabel.setText("");
+                                    iconLabel.setVisible(false);
+                                } else {
+                                    imageLabel.setIcon(null);
+                                    imageLabel.setText("Không thể đọc ảnh");
+                                    iconLabel.setVisible(true);
+                                }
+                            } catch (Exception imgEx) {
+                                imageLabel.setIcon(null);
+                                imageLabel.setText("Lỗi: " + imgEx.getMessage());
+                            }
+                        } else {
+                            imageLabel.setIcon(null);
+                            imageLabel.setText("Thẻ chưa có ảnh");
+                            iconLabel.setVisible(true);
+                        }
+
+                        // Show edit button after successful load
+                        editInfoButton.setVisible(true);
+                    });
+
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> {
+                        infoArea.setText("✗ Lỗi: " + ex.getMessage());
+                        infoArea.setForeground(ADMIN_COLOR);
+                        imageLabel.setIcon(null);
+                        imageLabel.setText("Lỗi");
+                        iconLabel.setVisible(true);
+                        editInfoButton.setVisible(false);
+                        JOptionPane.showMessageDialog(
+                                SwingUtilities.getWindowAncestor(panel),
+                                "Lỗi khi lấy thông tin: " + ex.getMessage(),
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                    });
+                    ex.printStackTrace();
+                }
+            }).start();
+        });
+
+        // Edit button action
+        editInfoButton.addActionListener(e -> {
+            if (loadedUserInfo[0] != null) {
+                showEditInfoDialog(loadedUserInfo[0], loadedImageData[0], imageLabel, iconLabel, infoArea);
+            }
+        });
+
+        // Button row - horizontal layout for both buttons
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        buttonRow.setOpaque(false);
+        buttonRow.setAlignmentX(Component.CENTER_ALIGNMENT);
+        buttonRow.add(getInfoButton);
+        buttonRow.add(editInfoButton);
+
+        bottomSection.add(buttonRow);
         bottomSection.add(Box.createVerticalStrut(10));
 
         JLabel helperText = new JLabel("Đảm bảo thiết bị đọc thẻ đã được kết nối");
@@ -2329,6 +2493,279 @@ public class AdminPanel extends JPanel {
         panel.add(bottomSection, BorderLayout.SOUTH);
 
         return panel;
+    }
+
+    /**
+     * Show dialog to edit card info - edits and saves to smart card
+     */
+    private void showEditInfoDialog(CardInfoManager.UserInfo userInfo, byte[] currentImageData,
+            JLabel imageLabel, JLabel iconLabel, JTextArea infoArea) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sửa Thông Tin Thẻ", true);
+        dialog.setSize(600, 550);
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(false);
+
+        // Dark theme content panel
+        JPanel contentPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, new Color(15, 23, 42),
+                        getWidth(), getHeight(), new Color(30, 27, 75));
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        contentPanel.setLayout(new GridBagLayout());
+        contentPanel.setBorder(new EmptyBorder(25, 30, 25, 30));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 0, 10, 15);
+
+        // Title
+        JLabel titleLabel = new JLabel("Chỉnh Sửa Thông Tin Thẻ");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        contentPanel.add(titleLabel, gbc);
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(0, 0, 10, 15);
+
+        // Card ID (Read only)
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.3;
+        contentPanel.add(createDarkLabel("Mã Thẻ:"), gbc);
+        JTextField cardIdField = createDarkTextField("");
+        cardIdField.setText(userInfo.cardId);
+        cardIdField.setEditable(false);
+        cardIdField.setBackground(new Color(30, 41, 59));
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        contentPanel.add(cardIdField, gbc);
+
+        // Full Name
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 10, 15);
+        contentPanel.add(createDarkLabel("Họ và Tên:"), gbc);
+        JTextField fullNameField = createDarkTextField("");
+        fullNameField.setText(userInfo.name);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        contentPanel.add(fullNameField, gbc);
+
+        // Phone
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 10, 15);
+        contentPanel.add(createDarkLabel("Số điện thoại:"), gbc);
+        JTextField phoneField = createDarkTextField("");
+        phoneField.setText(userInfo.phone);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        contentPanel.add(phoneField, gbc);
+
+        // Address
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 10, 15);
+        contentPanel.add(createDarkLabel("Địa chỉ:"), gbc);
+        JTextField addressField = createDarkTextField("");
+        addressField.setText(userInfo.address);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        contentPanel.add(addressField, gbc);
+
+        // DOB - convert from DDMMYYYY to DD/MM/YYYY for display
+        String dobDisplay = userInfo.dob;
+        if (dobDisplay != null && dobDisplay.length() == 8) {
+            dobDisplay = dobDisplay.substring(0, 2) + "/" + dobDisplay.substring(2, 4) + "/" + dobDisplay.substring(4);
+        }
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 10, 15);
+        contentPanel.add(createDarkLabel("Ngày sinh (DD/MM/YYYY):"), gbc);
+        JTextField dobField = createDarkTextField("");
+        dobField.setText(dobDisplay);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        contentPanel.add(dobField, gbc);
+
+        // Image from card
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        gbc.weightx = 0.3;
+        gbc.insets = new Insets(0, 0, 10, 15);
+        contentPanel.add(createDarkLabel("Ảnh thẻ:"), gbc);
+
+        JLabel imagePreview = new JLabel();
+        imagePreview.setPreferredSize(new Dimension(120, 100));
+        imagePreview.setOpaque(true);
+        imagePreview.setBackground(new Color(30, 41, 59));
+        imagePreview.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        imagePreview.setHorizontalAlignment(SwingConstants.CENTER);
+
+        final File[] selectedImageFile = new File[1];
+
+        // Display current image
+        if (currentImageData != null && currentImageData.length > 2) {
+            boolean isValidJpeg = (currentImageData[0] & 0xFF) == 0xFF && (currentImageData[1] & 0xFF) == 0xD8;
+            if (isValidJpeg) {
+                try {
+                    BufferedImage img = ImageIO.read(new ByteArrayInputStream(currentImageData));
+                    if (img != null) {
+                        Image scaled = img.getScaledInstance(120, 100, Image.SCALE_SMOOTH);
+                        imagePreview.setIcon(new ImageIcon(scaled));
+                    }
+                } catch (Exception ex) {
+                    imagePreview.setText("<html><center style='color:#888;'>Lỗi</center></html>");
+                }
+            } else {
+                imagePreview.setText("<html><center style='color:#888;'>Không có ảnh</center></html>");
+            }
+        } else {
+            imagePreview.setText("<html><center style='color:#888;'>Không có ảnh</center></html>");
+        }
+
+        JButton chooseImageButton = createGradientButton("Chọn Ảnh Mới", new Color(59, 130, 246),
+                new Color(37, 99, 235));
+        chooseImageButton.setPreferredSize(new Dimension(130, 32));
+        chooseImageButton.addActionListener(ev -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileFilter(
+                    new javax.swing.filechooser.FileNameExtensionFilter("Ảnh (JPG, JPEG, PNG)", "jpg", "jpeg", "png"));
+            int res = chooser.showOpenDialog(dialog);
+            if (res == JFileChooser.APPROVE_OPTION) {
+                selectedImageFile[0] = chooser.getSelectedFile();
+                try {
+                    BufferedImage img = ImageIO.read(selectedImageFile[0]);
+                    if (img != null) {
+                        Image scaled = img.getScaledInstance(120, 100, Image.SCALE_SMOOTH);
+                        imagePreview.setIcon(new ImageIcon(scaled));
+                        imagePreview.setText(null);
+                    }
+                } catch (Exception ex) {
+                    imagePreview.setIcon(null);
+                    imagePreview.setText("Lỗi đọc ảnh");
+                }
+            }
+        });
+
+        JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        imagePanel.setOpaque(false);
+        imagePanel.add(imagePreview);
+        imagePanel.add(chooseImageButton);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.insets = new Insets(0, 0, 10, 0);
+        contentPanel.add(imagePanel, gbc);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton saveButton = createGradientButton("LƯU LÊN THẺ", SUCCESS_COLOR, new Color(16, 150, 100));
+        saveButton.addActionListener(e -> {
+            String fullName = fullNameField.getText().trim();
+            String phone = phoneField.getText().trim();
+            String address = addressField.getText().trim();
+            String dob = dobField.getText().trim();
+
+            if (fullName.isEmpty() || phone.isEmpty() || address.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ họ tên, SĐT và địa chỉ!", "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            saveButton.setEnabled(false);
+            saveButton.setText("Đang lưu...");
+
+            new SwingWorker<Boolean, Void>() {
+                String errorMsg = "";
+
+                @Override
+                protected Boolean doInBackground() {
+                    try {
+                        CardConnectionManager connManager = CardConnectionManager.getInstance();
+                        connManager.connectCard();
+                        try {
+                            // Update info on card
+                            smartcard.CardUpdateManager updateManager = new smartcard.CardUpdateManager(
+                                    connManager.getChannel());
+                            boolean infoOk = updateManager.updateInfo(fullName, dob, phone, address);
+
+                            // Upload new image if selected
+                            boolean imageOk = true;
+                            if (selectedImageFile[0] != null && selectedImageFile[0].exists()) {
+                                CardImageManager imageManager = new CardImageManager(connManager.getChannel());
+                                imageOk = imageManager.uploadImage(selectedImageFile[0]);
+                            }
+
+                            return infoOk && imageOk;
+                        } finally {
+                            connManager.disconnectCard();
+                        }
+                    } catch (Exception ex) {
+                        errorMsg = ex.getMessage();
+                        ex.printStackTrace();
+                        return false;
+                    }
+                }
+
+                @Override
+                protected void done() {
+                    saveButton.setEnabled(true);
+                    saveButton.setText("LƯU LÊN THẺ");
+                    try {
+                        if (get()) {
+                            JOptionPane.showMessageDialog(dialog,
+                                    "Đã cập nhật thông tin lên thẻ thành công!\n\nNhấn 'Lấy Thông Tin' để xem thay đổi.",
+                                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                            dialog.dispose();
+                        } else {
+                            JOptionPane.showMessageDialog(dialog,
+                                    "Lỗi khi cập nhật thẻ!\n" + errorMsg,
+                                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dialog,
+                                "Lỗi: " + ex.getMessage(),
+                                "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }.execute();
+        });
+        buttonPanel.add(saveButton);
+
+        JButton cancelButton = createGradientButton("HỦY", new Color(100, 116, 139), new Color(71, 85, 105));
+        cancelButton.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(cancelButton);
+
+        gbc.gridx = 0;
+        gbc.gridy = 7;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(15, 0, 0, 0);
+        contentPanel.add(buttonPanel, gbc);
+
+        dialog.add(contentPanel);
+        dialog.setVisible(true);
     }
 
     /**
