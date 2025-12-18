@@ -261,14 +261,11 @@ public class AdminPanel extends JPanel {
         tabbedPane.addTab("", createResetPINPanel());
         tabbedPane.addTab("", createImportCardDataPanel());
         tabbedPane.addTab("", createGetInfoPanel());
-        tabbedPane.addTab("", createAddBookPanel());
         tabbedPane.addTab("", createManageBooksPanel());
-        tabbedPane.addTab("", createAddStationeryPanel());
         tabbedPane.addTab("", createManageStationeryPanel());
 
         // Tab icons and labels - custom styled buttons as tab components
-        String[] tabNames = { "Đổi Mã PIN", "Nạp Dữ Liệu", "Lấy Thông Tin", "Thêm Sách", "QL Sách", "Thêm VPP",
-                "QL VPP" };
+        String[] tabNames = { "Đổi Mã PIN", "Nạp Dữ Liệu", "Lấy Thông Tin", "QL Sách", "QL VPP" };
 
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             final int tabIndex = i;
@@ -382,11 +379,7 @@ public class AdminPanel extends JPanel {
                 g2.drawLine(x - 4, y + 2, x + 4, y + 2);
                 g2.drawLine(x - 4, y + 6, x + 4, y + 6);
                 break;
-            case 3: // Add Book (Book)
-                g2.drawRoundRect(x - 9, y - 8, 7, 16, 3, 3); // Left page
-                g2.drawRoundRect(x, y - 8, 7, 16, 3, 3); // Right page
-                break;
-            case 4: // Manage Books (List icon)
+            case 3: // Manage Books (List icon)
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawLine(x - 7, y - 6, x + 7, y - 6);
                 g2.drawLine(x - 7, y, x + 7, y);
@@ -395,14 +388,7 @@ public class AdminPanel extends JPanel {
                 g2.fillOval(x - 9, y - 2, 4, 4);
                 g2.fillOval(x - 9, y + 4, 4, 4);
                 break;
-            case 5: // Add VPP (Pen)
-                java.awt.geom.AffineTransform old = g2.getTransform();
-                g2.rotate(Math.toRadians(45), x, y);
-                g2.drawRoundRect(x - 2, y - 8, 4, 14, 2, 2);
-                g2.drawPolygon(new int[] { x - 2, x + 2, x }, new int[] { y + 6, y + 6, y + 9 }, 3);
-                g2.setTransform(old);
-                break;
-            case 6: // Manage VPP (Grid icon)
+            case 4: // Manage VPP (Grid icon)
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawRect(x - 8, y - 8, 6, 6);
                 g2.drawRect(x + 2, y - 8, 6, 6);
@@ -3718,8 +3704,36 @@ public class AdminPanel extends JPanel {
         refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         refreshButton.addActionListener(e -> loadBooksToTable(tableModel));
 
-        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        // Add New Book button
+        JButton addNewButton = new JButton("THÊM MỚI") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, PRIMARY_GRADIENT_START, getWidth(), 0,
+                        PRIMARY_GRADIENT_END);
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        addNewButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        addNewButton.setPreferredSize(new Dimension(110, 36));
+        addNewButton.setBorderPainted(false);
+        addNewButton.setContentAreaFilled(false);
+        addNewButton.setFocusPainted(false);
+        addNewButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        addNewButton.addActionListener(e -> showAddBookDialog(tableModel));
+
+        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonWrapper.setOpaque(false);
+        buttonWrapper.add(addNewButton);
         buttonWrapper.add(refreshButton);
         headerPanel.add(buttonWrapper, BorderLayout.EAST);
 
@@ -3860,8 +3874,36 @@ public class AdminPanel extends JPanel {
         refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         refreshButton.addActionListener(e -> loadStationeryToTable(tableModel));
 
-        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        // Add New Stationery button
+        JButton addNewButton = new JButton("THÊM MỚI") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, PRIMARY_GRADIENT_START, getWidth(), 0,
+                        PRIMARY_GRADIENT_END);
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight() - 2, 10, 10);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(getFont());
+                FontMetrics fm = g2d.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
+                int textY = (getHeight() - 2 + fm.getAscent() - fm.getDescent()) / 2;
+                g2d.drawString(getText(), textX, textY);
+                g2d.dispose();
+            }
+        };
+        addNewButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        addNewButton.setPreferredSize(new Dimension(110, 36));
+        addNewButton.setBorderPainted(false);
+        addNewButton.setContentAreaFilled(false);
+        addNewButton.setFocusPainted(false);
+        addNewButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        addNewButton.addActionListener(e -> showAddStationeryDialog(tableModel));
+
+        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonWrapper.setOpaque(false);
+        buttonWrapper.add(addNewButton);
         buttonWrapper.add(refreshButton);
         headerPanel.add(buttonWrapper, BorderLayout.EAST);
 
@@ -4019,6 +4061,272 @@ public class AdminPanel extends JPanel {
         } catch (SQLException e) {
             System.err.println("Lỗi khi load VPP: " + e.getMessage());
         }
+    }
+
+    /**
+     * Show Add Book Dialog
+     */
+    private void showAddBookDialog(DefaultTableModel tableModel) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Thêm Sách Mới", true);
+        dialog.setSize(500, 560);
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(false);
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new GridBagLayout());
+        contentPanel.setBorder(new EmptyBorder(20, 30, 20, 30));
+        contentPanel.setBackground(BACKGROUND_DARK);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 5, 8, 5);
+
+        // Title
+        JLabel dialogTitle = new JLabel("THÊM SÁCH MỚI");
+        dialogTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        dialogTitle.setForeground(TEXT_PRIMARY);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        contentPanel.add(dialogTitle, gbc);
+
+        gbc.gridwidth = 1;
+
+        // Book ID (auto-generated, read-only)
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.3;
+        contentPanel.add(createDarkLabel("Mã Sách:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        JTextField bookIdField = createDarkTextField("");
+        bookIdField.setText(generateBookId());
+        bookIdField.setEditable(false);
+        bookIdField.setBackground(new Color(39, 39, 42));
+        contentPanel.add(bookIdField, gbc);
+
+        // Title
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = 0.3;
+        contentPanel.add(createDarkLabel("Tên Sách:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        JTextField titleField = createDarkTextField("Nhập tên sách...");
+        contentPanel.add(titleField, gbc);
+
+        // Author
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        contentPanel.add(createDarkLabel("Tác Giả:"), gbc);
+        gbc.gridx = 1;
+        JTextField authorField = createDarkTextField("Nhập tên tác giả...");
+        contentPanel.add(authorField, gbc);
+
+        // Publisher
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        contentPanel.add(createDarkLabel("Nhà Xuất Bản:"), gbc);
+        gbc.gridx = 1;
+        JTextField publisherField = createDarkTextField("Nhập nhà xuất bản...");
+        contentPanel.add(publisherField, gbc);
+
+        // Price
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        contentPanel.add(createDarkLabel("Giá (VNĐ):"), gbc);
+        gbc.gridx = 1;
+        JTextField priceField = createDarkTextField("0");
+        priceField.setText("0");
+        contentPanel.add(priceField, gbc);
+
+        // Stock
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        contentPanel.add(createDarkLabel("Số Lượng:"), gbc);
+        gbc.gridx = 1;
+        JTextField stockField = createDarkTextField("1");
+        stockField.setText("1");
+        contentPanel.add(stockField, gbc);
+
+        // Category
+        gbc.gridx = 0;
+        gbc.gridy = 7;
+        contentPanel.add(createDarkLabel("Thể Loại:"), gbc);
+        gbc.gridx = 1;
+        String[] categories = { "Văn học", "Khoa học", "Thiếu nhi", "Manga", "Self-help", "Lập trình",
+                "Kinh tế", "Tâm lý", "Lịch sử", "Khác" };
+        JComboBox<String> categoryCombo = new JComboBox<>(categories);
+        categoryCombo.setBackground(INPUT_BG);
+        categoryCombo.setForeground(TEXT_PRIMARY);
+        contentPanel.add(categoryCombo, gbc);
+
+        // Buttons
+        gbc.gridx = 0;
+        gbc.gridy = 8;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 5, 8, 5);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton addButton = createGradientButton("THÊM SÁCH", SUCCESS_COLOR, new Color(16, 150, 100));
+        addButton.addActionListener(e -> {
+            String bookId = bookIdField.getText().trim();
+            String bookTitle = titleField.getText().trim();
+            String author = authorField.getText().trim();
+            String publisher = publisherField.getText().trim();
+            String priceStr = priceField.getText().trim();
+            String stockStr = stockField.getText().trim();
+            String category = (String) categoryCombo.getSelectedItem();
+
+            if (bookId.isEmpty() || bookTitle.isEmpty() || author.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ Mã sách, Tên sách và Tác giả!", "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(priceStr);
+                int stock = Integer.parseInt(stockStr);
+
+                if (insertBook(bookId, bookTitle, author, publisher, price, stock, category, "")) {
+                    JOptionPane.showMessageDialog(dialog, "Thêm sách thành công!\nMã sách: " + bookId, "Thành công",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    loadBooksToTable(tableModel);
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "Lỗi khi thêm sách vào database!", "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Giá và Số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        buttonPanel.add(addButton);
+
+        JButton cancelButton = createGradientButton("HỦY", new Color(100, 116, 139), new Color(71, 85, 105));
+        cancelButton.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(cancelButton);
+
+        contentPanel.add(buttonPanel, gbc);
+
+        dialog.add(contentPanel);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Show Add Stationery Dialog
+     */
+    private void showAddStationeryDialog(DefaultTableModel tableModel) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Thêm VPP Mới", true);
+        dialog.setSize(450, 420);
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(false);
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new GridBagLayout());
+        contentPanel.setBorder(new EmptyBorder(20, 30, 20, 30));
+        contentPanel.setBackground(BACKGROUND_DARK);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 5, 8, 5);
+
+        // Title
+        JLabel dialogTitle = new JLabel("THÊM VĂN PHÒNG PHẨM MỚI");
+        dialogTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        dialogTitle.setForeground(TEXT_PRIMARY);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        contentPanel.add(dialogTitle, gbc);
+
+        gbc.gridwidth = 1;
+
+        // Item ID (auto-generated, read-only)
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.3;
+        contentPanel.add(createDarkLabel("Mã VPP:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        JTextField idField = createDarkTextField("");
+        idField.setText(generateStationeryId());
+        idField.setEditable(false);
+        idField.setBackground(new Color(39, 39, 42));
+        contentPanel.add(idField, gbc);
+
+        // Name
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        contentPanel.add(createDarkLabel("Tên VPP:"), gbc);
+        gbc.gridx = 1;
+        JTextField nameField = createDarkTextField("Nhập tên VPP...");
+        contentPanel.add(nameField, gbc);
+
+        // Price
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        contentPanel.add(createDarkLabel("Giá (VNĐ):"), gbc);
+        gbc.gridx = 1;
+        JTextField priceField = createDarkTextField("0");
+        priceField.setText("0");
+        contentPanel.add(priceField, gbc);
+
+        // Stock
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        contentPanel.add(createDarkLabel("Số Lượng:"), gbc);
+        gbc.gridx = 1;
+        JTextField stockField = createDarkTextField("1");
+        stockField.setText("1");
+        contentPanel.add(stockField, gbc);
+
+        // Buttons
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 5, 8, 5);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton addButton = createGradientButton("THÊM VPP", SUCCESS_COLOR, new Color(16, 150, 100));
+        addButton.addActionListener(e -> {
+            String name = nameField.getText().trim();
+            String priceStr = priceField.getText().trim();
+            String stockStr = stockField.getText().trim();
+
+            if (name.isEmpty() || name.equals("Nhập tên VPP...")) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập tên VPP!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(priceStr);
+                int stock = Integer.parseInt(stockStr);
+
+                if (insertStationery(idField.getText(), name, price, stock, null)) {
+                    JOptionPane.showMessageDialog(dialog, "Thêm VPP thành công!", "Thành công",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    loadStationeryToTable(tableModel);
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "Lỗi khi thêm VPP!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        buttonPanel.add(addButton);
+
+        JButton cancelButton = createGradientButton("HỦY", new Color(100, 116, 139), new Color(71, 85, 105));
+        cancelButton.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(cancelButton);
+
+        contentPanel.add(buttonPanel, gbc);
+
+        dialog.add(contentPanel);
+        dialog.setVisible(true);
     }
 
     /**
