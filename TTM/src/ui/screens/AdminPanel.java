@@ -461,7 +461,7 @@ public class AdminPanel extends JPanel {
                 connManager.connectCard();
 
                 CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
-                setupManager.getPublicKey();
+                // setupManager.getPublicKey();
 
                 byte[] pinTries = setupManager.getPinTries();
 
@@ -1478,8 +1478,8 @@ public class AdminPanel extends JPanel {
                     connManager.connectCard();
 
                     CardSetupManager setupManager = new CardSetupManager(connManager.getChannel());
-                    setupManager.getPublicKey();
                     setupManager.setupCard(userPin, adminPin);
+                    setupManager.getPublicKey();
                     setupManager.verifyPin(userPin);
                     setupManager.initUserData(cardId, fullName, formattedDob, phone, address, regDate);
 
@@ -1710,6 +1710,33 @@ public class AdminPanel extends JPanel {
                 boolean success = pinManager.resetUserPin(adminPIN, newUserPIN);
 
                 if (success) {
+                    // Retrieve public key after reset as per user request
+                    smartcard.CardSetupManager setupMgr = new smartcard.CardSetupManager(connManager.getChannel());
+                    if (setupMgr.getPublicKey()) {
+                        byte[] pubBytes = setupMgr.getKeyManager().getCardPublicKeyEncoded();
+                        if (pubBytes != null) {
+                            // Assuming cardId is needed? resetUserPin doesn't have cardId in context?
+                            // AdminPanel.resetPINOnCard is likely context specific.
+                            // The method `resetPINOnCard` in AdminPanel doesn't seem to have `cardId`
+                            // passed to it?
+                            // Let's check how it's called.
+                            // It's called from `createResetPINPanel`.
+                            // This might be an issue. If we don't know WHICH card it is (CardID), we can't
+                            // update DB.
+                            // However, we can GET CardID from the card itself!
+
+                            // Let's fetch Card ID first to be safe.
+                            // We can use INS_AUTH_GET_CARD_ID or extract it.
+                            String cardIdVal = smartcard.CardIdExtractor.extractCardId(connManager.getChannel(),
+                                    setupMgr.getKeyManager());
+                            if (cardIdVal != null) {
+                                services.CardService cs = new services.CardService();
+                                cs.updateCardPublicKey(cardIdVal, pubBytes);
+                                System.out.println("Updated Public Key for Card: " + cardIdVal);
+                            }
+                        }
+                    }
+
                     SwingUtilities.invokeLater(() -> {
                         messageLabel.setForeground(SUCCESS_COLOR);
                         messageLabel.setText("Đổi mã PIN thành công! Mã PIN mới: " + newUserPIN);

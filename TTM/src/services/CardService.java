@@ -198,15 +198,9 @@ public class CardService {
     
     /**
      * Save or update card public key (BLOB) in Cards table
-     * Only saves if public key doesn't exist yet
+     * Always updates/overwrites the public key
      */
     public boolean updateCardPublicKey(String cardId, byte[] publicKeyBytes) {
-        // Check if public key already exists
-        if (hasPublicKey(cardId)) {
-            System.out.println("Card " + cardId + " already has public key stored. Skipping update.");
-            return true; // Consider it success since key already exists
-        }
-        
         String sql = "UPDATE Cards SET CardPublicKey = ? WHERE CardID = ?";
         try (Connection conn = DBConnect.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -214,7 +208,7 @@ public class CardService {
             pstmt.setString(2, cardId);
             int updated = pstmt.executeUpdate();
             if (updated > 0) {
-                System.out.println("Card public key saved to database for CardID: " + cardId);
+                System.out.println("Card public key updated in database for CardID: " + cardId);
             }
             return updated > 0;
         } catch (SQLException e) {

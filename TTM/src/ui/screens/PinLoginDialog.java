@@ -3,8 +3,8 @@ package ui.screens;
 import services.SettingsService;
 import smartcard.CardConnectionManager;
 import smartcard.CardVerifyManager;
-import smartcard.CardKeyManager;
-import smartcard.CardIdExtractor;
+// import smartcard.CardKeyManager; // Removed unused
+// import smartcard.CardIdExtractor; // Removed unused
 import javax.smartcardio.CardChannel;
 import ui.DBConnect;
 import java.awt.*;
@@ -281,15 +281,35 @@ public class PinLoginDialog extends JDialog {
         });
     }
 
-    private void authenticateUserAfterLogin(javax.smartcardio.CardChannel channel) throws Exception {
-        CardKeyManager keyManager = new CardKeyManager(channel);
-        keyManager.getPublicKey();
-        if (!keyManager.loadAppKeyPair())
-            throw new Exception("App KeyPair error");
+    private void authenticateUserAfterLogin(CardChannel channel) throws Exception {
+        smartcard.CardAuthenticator authenticator = new smartcard.CardAuthenticator(channel);
+        String cardId = authenticator.authenticateUser();
 
-        String cardId = CardIdExtractor.extractCardId(channel, keyManager);
-        if (cardId == null)
-            throw new Exception("Card ID error");
+        // --- FIRST LOGIN CHECK ---
+        smartcard.CardFirstLoginManager firstLoginMgr = new smartcard.CardFirstLoginManager(channel);
+        if (firstLoginMgr.isFirstLogin()) {
+            System.out.println(">>> First Login Detected! Showing Change PIN Dialog...");
+
+            final String currentPin = new String(pinField.getPassword());
+            final boolean[] success = { false };
+
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    FirstLoginChangePinDialog dialog = new FirstLoginChangePinDialog(
+                            (Frame) SwingUtilities.getWindowAncestor(this),
+                            CardConnectionManager.getInstance());
+                    dialog.setPinUpdateLogic(currentPin);
+                    dialog.setVisible(true);
+                    success[0] = dialog.isSuccess();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            if (!success[0]) {
+                throw new Exception("Bắt buộc đổi PIN lần đầu để tiếp tục!");
+            }
+        }
 
         this.authenticatedCardId = cardId;
         lastAuthenticatedCardId = cardId;

@@ -339,7 +339,27 @@ public class doipin extends javax.swing.JPanel {
                     throw new Exception("Xác thực mã PIN mới thất bại!");
                 }
 
+                if (!newPinVerified) {
+                    throw new Exception("Xác thực mã PIN mới thất bại!");
+                }
+
                 System.out.println("New PIN verified successfully!");
+
+                // SYNC PUBLIC KEY TO DB
+                if (setupManager.getPublicKey()) {
+                    byte[] pubBytes = setupManager.getKeyManager().getCardPublicKeyEncoded();
+                    if (pubBytes != null) {
+                        // We need CardID. We can get it from CardIdExtractor since we are connected
+                        // Use setupManager.getKeyManager() ensuring keys are loaded
+                        String cardIdVal = smartcard.CardIdExtractor.extractCardId(connManager.getChannel(),
+                                setupManager.getKeyManager());
+                        if (cardIdVal != null) {
+                            services.CardService cs = new services.CardService();
+                            cs.updateCardPublicKey(cardIdVal, pubBytes);
+                            System.out.println("User Change PIN: Updated Public Key for Card: " + cardIdVal);
+                        }
+                    }
+                }
 
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     setStatus("Thay đổi mã PIN thành công!", true);
